@@ -32,13 +32,13 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/arnscott/dpks
+    $ git clone git://github.com/InfectionMedicineProteomics/DPKS
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl -OJL https://github.com/arnscott/dpks/tarball/master
+    $ curl -OJL git://github.com/InfectionMedicineProteomics/DPKS/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/arnscott/dpks
-.. _tarball: https://github.com/arnscott/dpks/tarball/master
+.. _Github repo: git://github.com/InfectionMedicineProteomics/DPKS
+.. _tarball: git://github.com/InfectionMedicineProteomics/DPKS/dpks/tarball/master
