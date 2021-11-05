@@ -79,19 +79,19 @@ class QuantMatrix:
         self.quant_type = quant_type
         self.design_matrix = design_matrix  # type: ignore
 
-        if matrix:
+        if matrix is not None:
             self.matrix = matrix
         else:
             self.matrix = np.zeros(
                 shape=(num_quant_records, num_samples), dtype="f8"
             )  # 64-bit floating-point number
 
-        if quant_graph:
+        if quant_graph is not None:
             self.quant_graph = quant_graph
         else:
             self.quant_graph = nx.Graph()
 
-        if quant_record_index:
+        if quant_record_index is not None:
             self.quant_record_index = quant_record_index
         else:
             self.quant_record_index = np.empty(shape=(num_quant_records,), dtype=str)
