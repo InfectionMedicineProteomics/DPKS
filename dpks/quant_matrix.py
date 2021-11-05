@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from typing import Tuple
-
-import numpy as np  # type: ignore
-import networkx as nx  # type: ignore
-
 from csv import DictReader
 
+import networkx as nx  # type: ignore
+import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
 from dpks.normalization import (
@@ -14,7 +11,6 @@ from dpks.normalization import (
     MeanNormalization,
     MedianNormalization,
 )
-
 from dpks.quantification import ProteinQuantificationMethod, TopNPrecursors
 
 
@@ -22,7 +18,6 @@ class Protein:
 
     accession: str
     index: int
-
 
     def __init__(self, accession: str = "", index: int = -1):
 
@@ -66,6 +61,7 @@ class QuantMatrix:
     data_sets: dict[str, np.ndarray]
     num_samples: int
     num_quant_records: int
+    quant_ids: np.ndarray
 
     def __init__(
         self,
@@ -73,17 +69,32 @@ class QuantMatrix:
         num_samples: int = 0,
         num_quant_records: int = 0,
         quant_type: str = "",
+        matrix: np.ndarray = None,
+        quant_record_index: np.ndarray = None,
+        quant_graph: nx.Graph = None,
     ):
 
         self.num_samples = num_samples
         self.num_quant_records = num_quant_records
         self.quant_type = quant_type
         self.design_matrix = design_matrix  # type: ignore
-        self.matrix = np.zeros(
-            shape=(num_quant_records, num_samples), dtype="f8"
-        )  # 64-bit floating-point number
-        self.quant_graph = nx.Graph()
-        self.protein_matrix = None
+
+        if matrix:
+            self.matrix = matrix
+        else:
+            self.matrix = np.zeros(
+                shape=(num_quant_records, num_samples), dtype="f8"
+            )  # 64-bit floating-point number
+
+        if quant_graph:
+            self.quant_graph = quant_graph
+        else:
+            self.quant_graph = nx.Graph()
+
+        if quant_record_index:
+            self.quant_record_index = quant_record_index
+        else:
+            self.quant_record_index = np.empty(shape=(num_quant_records,), dtype=str)
 
     def normalize(self, method: NormalizationMethod):
 
@@ -109,28 +120,35 @@ class QuantMatrix:
             quant_type=self.quant_type,
             design_matrix=self.design_matrix,
             matrix=normalized_data,
-            protein_matrix=self.protein_matrix,
             quant_graph=self.quant_graph,
+            quant_record_index=self.quant_record_index,
         )
 
-    def quantify(self, method: ProteinQuantificationMethod, top_n: int = 1):
+    def quantify(
+        self,
+        method: ProteinQuantificationMethod,
+        top_n: int = 1,
+        protein_grouping: str = "",
+    ):
 
         if method.value == ProteinQuantificationMethod.TOP_N_PRECURSORS.value:
 
-            quantification = TopNPrecursors(top_n=top_n)
+            quantification = TopNPrecursors(
+                top_n=top_n, protein_grouping=protein_grouping
+            )
 
-        quantification.fit(self)
+        quantification.init(self.matrix, self.quant_graph)
 
-        quantified_proteins = quantification.quantify()
+        quantified_protein_ids, quantified_protein_data = quantification.quantify()
 
         return self._copy(
             num_samples=self.num_samples,
             num_quant_records=self.num_quant_records,
             quant_type=self.quant_type,
             design_matrix=self.design_matrix,
-            matrix=self.matrix,
-            protein_matrix=quantified_proteins,
+            matrix=quantified_protein_data,
             quant_graph=self.quant_graph,
+            quant_record_index=quantified_protein_ids,
         )
 
     def _copy(
@@ -140,8 +158,8 @@ class QuantMatrix:
         quant_type: str = "",
         design_matrix: list = None,
         matrix: np.ndarray = None,
-        protein_matrix: Tuple[np.ndarray, np.ndarray] = None,
         quant_graph: nx.Graph = None,
+        quant_record_index: np.ndarray = None,
     ):
 
         cloned = self.__class__
@@ -150,24 +168,10 @@ class QuantMatrix:
             num_quant_records=num_quant_records,
             quant_type=quant_type,
             design_matrix=design_matrix,
+            matrix=matrix,
+            quant_record_index=quant_record_index,
+            quant_graph=quant_graph,
         )
-
-        if protein_matrix:
-
-            protein_ids, protein_data = protein_matrix
-
-            obj.matrix = protein_data
-            obj.row_ids = protein_ids
-
-        else:
-
-            obj.matrix = matrix
-            obj.row_ids = None
-
-        obj.quant_graph = quant_graph
-
-        obj.matrix = matrix
-        obj.protein_matrix = protein_matrix  # type: ignore
 
         return obj
 
@@ -204,21 +208,21 @@ class QuantMatrix:
 
         if level == "protein":
 
-            num_proteins = self.protein_matrix[0].shape[0]  # type: ignore
+            num_proteins: int = self.quant_record_index.shape[0]
 
             for protein_index in range(num_proteins):
 
-                protein_id = self.protein_matrix[0][protein_index]  # type: ignore
+                protein_id: str = self.quant_record_index[protein_index]
 
-                protein_quantifications = self.protein_matrix[1][protein_index, :]  # type: ignore
-
-                record = {
+                record: dict = {
                     "Protein": protein_id,
                 }
 
                 for sample_index, sample_data in enumerate(self.design_matrix):
 
-                    record[sample_data["name"]] = protein_quantifications[sample_index]
+                    record[sample_data["name"]] = self.matrix[
+                        protein_index, sample_index
+                    ]
 
                 records.append(record)
 
@@ -283,6 +287,8 @@ class QuantMatrix:
                 if quant_type == "precursor":
 
                     precursor_id = f"{record['PeptideSequence']}_{record['Charge']}"
+
+                    quant_matrix.quant_record_index[index] = precursor_id
 
                     precursor = Precursor(
                         peptide_sequence=record["PeptideSequence"],
