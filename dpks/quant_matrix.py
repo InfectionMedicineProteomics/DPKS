@@ -155,6 +155,10 @@ class QuantMatrix:
 
         pass
 
+    def write(self, file_path : str = ''):
+
+        pass
+
     def as_dataframe(self, level : str = ''):
 
         records = []
