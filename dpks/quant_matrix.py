@@ -9,15 +9,15 @@ from csv import DictReader
 
 import pandas as pd
 
-from dpks.normalization import NormalizationMethod, MeanNormalization, MedianNormalization
+from dpks.normalization import NormalizationMethod, MeanNormalization, MedianNormalization, Normalization
 from dpks.quantification import ProteinQuantificationMethod, TopNPrecursors
 
 class Protein:
 
-    accession : str
-    index : int
+    accession: str
+    index: int
 
-    def __init__(self, accession : str = '', index : int = -1):
+    def __init__(self, accession: str = '', index: int = -1):
 
         self.accession = accession
         self.index = index
@@ -55,6 +55,7 @@ class QuantMatrix:
     data_sets : dict[str, np.ndarray]
     num_samples : int
     num_quant_records : int
+    row_ids : np.ndarray
 
     def __init__(self, design_matrix : list = None, num_samples : int = 0, num_quant_records : int = 0, quant_type : str = ''):
 
@@ -66,8 +67,15 @@ class QuantMatrix:
         self.quant_graph = nx.Graph()
         self.protein_matrix = None
 
+        self.row_ids = np.empty(
+            shape=(num_quant_records,),
+            dtype=str
+        )
+
 
     def normalize(self, method : NormalizationMethod):
+
+        normalization: Normalization = None
 
         if method.value == NormalizationMethod.MEAN.value:
 
@@ -128,9 +136,20 @@ class QuantMatrix:
             design_matrix=design_matrix
         )
 
+        if protein_matrix:
+
+            protein_ids, protein_data = protein_matrix
+
+            obj.matrix = protein_data
+            obj.row_ids = protein_ids
+
+        else:
+
+            obj.matrix = matrix
+            obj.row_ids = None
+
         obj.quant_graph = quant_graph
-        obj.matrix = matrix
-        obj.protein_matrix = protein_matrix
+
 
         return obj
 
