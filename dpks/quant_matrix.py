@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from typing import Tuple
+
 import numpy as np
 import networkx as nx
 
 from csv import DictReader
+
+import pandas as pd
 
 from dpks.normalization import NormalizationMethod, MeanNormalization, MedianNormalization
 from dpks.quantification import ProteinQuantificationMethod, TopNPrecursors
@@ -46,11 +50,7 @@ class Fragment:
 
 class QuantMatrix:
 
-    proteins : dict[str, Protein]
-    precursors : dict[str, Precursor]
-    fragments : dict[str, Fragment]
     matrix : np.ndarray
-    quant_graph : nx.Graph
     design_matrix : list[dict[str, str]]
     data_sets : dict[str, np.ndarray]
     num_samples : int
@@ -60,63 +60,138 @@ class QuantMatrix:
 
         self.num_samples = num_samples
         self.num_quant_records = num_quant_records
-
         self.quant_type = quant_type
-
         self.design_matrix = design_matrix
-
-        self.proteins = dict()
-        self.precursors = dict()
-        self.fragments = dict()
-
         self.matrix = np.zeros(shape=(num_quant_records, num_samples), dtype='f8') # 64-bit floating-point number
-
         self.quant_graph = nx.Graph()
-        self.data_sets = dict()
-
+        self.protein_matrix = None
 
 
     def normalize(self, method : NormalizationMethod):
 
         if method.value == NormalizationMethod.MEAN.value:
 
-            method_key = 'mean_normalized'
-
             normalization = MeanNormalization(log_transform=True, shape=self.matrix.shape)
 
         if method.value == NormalizationMethod.MEDIAN.value:
-
-            method_key = 'median_normalized'
 
             normalization = MedianNormalization(log_transform=True, shape=self.matrix.shape)
 
         normalization.fit(self.matrix)
 
-        self.data_sets[method_key] = normalization.transform(self.matrix)
+        normalized_data = normalization.transform(self.matrix)
 
-    def quantify(self, method : ProteinQuantificationMethod, data_key : str = '', top_n : int = 1):
+        return self._copy(
+            num_samples=self.num_samples,
+            num_quant_records=self.num_quant_records,
+            quant_type=self.quant_type,
+            design_matrix=self.design_matrix,
+            matrix=normalized_data,
+            protein_matrix=self.protein_matrix,
+            quant_graph=self.quant_graph
+        )
 
-        if not data_key:
-
-            data_key = list(self.data_sets.keys())[-1]
+    def quantify(self, method : ProteinQuantificationMethod, top_n : int = 1):
 
         if method.value == ProteinQuantificationMethod.TOP_N_PRECURSORS.value:
-
-            method_key = f"{data_key}_top_n_precursors_quantification"
 
             quantification = TopNPrecursors(top_n=top_n)
 
         quantification.fit(self)
 
-        self.data_sets[method_key] = quantification.quantify(data_key=data_key)
+        quantified_proteins = quantification.quantify()
 
+        return self._copy(
+            num_samples=self.num_samples,
+            num_quant_records=self.num_quant_records,
+            quant_type=self.quant_type,
+            design_matrix=self.design_matrix,
+            matrix=self.matrix,
+            protein_matrix=quantified_proteins,
+            quant_graph=self.quant_graph
+        )
 
-    def calculate_differential_expression(self):
+    def _copy(self,
+              num_samples : int = 0,
+              num_quant_records : int = 0,
+              quant_type : str = '',
+              design_matrix : list = None,
+              matrix : np.ndarray = None,
+              protein_matrix : Tuple[np.ndarray, np.ndarray] = None,
+              quant_graph : nx.Graph = None):
+
+        cloned = self.__class__
+        obj = cloned(
+            num_samples=num_samples,
+            num_quant_records=num_quant_records,
+            quant_type=quant_type,
+            design_matrix=design_matrix
+        )
+
+        obj.quant_graph = quant_graph
+        obj.matrix = matrix
+        obj.protein_matrix = protein_matrix
+
+        return obj
+
+    def differentiate_expression(self):
 
         pass
 
-    def as_dataframe(self):
+    def filter(self):
+        ## Based on on frequency of observations
+        ## Or based on frequency in biological replicates
+        pass
 
+    def impute(self):
+
+        pass
+
+    def outlier_detection(self):
+
+        pass
+
+    def flag_bad_runs(self):
+
+        pass
+
+    def as_dataframe(self, level : str = ''):
+
+        records = []
+
+        if level == 'protein':
+
+            num_proteins = self.protein_matrix[0].shape[0]
+
+            for protein_index in range(num_proteins):
+
+                protein_id = self.protein_matrix[0][protein_index]
+
+                protein_quantifications = self.protein_matrix[1][protein_index, :]
+
+                record = {
+                    'Protein': protein_id,
+                }
+
+                for sample_index, sample_data in enumerate(self.design_matrix):
+
+                    record[sample_data['name']] = protein_quantifications[sample_index]
+
+                records.append(record)
+
+        if level == 'precursor':
+
+            pass
+
+        if level == 'peptide':
+
+            pass
+
+        if level == 'fragment':
+
+            pass
+
+        return pd.DataFrame(records)
 
     @classmethod
     def from_csv(cls, file_path : str = '', design_matrix_path : str = '', quant_type : str = '') -> QuantMatrix:

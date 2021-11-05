@@ -38,17 +38,7 @@ class TopNPrecursors(ProteinQuantification):
 
         self.quant_matrix = quant_matrix
 
-    def quantify(self, data_key : str = '') -> Tuple[np.ndarray, np.ndarray]:
-
-        if data_key:
-
-            base_quant_matrix = self.quant_matrix.data_sets[data_key]
-
-        else:
-
-            last_key = list(self.quant_matrix.data_sets.keys())[-1]
-
-            base_quant_matrix = self.quant_matrix.data_sets[last_key]
+    def quantify(self) -> Tuple[np.ndarray, np.ndarray]:
 
         num_proteins = 0
 
@@ -89,7 +79,7 @@ class TopNPrecursors(ProteinQuantification):
 
                 for sample_index in range(self.quant_matrix.num_samples):
 
-                    local_protein_matrix[local_index, sample_index] = base_quant_matrix[precursor_index, sample_index]
+                    local_protein_matrix[local_index, sample_index] = self.quant_matrix.matrix[precursor_index, sample_index]
 
 
             if self.top_n == 1:
