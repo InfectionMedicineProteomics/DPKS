@@ -10,7 +10,8 @@ import pandas as pd  # type: ignore
 from dpks.normalization import (
     NormalizationMethod,
     MeanNormalization,
-    MedianNormalization, Normalization,
+    MedianNormalization,
+    Normalization,
 )
 from dpks.quantification import ProteinQuantificationMethod, TopNPrecursors
 
@@ -72,7 +73,7 @@ class QuantMatrix:
         quant_type: str = "",
         matrix: np.ndarray = None,
         quant_record_index: np.ndarray = None,
-        quant_graph: nx.Graph = None
+        quant_graph: nx.Graph = None,
     ):
 
         self.num_samples = num_samples
@@ -295,13 +296,13 @@ class QuantMatrix:
 
                     quant_matrix.quant_record_index[index] = precursor_id
 
-                    if 'RT' in set(record.keys()):
+                    if "RT" in set(record.keys()):
 
-                        retention_time = record['RT']
+                        retention_time = record["RT"]
 
-                    elif 'RetentionTime' in set(record.keys()):
+                    elif "RetentionTime" in set(record.keys()):
 
-                        retention_time = record['RetentionTime']
+                        retention_time = record["RetentionTime"]
 
                     precursor = Precursor(
                         peptide_sequence=record["PeptideSequence"],
