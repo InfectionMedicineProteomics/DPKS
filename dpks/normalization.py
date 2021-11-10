@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Tuple
 
 import numpy as np  # type: ignore
 
@@ -23,11 +24,16 @@ class Normalization(ABC):
 
 
 class MeanNormalization(Normalization):
-    def __init__(self, log_transform: bool = False, shape: tuple = None):
+
+    mean: np.ndarray
+    stdev: np.ndarray
+    log_transforms: np.ndarray
+
+    def __init__(self, log_transform: bool = False, shape: Tuple[int, int] = (0, 0)):
 
         self.log_transform = log_transform
-        self.mean = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
-        self.stdev = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
+        self.mean = np.ndarray(dtype="f8", shape=(shape[0],))
+        self.stdev = np.ndarray(dtype="f8", shape=(shape[0],))
 
     def fit(self, data: np.ndarray) -> None:
 
@@ -48,11 +54,16 @@ class MeanNormalization(Normalization):
 
 
 class MedianNormalization(Normalization):
-    def __init__(self, log_transform: bool = False, shape: tuple = None):
+
+    median: np.ndarray
+    iqr: np.ndarray
+    log_transforms: np.ndarray
+
+    def __init__(self, log_transform: bool = False, shape: Tuple[int, int] = (0, 0)):
 
         self.log_transform = log_transform
-        self.median = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
-        self.iqr = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
+        self.median = np.ndarray(dtype="f8", shape=(shape[0],))
+        self.iqr = np.ndarray(dtype="f8", shape=(shape[0],))
 
     def fit(self, data: np.ndarray) -> None:
 
@@ -60,9 +71,9 @@ class MedianNormalization(Normalization):
 
             data = np.log(data)
 
-        self.median = np.nanpercentile(data, axis=1).reshape((-1, 1))
+        self.median = np.nanmedian(data, axis=1).reshape((-1, 1))
 
-        q75, q25 = np.percentile(data, [75, 25])
+        q75, q25 = np.nanpercentile(a=data, q=[75, 25])
 
         q75 = q75.reshape((-1, 1))
         q25 = q25.reshape((-1, 1))

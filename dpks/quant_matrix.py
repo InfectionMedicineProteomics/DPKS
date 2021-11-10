@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from csv import DictReader
+from typing import Dict, List, Optional, cast, Tuple, Iterable
 
 import networkx as nx  # type: ignore
 import numpy as np  # type: ignore
@@ -9,7 +10,7 @@ import pandas as pd  # type: ignore
 from dpks.normalization import (
     NormalizationMethod,
     MeanNormalization,
-    MedianNormalization,
+    MedianNormalization, Normalization,
 )
 from dpks.quantification import ProteinQuantificationMethod, TopNPrecursors
 
@@ -57,7 +58,7 @@ class Fragment:
 class QuantMatrix:
 
     matrix: np.ndarray
-    design_matrix: list[dict[str, str]]
+    design_matrix: Optional[List[Dict[str, str]]]
     data_sets: dict[str, np.ndarray]
     num_samples: int
     num_quant_records: int
@@ -65,19 +66,19 @@ class QuantMatrix:
 
     def __init__(
         self,
-        design_matrix: list = None,
+        design_matrix: Optional[List[Dict[str, str]]] = None,
         num_samples: int = 0,
         num_quant_records: int = 0,
         quant_type: str = "",
         matrix: np.ndarray = None,
         quant_record_index: np.ndarray = None,
-        quant_graph: nx.Graph = None,
+        quant_graph: nx.Graph = None
     ):
 
         self.num_samples = num_samples
         self.num_quant_records = num_quant_records
         self.quant_type = quant_type
-        self.design_matrix = design_matrix  # type: ignore
+        self.design_matrix = design_matrix
 
         if matrix is not None:
             self.matrix = matrix
@@ -98,16 +99,18 @@ class QuantMatrix:
 
     def normalize(self, method: NormalizationMethod):
 
+        normalization: Normalization
+
         if method.value == NormalizationMethod.MEAN.value:
 
             normalization = MeanNormalization(
-                log_transform=True, shape=self.matrix.shape
+                log_transform=True, shape=cast(Tuple[int, int], self.matrix.shape)
             )
 
         if method.value == NormalizationMethod.MEDIAN.value:
 
-            normalization = MedianNormalization(  # type: ignore
-                log_transform=True, shape=self.matrix.shape
+            normalization = MedianNormalization(
+                log_transform=True, shape=cast(Tuple[int, int], self.matrix.shape)
             )
 
         normalization.fit(self.matrix)
@@ -218,7 +221,9 @@ class QuantMatrix:
                     "Protein": protein_id,
                 }
 
-                for sample_index, sample_data in enumerate(self.design_matrix):
+                for sample_index, sample_data in enumerate(
+                    cast(Iterable[Dict[str, str]], self.design_matrix)
+                ):
 
                     record[sample_data["name"]] = self.matrix[
                         protein_index, sample_index
@@ -290,11 +295,19 @@ class QuantMatrix:
 
                     quant_matrix.quant_record_index[index] = precursor_id
 
+                    if 'RT' in set(record.keys()):
+
+                        retention_time = record['RT']
+
+                    elif 'RetentionTime' in set(record.keys()):
+
+                        retention_time = record['RetentionTime']
+
                     precursor = Precursor(
                         peptide_sequence=record["PeptideSequence"],
-                        charge=record["Charge"],  # type: ignore
-                        decoy=record["Decoy"],  # type: ignore
-                        retention_time=record["RetentionTime"],  # type: ignore
+                        charge=int(record["Charge"]),
+                        decoy=int(record["Decoy"]),
+                        retention_time=float(retention_time),
                         index=index,
                     )
 
