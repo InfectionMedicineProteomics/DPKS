@@ -13,6 +13,7 @@ from dpks.normalization import (
     MedianNormalization,
     Normalization,
 )
+
 from dpks.quantification import ProteinQuantificationMethod, TopNPrecursors
 
 
@@ -257,7 +258,7 @@ class QuantMatrix:
 
         with open(design_matrix_path, "r") as design_matrix_path_h:
 
-            csv_reader = DictReader(design_matrix_path_h)
+            csv_reader = DictReader(design_matrix_path_h, delimiter='\t')
 
             for record in csv_reader:
 
@@ -275,7 +276,7 @@ class QuantMatrix:
 
         with open(file_path, "r") as quant_file_h:
 
-            csv_reader = DictReader(quant_file_h)
+            csv_reader = DictReader(quant_file_h, delimiter="\t")
 
             records = list(csv_reader)
 
@@ -338,7 +339,13 @@ class QuantMatrix:
 
                         intensity = record[sample_name]
 
-                        quant_matrix.matrix[index, sample_index] = intensity
+                        if intensity and intensity != "NA":
+
+                            quant_matrix.matrix[index, sample_index] = intensity
+
+                        else:
+
+                            quant_matrix.matrix[index, sample_index] = np.NaN
 
         return quant_matrix
 
