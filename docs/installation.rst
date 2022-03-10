@@ -4,17 +4,32 @@
 Installation
 ============
 
+Dependencies
+------------
 
-Stable release
---------------
+On ubuntu::
 
-To install dpks, run this command in your terminal:
+     apt install libblas3 liblapack3 liblapack-dev libblas-dev libatlas-base-dev gfortran
 
-.. code-block:: console
+Install DPKS
+------------
 
-    $ pip install dpks
+The sources for dpks can be downloaded from the `Github repo`_.
 
-This is the preferred method to install dpks, as it will always install the most recent stable release.
+.. _Github repo: git://github.com/InfectionMedicineProteomics/DPKS
+
+You can clone the repository::
+
+    git clone git://github.com/InfectionMedicineProteomics/DPKS
+
+To install dpks, run this command in your terminal::
+
+    cd DPKS && pip install .
+
+If you are developing DPKS, run this command in your terminal::
+
+    pip install tox flake8 flake8-html coverage Sphinx sphinx-material sphinx-copybutton sphinx-autodoc-typehints sphinxcontrib-autoyaml pytest-sphinx sphinx-click pytest pytest-html pytest-cov black mypy bandit
+    cd DPKS && pip install -e .
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
@@ -22,30 +37,13 @@ you through the process.
 .. _pip: https://pip.pypa.io
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
+You can also install it with::
 
-From sources
-------------
+    python setup.py install
 
-The sources for dpks can be downloaded from the `Github repo`_.
+Documentation
+-------------
 
-You can either clone the public repository:
+To build the documentation::
 
-.. code-block:: console
-
-    $ git clone git://github.com/InfectionMedicineProteomics/DPKS
-
-Or download the `tarball`_:
-
-.. code-block:: console
-
-    $ curl -OJL git://github.com/InfectionMedicineProteomics/DPKS/tarball/master
-
-Once you have a copy of the source, you can install it with:
-
-.. code-block:: console
-
-    $ python setup.py install
-
-
-.. _Github repo: git://github.com/InfectionMedicineProteomics/DPKS
-.. _tarball: git://github.com/InfectionMedicineProteomics/DPKS/dpks/tarball/master
+    sphinx-build -b html docs <path_to_site>
