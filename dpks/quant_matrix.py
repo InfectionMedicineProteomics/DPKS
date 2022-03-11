@@ -127,6 +127,24 @@ class QuantMatrix:
 
             pass
 
+    def filter(self, peptide_q_value: float = 0.01, protein_q_value: float = 0.01, remove_decoys: bool = True):
+
+        filtered_data = self.quantitative_data[
+            (self.quantitative_data.obs["PeptideQValue"] <= peptide_q_value) &
+            (self.quantitative_data.obs["ProteinQValue"] <= protein_q_value)
+        ].copy()
+
+        if remove_decoys:
+
+            filtered_data = filtered_data[
+                filtered_data.obs["Decoy"] == 0
+            ].copy()
+
+        self.quantitative_data = filtered_data
+
+        return self
+
+
     def normalize(self, method: NormalizationMethod):
 
         if method.value == NormalizationMethod.MEAN.value:
@@ -210,12 +228,6 @@ class QuantMatrix:
 
         pass
 
-    def filter(self):
-        """
-        Based on on frequency of observations
-        Or based on frequency in biological replicates
-        """
-        pass
 
     def impute(self):
 
