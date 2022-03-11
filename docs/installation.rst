@@ -47,3 +47,16 @@ Documentation
 To build the documentation::
 
     sphinx-build -b html docs <path_to_site>
+
+Tests
+-----
+
+To test dpks::
+
+    pytest
+
+To test the quantification module::
+
+    pytest -m quantification
+
+All test tags are listed in pytest.ini
