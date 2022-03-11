@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from csv import DictReader
 from typing import Union
 
 import networkx as nx  # type: ignore
@@ -13,7 +12,7 @@ from dpks.normalization import (
     MedianNormalization,
     MeanNormalization
 )
-from dpks.quantification import ProteinQuantificationMethod, TopN
+from dpks.quantification import TopN
 
 
 class Protein:
@@ -207,6 +206,15 @@ class QuantMatrix:
             )
 
             return protein_quantifications
+
+    def to_df(self):
+
+        merged = pd.concat(
+            [self.quantitative_data.obs, self.quantitative_data.to_df()],
+            axis=1
+        )
+
+        return merged
 
     def test_differential_expression(self):
 
