@@ -158,4 +158,8 @@ class QuantMatrix:
 
     def write(self, file_path: str = "") -> None:
 
-        pass
+        self.to_df().to_csv(
+            file_path,
+            sep="\t",
+            index=False
+        )
