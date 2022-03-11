@@ -13,7 +13,7 @@ from dpks.normalization import (
     MedianNormalization,
     MeanNormalization
 )
-from dpks.quantification import ProteinQuantificationMethod, TopNPrecursors
+from dpks.quantification import ProteinQuantificationMethod, TopN
 
 
 class Protein:
@@ -127,7 +127,16 @@ class QuantMatrix:
 
             pass
 
-    def filter(self, peptide_q_value: float = 0.01, protein_q_value: float = 0.01, remove_decoys: bool = True):
+    @property
+    def proteins(self):
+
+        return list(self.quantitative_data.obs["Protein"].unique())
+
+    def filter(self,
+               peptide_q_value: float = 0.01,
+               protein_q_value: float = 0.01,
+               remove_decoys: bool = True,
+               remove_contaminants: bool = True):
 
         filtered_data = self.quantitative_data[
             (self.quantitative_data.obs["PeptideQValue"] <= peptide_q_value) &
@@ -138,6 +147,12 @@ class QuantMatrix:
 
             filtered_data = filtered_data[
                 filtered_data.obs["Decoy"] == 0
+            ].copy()
+
+        if remove_contaminants:
+
+            filtered_data = filtered_data[
+                ~filtered_data.obs["Protein"].str.contains("contam")
             ].copy()
 
         self.quantitative_data = filtered_data
