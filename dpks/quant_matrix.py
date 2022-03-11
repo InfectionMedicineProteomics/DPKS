@@ -15,46 +15,6 @@ from dpks.normalization import (
 from dpks.quantification import TopN
 
 
-class Protein:
-
-    accession: str
-    index: int
-
-    def __init__(self, accession: str = "", index: int = -1):
-
-        self.accession = accession
-        self.index = index
-
-
-class Precursor:
-
-    peptide_sequence: str
-    charge: int
-    decoy: int
-    retention_time: float
-    index: int
-
-    def __init__(
-        self,
-        peptide_sequence: str = "",
-        charge: int = 0,
-        decoy: int = 0,
-        retention_time: float = 0.0,
-        index: int = 0,
-    ):
-
-        self.peptide_sequence = peptide_sequence
-        self.charge = charge
-        self.decoy = decoy
-        self.retention_time = retention_time
-        self.index = index
-
-
-class Fragment:
-
-    pass
-
-
 class QuantMatrix:
 
     quantification_file_path: Union[str, pd.DataFrame]
