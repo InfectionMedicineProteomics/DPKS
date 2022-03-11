@@ -58,3 +58,22 @@ class MedianNormalization(TransformerMixin):
         normalized_signal = np.log2(normalized_signal)
 
         return normalized_signal
+
+
+class MeanNormalization(TransformerMixin):
+
+    def __init__(self):
+
+        pass
+
+    def fit_transform(self, X, y=None, **fit_params):
+
+        sample_means = np.nanmean(X, axis=0)
+
+        mean_sample_means = np.mean(sample_means)
+
+        normalized_signal = (X / sample_means[None, :]) * mean_sample_means
+
+        normalized_signal = np.log2(normalized_signal)
+
+        return normalized_signal
