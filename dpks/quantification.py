@@ -1,10 +1,14 @@
 from typing import Tuple, List
 
 import networkx as nx  # type: ignore
-import numpy as np  # type: ignore
+import numpy as np
+import pandas as pd# type: ignore
 
-import pandas as pd
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+
+    from .quant_matrix import QuantMatrix
 
 class TopN:
 
@@ -18,7 +22,7 @@ class TopN:
         self.num_samples = 0
         self.protein_nodes = []
 
-    def quantify(self, quantitative_data, y=None, **fit_params):
+    def quantify(self, quantitative_data : QuantMatrix) -> pd.DataFrame:
 
         protein_quantifications = dict()
 
@@ -32,15 +36,15 @@ class TopN:
 
             protein_quantifications[protein] = protein_quantification
 
-        protein_quantifications = pd.DataFrame(protein_quantifications)
+        proteins = pd.DataFrame(protein_quantifications)
 
-        protein_quantifications = protein_quantifications.T.copy()
+        proteins = proteins.T.copy()
 
-        protein_quantifications.columns = list(
+        proteins.columns = list(
             quantitative_data.quantitative_data.var["sample"]
         )
 
-        return protein_quantifications.reset_index().rename(
+        return proteins.reset_index().rename(
             columns={"index": "Protein"}
         )
 
@@ -52,6 +56,6 @@ class TopN:
 
         sorted_precursors = np.take_along_axis(grouped_protein, sort_indices, axis=0)
 
-        protein_quantification = np.sum(sorted_precursors[: self.top_n], axis=0)
+        protein_quantification: np.ndarray = np.sum(sorted_precursors[: self.top_n], axis=0)
 
         return protein_quantification

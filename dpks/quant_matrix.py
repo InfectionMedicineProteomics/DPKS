@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Union
+from typing import Union, List
 
-import networkx as nx  # type: ignore
-import numpy as np  # type: ignore
+import networkx as nx # type: ignore
+import numpy as np
 import pandas as pd  # type: ignore
-import anndata as ad
+import anndata as ad # type: ignore
 
 from dpks.normalization import TicNormalization, MedianNormalization, MeanNormalization
 from dpks.quantification import TopN
@@ -18,12 +18,6 @@ class QuantMatrix:
     num_rows: int
     num_samples: int
     quantitative_data: ad.AnnData
-    # matrix: np.ndarray
-    # design_matrix: list[dict[str, str]]
-    # data_sets: dict[str, np.ndarray]
-    # num_samples: int
-    # num_quant_records: int
-    # quant_ids: np.ndarray
 
     def __init__(
         self,
@@ -67,7 +61,7 @@ class QuantMatrix:
             pass
 
     @property
-    def proteins(self):
+    def proteins(self) -> List[str]:
 
         return list(self.quantitative_data.obs["Protein"].unique())
 
@@ -77,7 +71,7 @@ class QuantMatrix:
         protein_q_value: float = 0.01,
         remove_decoys: bool = True,
         remove_contaminants: bool = True,
-    ):
+    ) -> QuantMatrix:
 
         filtered_data = self.quantitative_data[
             (self.quantitative_data.obs["PeptideQValue"] <= peptide_q_value)
@@ -98,7 +92,7 @@ class QuantMatrix:
 
         return self
 
-    def normalize(self, method: str):
+    def normalize(self, method: str) -> QuantMatrix:
 
         if method == "tic":
 
@@ -120,7 +114,7 @@ class QuantMatrix:
 
         return self
 
-    def quantify(self, method: str, resolve_protein_groups: bool = False, **kwargs):
+    def quantify(self, method: str, resolve_protein_groups: bool = False, **kwargs: int) -> QuantMatrix:
 
         if resolve_protein_groups:
 
@@ -136,9 +130,9 @@ class QuantMatrix:
                 quantifications, design_matrix_file=design_matrix
             )
 
-            return protein_quantifications
+        return protein_quantifications
 
-    def to_df(self):
+    def to_df(self) -> pd.DataFrame:
 
         merged = pd.concat(
             [self.quantitative_data.obs, self.quantitative_data.to_df()], axis=1
@@ -146,22 +140,22 @@ class QuantMatrix:
 
         return merged
 
-    def test_differential_expression(self):
+    def test_differential_expression(self) -> None:
 
         pass
 
-    def impute(self):
+    def impute(self) -> None:
 
         pass
 
-    def outlier_detection(self):
+    def outlier_detection(self) -> None:
 
         pass
 
-    def flag_bad_runs(self):
+    def flag_bad_runs(self) -> None:
 
         pass
 
-    def write(self, file_path: str = ""):
+    def write(self, file_path: str = "") -> None:
 
         pass

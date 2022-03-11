@@ -1,10 +1,12 @@
 """Console script for dpks."""
 import sys
+from typing import Union
+
 import click
 
 
 @click.command()
-def main(args=None):
+def main(args: Union[str, None] = None) -> int:
     """Console script for dpks."""
     click.echo("Replace this message by putting your code into " "dpks.cli.main")
     click.echo("See click documentation at https://click.palletsprojects.com/")
