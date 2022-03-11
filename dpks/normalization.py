@@ -1,25 +1,6 @@
-from abc import ABC, abstractmethod
-
 import numpy as np  # type: ignore
 
-from enum import Enum
-
 from sklearn.base import TransformerMixin
-
-
-class NormalizationMethod(Enum):
-    MEAN = 1
-    MEDIAN = 2
-
-
-class Normalization(ABC):
-    @abstractmethod
-    def fit(self, data: np.ndarray) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def transform(self, data: np.ndarray) -> np.ndarray:
-        raise NotImplementedError
 
 
 class TicNormalization(TransformerMixin):
