@@ -16,7 +16,7 @@ def paths(tmpdir_factory):
     paths["test_base_path"] = Path(tmpdir_factory.mktemp("dpks"))
     paths["design_matrix_path"] = base_dir / Path("tests/input_files/design_matrix.tsv")
     paths["baseline_matrix_path"] = base_dir / Path(
-        "tests/input_files/pyprophet_baseline_matrix.csv"
+        "tests/input_files/pyprophet_baseline_matrix.tsv"
     )
 
     yield paths

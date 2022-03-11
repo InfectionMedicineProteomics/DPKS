@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from csv import DictReader
+from typing import Union
 
 import networkx as nx  # type: ignore
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
+import anndata as ad
 
 from dpks.normalization import (
     NormalizationMethod,
@@ -56,45 +58,74 @@ class Fragment:
 
 class QuantMatrix:
 
-    matrix: np.ndarray
-    design_matrix: list[dict[str, str]]
-    data_sets: dict[str, np.ndarray]
+    quantification_file_path: Union[str, pd.DataFrame]
+    design_matrix_file: Union[str, pd.DataFrame]
+    num_rows: int
     num_samples: int
-    num_quant_records: int
-    quant_ids: np.ndarray
+    quantitative_data: ad.AnnData
+    # matrix: np.ndarray
+    # design_matrix: list[dict[str, str]]
+    # data_sets: dict[str, np.ndarray]
+    # num_samples: int
+    # num_quant_records: int
+    # quant_ids: np.ndarray
 
     def __init__(
         self,
-        design_matrix: list = None,
-        num_samples: int = 0,
-        num_quant_records: int = 0,
-        quant_type: str = "",
-        matrix: np.ndarray = None,
-        quant_record_index: np.ndarray = None,
-        quant_graph: nx.Graph = None,
+        quantification_file: Union[str, pd.DataFrame],
+        design_matrix_file: Union[str, pd.DataFrame],
+        build_quant_graph: bool = False
     ):
 
-        self.num_samples = num_samples
-        self.num_quant_records = num_quant_records
-        self.quant_type = quant_type
-        self.design_matrix = design_matrix  # type: ignore
+        if isinstance(design_matrix_file, str):
 
-        if matrix is not None:
-            self.matrix = matrix
-        else:
-            self.matrix = np.zeros(
-                shape=(num_quant_records, num_samples), dtype="f8"
-            )  # 64-bit floating-point number
+            design_matrix_file = pd.read_csv(
+                design_matrix_file,
+                sep="\t"
+            )
 
-        if quant_graph is not None:
-            self.quant_graph = quant_graph
-        else:
-            self.quant_graph = nx.Graph()
+            design_matrix_file.columns = map(
+                str.lower,
+                design_matrix_file.columns
+            )
 
-        if quant_record_index is not None:
-            self.quant_record_index = quant_record_index
-        else:
-            self.quant_record_index = np.empty(shape=(num_quant_records,), dtype=str)
+        if isinstance(quantification_file, str):
+
+            quantification_file = pd.read_csv(
+                quantification_file,
+                sep="\t"
+            )
+
+        self.num_samples = len(design_matrix_file)
+        self.num_rows = len(quantification_file)
+
+        quantitative_data = quantification_file[list(design_matrix_file["sample"])].copy().set_index(
+            np.arange(
+                self.num_rows,
+                dtype=int
+            ).astype(str)
+        )
+
+        row_obs = quantification_file.drop(
+            list(design_matrix_file["sample"]),
+            axis=1
+        ).set_index(
+            np.arange(
+                self.num_rows,
+                dtype=int
+            ).astype(str)
+        )
+
+        self.quantitative_data = ad.AnnData(
+            quantitative_data,
+            obs=row_obs,
+            var=design_matrix_file.copy().set_index(design_matrix_file["sample"]),
+            dtype=np.float64
+        )
+
+        if build_quant_graph:
+
+            pass
 
     def normalize(self, method: NormalizationMethod):
 
