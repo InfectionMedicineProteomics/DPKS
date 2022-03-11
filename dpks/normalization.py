@@ -41,47 +41,20 @@ class TicNormalization(TransformerMixin):
         return normalized_signal
 
 
-class MeanNormalization(Normalization):
-    def __init__(self, log_transform: bool = False, shape: tuple = None):
+class MedianNormalization(TransformerMixin):
 
-        self.log_transform = log_transform
-        self.mean = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
-        self.stdev = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
+    def __init__(self):
 
-    def fit(self, data: np.ndarray) -> None:
+        pass
 
-        if self.log_transform:
-            data = np.log(data)
+    def fit_transform(self, X, y=None, **fit_params):
 
-        self.mean = np.nanmean(data, axis=1).reshape((-1, 1))
-        self.stdev = np.nanstd(data, axis=1).reshape((-1, 1))
+        sample_medians = np.nanmedian(X, axis=0)
 
-    def transform(self, data: np.ndarray) -> np.ndarray:
+        mean_sample_median = np.mean(sample_medians)
 
-        if self.log_transform:
-            data = np.log(data)
+        normalized_signal = (X / sample_medians[None, :]) * mean_sample_median
 
-        return (data - self.mean) / self.stdev
+        normalized_signal = np.log2(normalized_signal)
 
-
-class MedianNormalization(Normalization):
-    def __init__(self, log_transform: bool = False, shape: tuple = None):
-
-        self.log_transform = log_transform
-        self.median = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
-        self.stdev = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
-
-    def fit(self, data: np.ndarray) -> None:
-
-        if self.log_transform:
-            data = np.log(data)
-
-        self.median = np.nanmedian(data, axis=1).reshape((-1, 1))
-        self.stdev = np.nanstd(data, axis=1).reshape((-1, 1))
-
-    def transform(self, data: np.ndarray) -> np.ndarray:
-
-        if self.log_transform:
-            data = np.log(data)
-
-        return (data - self.median) / self.stdev
+        return normalized_signal

@@ -10,7 +10,6 @@ import anndata as ad
 
 from dpks.normalization import (
     NormalizationMethod,
-    MeanNormalization,
     MedianNormalization,
 )
 from dpks.quantification import ProteinQuantificationMethod, TopNPrecursors
