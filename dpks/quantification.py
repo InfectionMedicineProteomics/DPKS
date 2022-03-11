@@ -1,118 +1,52 @@
-from abc import ABC, abstractmethod
 from typing import Tuple, List
 
 import networkx as nx  # type: ignore
-import numpy as np  # type: ignore
+import numpy as np
+import pandas as pd# type: ignore
 
-from enum import Enum
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
 
-class ProteinQuantificationMethod(Enum):
-    TOP_N_PRECURSORS = 1
+    from .quant_matrix import QuantMatrix
 
-
-class ProteinQuantification(ABC):
-    @abstractmethod
-    def init(self, quant_data: np.ndarray, protein_graph: nx.Graph) -> None:
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def quantify(self) -> Tuple[np.ndarray, np.ndarray]:
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def build_protein_group(self, protein_node: str) -> np.ndarray:
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def quantify_protein(self, group_protein: np.ndarray) -> np.ndarray:
-
-        raise NotImplementedError
-
-
-class TopNPrecursors(ProteinQuantification):
+class TopN:
 
     top_n: int
     protein_nodes: List[str]
 
-    def __init__(self, top_n: int = 1, protein_grouping: str = ""):
+    def __init__(self, top_n: int = 1):
 
         self.top_n = top_n
-        self.protein_grouping = protein_grouping
         self.num_proteins = 0
         self.num_samples = 0
         self.protein_nodes = []
 
-    def init(self, quant_data: np.ndarray, protein_graph: nx.Graph):
+    def quantify(self, quantitative_data : QuantMatrix) -> pd.DataFrame:
 
-        self.num_samples = quant_data.shape[1]
+        protein_quantifications = dict()
 
-        for node, node_data in protein_graph.nodes(data=True):
+        for protein in quantitative_data.proteins:
 
-            if node_data["bipartite"] == "protein":
+            protein_group = quantitative_data.quantitative_data[
+                quantitative_data.quantitative_data.obs["Protein"] == protein
+            ]
 
-                self.num_proteins += 1
+            protein_quantification = self.quantify_protein(protein_group.X)
 
-                self.protein_nodes.append(node)
+            protein_quantifications[protein] = protein_quantification
 
-        self.protein_matrix = np.zeros(
-            shape=(self.num_proteins, self.num_samples), dtype="f8"
+        proteins = pd.DataFrame(protein_quantifications)
+
+        proteins = proteins.T.copy()
+
+        proteins.columns = list(
+            quantitative_data.quantitative_data.var["sample"]
         )
 
-        self.quant_matrix = quant_data
-        self.protein_graph = protein_graph
-
-    def build_protein_group(self, protein_node: str) -> np.ndarray:
-
-        precursors: list = []
-
-        for precursor_node in self.protein_graph.neighbors(protein_node):
-
-            precursor_data = self.protein_graph.nodes(data=True)[precursor_node]["data"]
-
-            if self.protein_grouping == "proteotypic":
-
-                num_mapped_proteins = len(
-                    list(self.protein_graph.neighbors(precursor_node))
-                )
-
-                if num_mapped_proteins == 1:
-
-                    precursors.append(precursor_data)
-
-        local_protein_matrix = np.zeros(
-            shape=(len(precursors), self.num_samples), dtype="f8"
+        return proteins.reset_index().rename(
+            columns={"index": "Protein"}
         )
-
-        for local_index, precursor in enumerate(precursors):
-
-            precursor_index = precursor.index
-
-            for sample_index in range(self.num_samples):
-                local_protein_matrix[local_index, sample_index] = self.quant_matrix[
-                    precursor_index, sample_index
-                ]
-
-        return local_protein_matrix
-
-    def quantify(self) -> Tuple[np.ndarray, np.ndarray]:
-
-        for protein_index, protein_node in enumerate(self.protein_nodes):
-
-            grouped_protein = self.build_protein_group(protein_node)
-
-            protein_quantification = self.quantify_protein(grouped_protein)
-
-            for sample_index in range(self.num_samples):
-
-                self.protein_matrix[
-                    protein_index, sample_index
-                ] = protein_quantification[sample_index]
-
-        return np.asarray(self.protein_nodes, dtype=str), self.protein_matrix
 
     def quantify_protein(self, grouped_protein: np.ndarray) -> np.ndarray:
 
@@ -122,6 +56,6 @@ class TopNPrecursors(ProteinQuantification):
 
         sorted_precursors = np.take_along_axis(grouped_protein, sort_indices, axis=0)
 
-        protein_quantification = np.sum(sorted_precursors[: self.top_n], axis=0)
+        protein_quantification: np.ndarray = np.sum(sorted_precursors[: self.top_n], axis=0)
 
         return protein_quantification

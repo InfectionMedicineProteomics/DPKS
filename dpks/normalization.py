@@ -1,72 +1,59 @@
-from abc import ABC, abstractmethod
+import numpy as np
 
-import numpy as np  # type: ignore
+from sklearn.base import TransformerMixin # type: ignore
 
-from enum import Enum
+class TicNormalization:
 
+    def __init__(self) -> None:
 
-class NormalizationMethod(Enum):
-    MEAN = 1
-    MEDIAN = 2
+        pass
 
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
 
-class Normalization(ABC):
-    @abstractmethod
-    def fit(self, data: np.ndarray) -> None:
+        sample_sums = np.nansum(X, axis=0)
 
-        raise NotImplementedError
+        median_signal = np.nanmedian(sample_sums)
 
-    @abstractmethod
-    def transform(self, data: np.ndarray) -> np.ndarray:
+        normalized_signal : np.ndarray = (X / sample_sums[None, :]) * median_signal
 
-        raise NotImplementedError
+        normalized_signal = np.log2(normalized_signal)
 
-
-class MeanNormalization(Normalization):
-    def __init__(self, log_transform: bool = False, shape: tuple = None):
-
-        self.log_transform = log_transform
-        self.mean = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
-        self.stdev = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
-
-    def fit(self, data: np.ndarray) -> None:
-
-        if self.log_transform:
-
-            data = np.log(data)
-
-        self.mean = np.nanmean(data, axis=1).reshape((-1, 1))
-        self.stdev = np.nanstd(data, axis=1).reshape((-1, 1))
-
-    def transform(self, data: np.ndarray) -> np.ndarray:
-
-        if self.log_transform:
-
-            data = np.log(data)
-
-        return (data - self.mean) / self.stdev
+        return normalized_signal
 
 
-class MedianNormalization(Normalization):
-    def __init__(self, log_transform: bool = False, shape: tuple = None):
+class MedianNormalization:
 
-        self.log_transform = log_transform
-        self.median = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
-        self.stdev = np.ndarray(dtype="f8", shape=(shape[0],))  # type: ignore
+    def __init__(self) -> None:
 
-    def fit(self, data: np.ndarray) -> None:
+        pass
 
-        if self.log_transform:
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
 
-            data = np.log(data)
+        sample_medians = np.nanmedian(X, axis=0)
 
-        self.median = np.nanmedian(data, axis=1).reshape((-1, 1))
-        self.stdev = np.nanstd(data, axis=1).reshape((-1, 1))
+        mean_sample_median = np.mean(sample_medians)
 
-    def transform(self, data: np.ndarray) -> np.ndarray:
+        normalized_signal : np.ndarray = (X / sample_medians[None, :]) * mean_sample_median
 
-        if self.log_transform:
+        normalized_signal = np.log2(normalized_signal)
 
-            data = np.log(data)
+        return normalized_signal
 
-        return (data - self.median) / self.stdev
+
+class MeanNormalization:
+
+    def __init__(self) -> None:
+
+        pass
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+
+        sample_means = np.nanmean(X, axis=0)
+
+        mean_sample_means = np.mean(sample_means)
+
+        normalized_signal: np.ndarray = (X / sample_means[None, :]) * mean_sample_means
+
+        normalized_signal = np.log2(normalized_signal)
+
+        return normalized_signal
