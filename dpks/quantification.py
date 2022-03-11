@@ -18,7 +18,6 @@ class TopN:
         self.num_samples = 0
         self.protein_nodes = []
 
-
     def quantify(self, quantitative_data, y=None, **fit_params):
 
         protein_quantifications = dict()
@@ -33,15 +32,17 @@ class TopN:
 
             protein_quantifications[protein] = protein_quantification
 
-        protein_quantifications = pd.DataFrame(
-            protein_quantifications
-        )
+        protein_quantifications = pd.DataFrame(protein_quantifications)
 
         protein_quantifications = protein_quantifications.T.copy()
 
-        protein_quantifications.columns = list(quantitative_data.quantitative_data.var["sample"])
+        protein_quantifications.columns = list(
+            quantitative_data.quantitative_data.var["sample"]
+        )
 
-        return protein_quantifications.reset_index().rename(columns={"index": "Protein"})
+        return protein_quantifications.reset_index().rename(
+            columns={"index": "Protein"}
+        )
 
     def quantify_protein(self, grouped_protein: np.ndarray) -> np.ndarray:
 

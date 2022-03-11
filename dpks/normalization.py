@@ -4,7 +4,6 @@ from sklearn.base import TransformerMixin
 
 
 class TicNormalization(TransformerMixin):
-
     def __init__(self):
 
         pass
@@ -23,7 +22,6 @@ class TicNormalization(TransformerMixin):
 
 
 class MedianNormalization(TransformerMixin):
-
     def __init__(self):
 
         pass
@@ -42,7 +40,6 @@ class MedianNormalization(TransformerMixin):
 
 
 class MeanNormalization(TransformerMixin):
-
     def __init__(self):
 
         pass
