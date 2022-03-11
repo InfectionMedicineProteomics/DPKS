@@ -9,8 +9,9 @@ import pandas as pd  # type: ignore
 import anndata as ad
 
 from dpks.normalization import (
-    NormalizationMethod,
+    TicNormalization,
     MedianNormalization,
+    MeanNormalization
 )
 from dpks.quantification import ProteinQuantificationMethod, TopNPrecursors
 
@@ -144,33 +145,27 @@ class QuantMatrix:
         return self
 
 
-    def normalize(self, method: NormalizationMethod):
+    def normalize(self, method: str):
 
-        if method.value == NormalizationMethod.MEAN.value:
+        if method == "tic":
 
-            normalization = MeanNormalization(
-                log_transform=True, shape=self.matrix.shape
+            self.quantitative_data.X = TicNormalization().fit_transform(
+                self.quantitative_data.X
             )
 
-        if method.value == NormalizationMethod.MEDIAN.value:
+        elif method == "median":
 
-            normalization = MedianNormalization(  # type: ignore
-                log_transform=True, shape=self.matrix.shape
+            self.quantitative_data.X = MedianNormalization().fit_transform(
+                self.quantitative_data.X
             )
 
-        normalization.fit(self.matrix)
+        elif method == "mean":
 
-        normalized_data = normalization.transform(self.matrix)
+            self.quantitative_data.X = MeanNormalization().fit_transform(
+                self.quantitative_data.X
+            )
 
-        return self._copy(
-            num_samples=self.num_samples,
-            num_quant_records=self.num_quant_records,
-            quant_type=self.quant_type,
-            design_matrix=self.design_matrix,
-            matrix=normalized_data,
-            quant_graph=self.quant_graph,
-            quant_record_index=self.quant_record_index,
-        )
+        return self
 
     def quantify(
         self,
