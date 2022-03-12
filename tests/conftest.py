@@ -3,7 +3,7 @@
 import os
 import pytest
 from pathlib import Path
-import dpks.quant_matrix as quant
+from dpks.quant_matrix import QuantMatrix
 
 base_dir = Path(os.getcwd())
 
@@ -27,9 +27,8 @@ def quant_matrix(paths):
     """instanciate a quant_matrix"""
     assert paths["baseline_matrix_path"].is_file()
     assert paths["design_matrix_path"].is_file()
-    quant_matrix = quant.create_quant_matrix(
+    quant_matrix = QuantMatrix(
         str(paths["baseline_matrix_path"]),
         str(paths["design_matrix_path"]),
-        quant_type="precursor",
     )
     yield quant_matrix
