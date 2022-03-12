@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Union, List
 
-import networkx as nx  # type: ignore
 import numpy as np
 import pandas as pd  # type: ignore
 import anndata as ad  # type: ignore
