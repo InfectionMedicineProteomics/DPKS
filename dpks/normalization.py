@@ -1,9 +1,9 @@
 import numpy as np
 
-from sklearn.base import TransformerMixin # type: ignore
+from sklearn.base import TransformerMixin  # type: ignore
+
 
 class TicNormalization:
-
     def __init__(self) -> None:
 
         pass
@@ -14,7 +14,7 @@ class TicNormalization:
 
         median_signal = np.nanmedian(sample_sums)
 
-        normalized_signal : np.ndarray = (X / sample_sums[None, :]) * median_signal
+        normalized_signal: np.ndarray = (X / sample_sums[None, :]) * median_signal
 
         normalized_signal = np.log2(normalized_signal)
 
@@ -22,7 +22,6 @@ class TicNormalization:
 
 
 class MedianNormalization:
-
     def __init__(self) -> None:
 
         pass
@@ -33,7 +32,9 @@ class MedianNormalization:
 
         mean_sample_median = np.mean(sample_medians)
 
-        normalized_signal : np.ndarray = (X / sample_medians[None, :]) * mean_sample_median
+        normalized_signal: np.ndarray = (
+            X / sample_medians[None, :]
+        ) * mean_sample_median
 
         normalized_signal = np.log2(normalized_signal)
 
@@ -41,7 +42,6 @@ class MedianNormalization:
 
 
 class MeanNormalization:
-
     def __init__(self) -> None:
 
         pass
