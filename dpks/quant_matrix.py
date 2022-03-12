@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Union, List
 
-import networkx as nx # type: ignore
+import networkx as nx  # type: ignore
 import numpy as np
 import pandas as pd  # type: ignore
-import anndata as ad # type: ignore
+import anndata as ad  # type: ignore
 
 from dpks.normalization import TicNormalization, MedianNormalization, MeanNormalization
 from dpks.quantification import TopN
@@ -114,7 +114,9 @@ class QuantMatrix:
 
         return self
 
-    def quantify(self, method: str, resolve_protein_groups: bool = False, **kwargs: int) -> QuantMatrix:
+    def quantify(
+        self, method: str, resolve_protein_groups: bool = False, **kwargs: int
+    ) -> QuantMatrix:
 
         if resolve_protein_groups:
 
@@ -158,8 +160,4 @@ class QuantMatrix:
 
     def write(self, file_path: str = "") -> None:
 
-        self.to_df().to_csv(
-            file_path,
-            sep="\t",
-            index=False
-        )
+        self.to_df().to_csv(file_path, sep="\t", index=False)
