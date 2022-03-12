@@ -1,13 +1,12 @@
-from typing import List, Any
+from typing import List, Any, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd  # type: ignore
 
-# from typing import TYPE_CHECKING, Any
-
-# if TYPE_CHECKING:
-#
-#    from .quant_matrix import QuantMatrix
+if TYPE_CHECKING:
+   from .quant_matrix import QuantMatrix
+else:
+    QuantMatrix = Any
 
 
 class TopN:
@@ -22,7 +21,7 @@ class TopN:
         self.num_samples = 0
         self.protein_nodes = []
 
-    def quantify(self, quantitative_data: Any) -> pd.DataFrame:
+    def quantify(self, quantitative_data: QuantMatrix) -> pd.DataFrame:
 
         protein_quantifications = dict()
 
