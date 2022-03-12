@@ -1,7 +1,5 @@
 import numpy as np
 
-from sklearn.base import TransformerMixin  # type: ignore
-
 
 class TicNormalization:
     def __init__(self) -> None:
