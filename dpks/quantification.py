@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd  # type: ignore
 
 if TYPE_CHECKING:
-   from .quant_matrix import QuantMatrix
+    from .quant_matrix import QuantMatrix
 else:
     QuantMatrix = Any
 
