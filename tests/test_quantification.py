@@ -2,8 +2,7 @@
 """Tests for the quantification module"""
 
 import pytest
-from dpks.quantification import ProteinQuantificationMethod
-import dpks.quant_matrix as quant
+from dpks.quant_matrix import QuantMatrix
 from pathlib import Path
 import pandas
 
@@ -13,14 +12,13 @@ def test_quantification_protein(paths, quant_matrix):
     """quantification protein"""
 
     protein_quantities = quant_matrix.quantify(
-        method=ProteinQuantificationMethod.TOP_N_PRECURSORS,
+        method="top_n",
         top_n=1,
-        protein_grouping="proteotypic",
     )
 
-    assert type(protein_quantities) == quant.QuantMatrix
+    assert type(protein_quantities) == QuantMatrix
 
-    protein_quantities_df = protein_quantities.as_dataframe(level="protein")
+    protein_quantities_df = protein_quantities.to_df()
 
     assert type(protein_quantities_df) == pandas.core.frame.DataFrame
 
