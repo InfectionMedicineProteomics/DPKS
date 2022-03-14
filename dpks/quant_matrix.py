@@ -66,7 +66,7 @@ class QuantMatrix:
         return list(self.quantitative_data.obs["Protein"].unique())
 
     @property
-    def precursors(self) -> List[Tuple[str, str]]:
+    def precursors(self) -> List[str]:
 
         self.row_annotations["PrecursorId"] = (
             self.row_annotations["PeptideSequence"]
@@ -87,7 +87,7 @@ class QuantMatrix:
         return self.quantitative_data.obs
 
     @row_annotations.setter
-    def row_annotations(self, value):
+    def row_annotations(self, value: pd.DataFrame) -> None:
 
         self.quantitative_data.obs = value
 
@@ -174,15 +174,15 @@ class QuantMatrix:
 
         return merged
 
-    def compare_groups(self,
-                       method,
-                       group_a,
-                       group_b,
-                       min_samples_per_group=2,
-                       level="protein",
-                       multiple_testing_correction_method="fdr_tsbh") -> None:
-
-
+    def compare_groups(
+        self,
+        method: str,
+        group_a: int,
+        group_b: int,
+        min_samples_per_group:int = 2,
+        level: str ="protein",
+        multiple_testing_correction_method: str ="fdr_tsbh",
+    ) -> QuantMatrix:
 
         differential_test = DifferentialTest(
             method,
@@ -190,7 +190,7 @@ class QuantMatrix:
             group_b,
             min_samples_per_group,
             level,
-            multiple_testing_correction_method
+            multiple_testing_correction_method,
         )
 
         compared_data = differential_test.test(self)
@@ -214,5 +214,3 @@ class QuantMatrix:
     def write(self, file_path: str = "") -> None:
 
         self.to_df().to_csv(file_path, sep="\t", index=False)
-
-
