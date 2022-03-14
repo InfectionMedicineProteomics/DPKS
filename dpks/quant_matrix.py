@@ -8,6 +8,7 @@ import anndata as ad  # type: ignore
 
 from dpks.normalization import TicNormalization, MedianNormalization, MeanNormalization
 from dpks.quantification import TopN
+from dpks.differential_testing import DifferentialTest
 
 
 class QuantMatrix:
@@ -84,6 +85,11 @@ class QuantMatrix:
     def row_annotations(self) -> pd.DataFrame:
 
         return self.quantitative_data.obs
+
+    @row_annotations.setter
+    def row_annotations(self, value):
+
+        self.quantitative_data.obs = value
 
     def get_samples(self, group: int) -> List[str]:
 
@@ -168,9 +174,30 @@ class QuantMatrix:
 
         return merged
 
-    def test_differential_expression(self) -> None:
+    def compare_groups(self,
+                       method,
+                       group_a,
+                       group_b,
+                       min_samples_per_group=2,
+                       level="protein",
+                       multiple_testing_correction_method="fdr_tsbh") -> None:
 
-        pass
+
+
+        differential_test = DifferentialTest(
+            method,
+            group_a,
+            group_b,
+            min_samples_per_group,
+            level,
+            multiple_testing_correction_method
+        )
+
+        compared_data = differential_test.test(self)
+
+        self.row_annotations = compared_data.row_annotations.copy()
+
+        return self
 
     def impute(self) -> None:
 
@@ -187,3 +214,5 @@ class QuantMatrix:
     def write(self, file_path: str = "") -> None:
 
         self.to_df().to_csv(file_path, sep="\t", index=False)
+
+
