@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union, List
+from typing import Union, List, Tuple
 
 import numpy as np
 import pandas as pd  # type: ignore
@@ -63,6 +63,33 @@ class QuantMatrix:
     def proteins(self) -> List[str]:
 
         return list(self.quantitative_data.obs["Protein"].unique())
+
+    @property
+    def precursors(self) -> List[Tuple[str, str]]:
+
+        self.row_annotations["PrecursorId"] = (
+            self.row_annotations["PeptideSequence"]
+            + "_"
+            + self.row_annotations["Charge"].astype(str)
+        )
+
+        return list(self.row_annotations["PrecursorId"].unique())
+
+    @property
+    def sample_annotations(self) -> pd.DataFrame:
+
+        return self.quantitative_data.var
+
+    @property
+    def row_annotations(self) -> pd.DataFrame:
+
+        return self.quantitative_data.obs
+
+    def get_samples(self, group: int) -> List[str]:
+
+        return list(
+            self.sample_annotations[self.sample_annotations["group"] == group]["sample"]
+        )
 
     def filter(
         self,
