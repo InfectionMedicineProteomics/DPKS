@@ -2,6 +2,7 @@
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import pandas as pd
 from numpy.lib.stride_tricks import sliding_window_view
 
 from abc import ABC, abstractmethod
@@ -118,23 +119,110 @@ class RTSlidingWindowNormalization:
 
     base_method: NormalizationMethod
     window_length: int
-    stride: int
+    stride: float
 
     def __init__(self,
                  base_method: NormalizationMethod,
                  window_length: int = 25,
-                 stride: int = 5):
+                 stride: float = 1.0,
+                 minimum_data_points: int = 100):
 
         self.base_method = base_method
         self.window_length = window_length
         self.stride = stride
+        self.minimum_data_points = minimum_data_points
 
-    def fit_transform(self, quantitative_data: QuantMatrix) -> QuantMatrix:
+    def fit_transform(self, quantitative_data: QuantMatrix) -> np.ndarray:
 
-        for rt_window in sliding_window_view(quantitative_data.row_annotations.index, self.window_length)[::self.stride, :]:
+        quantitative_data.quantitative_data.obs["RT"] = quantitative_data.quantitative_data.obs["RT"] / 60.0
 
-            quantitative_data.quantitative_data[rt_window, :].X = self.base_method().fit_transform(
-                quantitative_data.quantitative_data[rt_window, :].X
-            )
+        rt_min = quantitative_data.quantitative_data.obs["RT"].min()
+        rt_max = quantitative_data.quantitative_data.obs["RT"].max()
+        step_size_minutes = self.stride
 
-        return quantitative_data
+        for window_start in np.arange(rt_min, rt_max, self.stride):
+
+            rt_slice = quantitative_data.quantitative_data[
+                (quantitative_data.quantitative_data.obs["RT"] >= window_start) &
+                (quantitative_data.quantitative_data.obs["RT"] < window_start + step_size_minutes)
+            ].obs.index
+
+            if rt_slice.any():
+
+                print(len(rt_slice))
+
+                if len(rt_slice) < self.minimum_data_points:
+
+                    remaining_data_points = self.minimum_data_points - len(rt_slice)
+
+                    pick_before = np.floor(remaining_data_points / 2).astype(int)
+
+                    pick_after = np.ceil(remaining_data_points / 2).astype(int)
+
+                    number_before = len(
+                        quantitative_data.quantitative_data[
+                            quantitative_data.quantitative_data.obs["RT"] < window_start
+                            ]
+                    )
+
+                    number_after = len(
+                        quantitative_data.quantitative_data[
+                            quantitative_data.quantitative_data.obs["RT"] >= window_start + step_size_minutes
+                            ]
+                    )
+
+                    if pick_before > number_before:
+
+                        diff = pick_before - number_before
+
+                        pick_after = pick_after + diff
+
+                        pick_before = pick_before - diff
+
+                    elif pick_after > number_after:
+
+                        diff = pick_after - number_after
+
+                        pick_before = pick_before + diff
+
+                        pick_after = pick_after - diff
+
+                    start_index = int(rt_slice[0])
+                    end_index = int(rt_slice[-1])
+
+                    quantitative_data.quantitative_data[(start_index - pick_before):(end_index + pick_after), :].X = self.base_method.fit_transform(
+                        quantitative_data.quantitative_data[(start_index - pick_before):(end_index + pick_after), :].X.copy()
+                    )
+
+                else:
+
+                    quantitative_data.quantitative_data[
+                        (quantitative_data.quantitative_data.obs["RT"] >= window_start) &
+                        (quantitative_data.quantitative_data.obs["RT"] < window_start + step_size_minutes)
+                    ].X = self.base_method.fit_transform(
+                        quantitative_data.quantitative_data[
+                            (quantitative_data.quantitative_data.obs["RT"] >= window_start) &
+                            (quantitative_data.quantitative_data.obs["RT"] < window_start + step_size_minutes)
+                        ].X.copy()
+                    )
+
+
+        # for rt_window in sliding_window_view(quantitative_data.row_annotations.index, self.window_length)[::self.stride, :]:
+        #
+        #     quantitative_data.quantitative_data[rt_window, :].X = self.base_method.fit_transform(
+        #         quantitative_data.quantitative_data[rt_window, :].X.copy()
+        #     )
+
+            # normalized_slice = pd.DataFrame(
+            #     self.base_method.fit_transform(
+            #         quantitative_data.quantitative_data[rt_window, :].X.copy()
+            #     )
+            # ).set_index(pd.Index(rt_window))
+            #
+            # normalized_slices.append(normalized_slice)
+
+        # joined_slices = pd.concat(normalized_slices)
+        #
+        # joined_slices = joined_slices.reset_index().groupby("index", sort=False).mean()
+
+        return quantitative_data.quantitative_data.X
