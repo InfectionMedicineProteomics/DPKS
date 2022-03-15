@@ -149,8 +149,6 @@ class RTSlidingWindowNormalization:
 
             if rt_slice.any():
 
-                print(len(rt_slice))
-
                 if len(rt_slice) < self.minimum_data_points:
 
                     remaining_data_points = self.minimum_data_points - len(rt_slice)
