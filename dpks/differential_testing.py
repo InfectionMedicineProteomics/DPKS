@@ -1,14 +1,14 @@
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from scipy import stats # type: ignore
+from scipy import stats  # type: ignore
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
 else:
     QuantMatrix = Any
 
-from statsmodels.stats.multitest import multipletests # type: ignore
+from statsmodels.stats.multitest import multipletests  # type: ignore
 
 
 class DifferentialTest:
