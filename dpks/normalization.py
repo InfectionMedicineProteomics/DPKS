@@ -11,6 +11,17 @@ class NormalizationMethod(ABC):
         pass
 
 
+class Log2Normalization(NormalizationMethod):
+
+    def __init__(self):
+
+        pass
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+
+        return np.log2(X)
+
+
 class TicNormalization(NormalizationMethod):
     def __init__(self) -> None:
 
@@ -23,8 +34,6 @@ class TicNormalization(NormalizationMethod):
         median_signal = np.nanmedian(sample_sums)
 
         normalized_signal: np.ndarray = (X / sample_sums[None, :]) * median_signal
-
-        normalized_signal = np.log2(normalized_signal)
 
         return normalized_signal
 
@@ -43,8 +52,6 @@ class MedianNormalization(NormalizationMethod):
         normalized_signal: np.ndarray = (
             X / sample_medians[None, :]
         ) * mean_sample_median
-
-        normalized_signal = np.log2(normalized_signal)
 
         return normalized_signal
 
@@ -93,6 +100,21 @@ class MeanNormalization(NormalizationMethod):
 
         normalized_signal: np.ndarray = (X / sample_means[None, :]) * mean_sample_means
 
-        normalized_signal = np.log2(normalized_signal)
-
         return normalized_signal
+
+
+class RTSlidingWindowNormalization:
+
+    base_method: NormalizationMethod
+    window_length: int
+    step: int
+
+    def __init__(self,
+                 base_method: NormalizationMethod,
+                 window_length: int = 25):
+
+        self.base_method = base_method
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+
+        pass

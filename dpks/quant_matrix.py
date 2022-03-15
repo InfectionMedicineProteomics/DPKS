@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd  # type: ignore
 import anndata as ad  # type: ignore
 
-from dpks.normalization import TicNormalization, MedianNormalization, MeanNormalization
+from dpks.normalization import TicNormalization, MedianNormalization, MeanNormalization, Log2Normalization
 from dpks.quantification import TopN
 from dpks.differential_testing import DifferentialTest
 
@@ -124,7 +124,7 @@ class QuantMatrix:
 
         return self
 
-    def normalize(self, method: str) -> QuantMatrix:
+    def normalize(self, method: str, log_transform: bool = True) -> QuantMatrix:
 
         if method == "tic":
 
@@ -141,6 +141,12 @@ class QuantMatrix:
         elif method == "mean":
 
             self.quantitative_data.X = MeanNormalization().fit_transform(
+                self.quantitative_data.X
+            )
+
+        if log_transform:
+
+            self.quantitative_data.X = Log2Normalization().fit_transform(
                 self.quantitative_data.X
             )
 
