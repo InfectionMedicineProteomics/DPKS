@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union, List
+from typing import Union, List, Tuple
 
 import numpy as np
 import pandas as pd  # type: ignore
@@ -8,6 +8,7 @@ import anndata as ad  # type: ignore
 
 from dpks.normalization import TicNormalization, MedianNormalization, MeanNormalization
 from dpks.quantification import TopN
+from dpks.differential_testing import DifferentialTest
 
 
 class QuantMatrix:
@@ -63,6 +64,38 @@ class QuantMatrix:
     def proteins(self) -> List[str]:
 
         return list(self.quantitative_data.obs["Protein"].unique())
+
+    @property
+    def precursors(self) -> List[str]:
+
+        self.row_annotations["PrecursorId"] = (
+            self.row_annotations["PeptideSequence"]
+            + "_"
+            + self.row_annotations["Charge"].astype(str)
+        )
+
+        return list(self.row_annotations["PrecursorId"].unique())
+
+    @property
+    def sample_annotations(self) -> pd.DataFrame:
+
+        return self.quantitative_data.var
+
+    @property
+    def row_annotations(self) -> pd.DataFrame:
+
+        return self.quantitative_data.obs
+
+    @row_annotations.setter
+    def row_annotations(self, value: pd.DataFrame) -> None:
+
+        self.quantitative_data.obs = value
+
+    def get_samples(self, group: int) -> List[str]:
+
+        return list(
+            self.sample_annotations[self.sample_annotations["group"] == group]["sample"]
+        )
 
     def filter(
         self,
@@ -141,9 +174,30 @@ class QuantMatrix:
 
         return merged
 
-    def test_differential_expression(self) -> None:
+    def compare_groups(
+        self,
+        method: str,
+        group_a: int,
+        group_b: int,
+        min_samples_per_group:int = 2,
+        level: str ="protein",
+        multiple_testing_correction_method: str ="fdr_tsbh",
+    ) -> QuantMatrix:
 
-        pass
+        differential_test = DifferentialTest(
+            method,
+            group_a,
+            group_b,
+            min_samples_per_group,
+            level,
+            multiple_testing_correction_method,
+        )
+
+        compared_data = differential_test.test(self)
+
+        self.row_annotations = compared_data.row_annotations.copy()
+
+        return self
 
     def impute(self) -> None:
 
