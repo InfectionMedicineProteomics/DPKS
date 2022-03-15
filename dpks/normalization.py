@@ -1,8 +1,17 @@
 """**normalizes quantitative matrices**, supports multiple methods as specified below"""
 import numpy as np
 
+from abc import ABC, abstractmethod
 
-class TicNormalization:
+class NormalizationMethod(ABC):
+
+    @abstractmethod
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+
+        pass
+
+
+class TicNormalization(NormalizationMethod):
     def __init__(self) -> None:
 
         pass
@@ -20,7 +29,7 @@ class TicNormalization:
         return normalized_signal
 
 
-class MedianNormalization:
+class MedianNormalization(NormalizationMethod):
     def __init__(self) -> None:
 
         pass
@@ -40,7 +49,7 @@ class MedianNormalization:
         return normalized_signal
 
 
-class MeanNormalization:
+class MeanNormalization(NormalizationMethod):
     """normalize the quantitative data using **mean**
 
     The input data is found in the DPKS git reposotory:
