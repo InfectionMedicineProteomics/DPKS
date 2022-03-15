@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union, List, Tuple
+from typing import Union, List
 
 import numpy as np
 import pandas as pd  # type: ignore
@@ -179,9 +179,9 @@ class QuantMatrix:
         method: str,
         group_a: int,
         group_b: int,
-        min_samples_per_group:int = 2,
-        level: str ="protein",
-        multiple_testing_correction_method: str ="fdr_tsbh",
+        min_samples_per_group: int = 2,
+        level: str = "protein",
+        multiple_testing_correction_method: str = "fdr_tsbh",
     ) -> QuantMatrix:
 
         differential_test = DifferentialTest(

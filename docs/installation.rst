@@ -60,3 +60,10 @@ To test the quantification module::
     pytest -m quantification
 
 All test tags are listed in pytest.ini
+
+DocTests
+--------
+
+To execute the doctests for the normalize module::
+
+    python3 -m doctest -v dpks/normalization.py

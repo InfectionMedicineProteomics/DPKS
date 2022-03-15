@@ -19,6 +19,7 @@ requirements = [
     "seaborn",
     "anndata",
     "sklearn",
+    "statsmodels",
 ]
 
 setup_requirements = [
