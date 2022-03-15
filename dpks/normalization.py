@@ -48,8 +48,8 @@ class MeanNormalization:
     - The minimal design matrix: `minimal_design_matrix.tsv`_. -  contains the experimental design
     - The minimal matrix: `minimal_matrix.tsv`_.  - contains the quantitative data
 
-    .. _minimal_design_matrix.tsv: https://github.com/InfectionMedicineProteomics/DPKS/blob/main/tests/input_files/design_matrix.tsv
-    .. _minimal_matrix.tsv: https://github.com/InfectionMedicineProteomics/DPKS/blob/main/tests/input_files/pyprophet_baseline_matrix.tsv
+    .. _minimal_design_matrix.tsv: https://github.com/InfectionMedicineProteomics/DPKS/blob/doctest001/tests/input_files/minimal_design_matrix.tsv
+    .. _minimal_matrix.tsv: https://github.com/InfectionMedicineProteomics/DPKS/blob/doctest001/tests/input_files/minimal_matrix.tsv
 
     The QuantMatrix instance is created by providing a quantitative matrix and a design matrix:
 
