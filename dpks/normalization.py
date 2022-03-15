@@ -1,11 +1,22 @@
 """**normalizes quantitative matrices**, supports multiple methods as specified below"""
+from typing import TYPE_CHECKING, Any
+
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 
 from abc import ABC, abstractmethod
 
-class NormalizationMethod(ABC):
+if TYPE_CHECKING:
+    from .quant_matrix import QuantMatrix
+else:
+    QuantMatrix = Any
 
-    @abstractmethod
+class NormalizationMethod:
+
+    def __init__(self):
+
+        pass
+
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
 
         pass
@@ -107,14 +118,23 @@ class RTSlidingWindowNormalization:
 
     base_method: NormalizationMethod
     window_length: int
-    step: int
+    stride: int
 
     def __init__(self,
                  base_method: NormalizationMethod,
-                 window_length: int = 25):
+                 window_length: int = 25,
+                 stride: int = 5):
 
         self.base_method = base_method
+        self.window_length = window_length
+        self.stride = stride
 
-    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+    def fit_transform(self, quantitative_data: QuantMatrix) -> QuantMatrix:
 
-        pass
+        for rt_window in sliding_window_view(quantitative_data.row_annotations.index, self.window_length)[::self.stride, :]:
+
+            quantitative_data.quantitative_data[rt_window, :].X = self.base_method().fit_transform(
+                quantitative_data.quantitative_data[rt_window, :].X
+            )
+
+        return quantitative_data
