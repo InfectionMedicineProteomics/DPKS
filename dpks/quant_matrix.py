@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union, List
+from typing import Union, List, cast
 
 import numpy as np
 import pandas as pd  # type: ignore
@@ -150,7 +150,7 @@ class QuantMatrix:
         method: str,
         log_transform: bool = True,
         use_rt_sliding_window_filter: bool = False,
-        **kwargs: int
+        **kwargs: Union[int, bool, str]
     ) -> QuantMatrix:
 
         base_method: NormalizationMethod = NormalizationMethod()
@@ -171,10 +171,10 @@ class QuantMatrix:
 
             rt_window_normalization = RTSlidingWindowNormalization(
                 base_method=base_method,
-                minimum_data_points=kwargs["minimum_data_points"],
-                stride=kwargs["stride"],
-                use_overlapping_windows=kwargs.get("use_overlapping_windows", False),
-                rt_unit=kwargs.get("rt_unit", "minute"),
+                minimum_data_points=cast(int, kwargs["minimum_data_points"]),
+                stride=cast(int, kwargs["stride"]),
+                use_overlapping_windows=cast(bool, kwargs.get("use_overlapping_windows", False)),
+                rt_unit=cast(str, kwargs.get("rt_unit", "minute")),
             )
 
             self.quantitative_data.X = rt_window_normalization.fit_transform(self)

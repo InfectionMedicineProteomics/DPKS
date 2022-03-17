@@ -2,10 +2,7 @@
 from typing import TYPE_CHECKING, Any, List
 
 import numpy as np
-import pandas as pd
-from numpy.lib.stride_tricks import sliding_window_view
-
-from abc import ABC, abstractmethod
+import pandas as pd  # type: ignore
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
@@ -14,7 +11,8 @@ else:
 
 
 class NormalizationMethod:
-    def __init__(self):
+
+    def __init__(self) -> None:
 
         pass
 
@@ -24,16 +22,18 @@ class NormalizationMethod:
 
 
 class Log2Normalization(NormalizationMethod):
-    def __init__(self):
+
+    def __init__(self) -> None:
 
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
 
-        return np.log2(X)
+        return np.array(np.log2(X), dtype=np.float64)
 
 
 class TicNormalization(NormalizationMethod):
+
     def __init__(self) -> None:
 
         pass
@@ -127,7 +127,7 @@ class RTSlidingWindowNormalization:
         base_method: NormalizationMethod,
         stride: float = 1.0,
         minimum_data_points: int = 250,
-        use_overlapping_windows: bool = True,
+        use_overlapping_windows: bool = False,
         rt_unit: str = "minute",
     ):
 
@@ -268,4 +268,6 @@ class RTSlidingWindowNormalization:
 
         joined_slices = joined_slices.reset_index().groupby("index", sort=False).mean()
 
-        return joined_slices.to_numpy()
+        return_array: np.ndarray = joined_slices.to_numpy(dtype=np.float64)
+
+        return return_array
