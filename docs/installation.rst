@@ -67,3 +67,20 @@ DocTests
 To execute the doctests for the normalize module::
 
     python3 -m doctest -v dpks/normalization.py
+
+New Release
+-----------
+
+Check the current release::
+
+    git tag
+
+Describe the new release in HISTORY.rst
+
+Bump the version::
+
+    bump2version <relase type, e.g. patch> setup.py
+
+Push the tag to the repository::
+
+    git push origin <version tag>
