@@ -1,12 +1,19 @@
 from __future__ import annotations
 
-from typing import Union, List
+from typing import Union, List, cast
 
 import numpy as np
 import pandas as pd  # type: ignore
 import anndata as ad  # type: ignore
 
-from dpks.normalization import TicNormalization, MedianNormalization, MeanNormalization
+from dpks.normalization import (
+    TicNormalization,
+    MedianNormalization,
+    MeanNormalization,
+    Log2Normalization,
+    NormalizationMethod,
+    RTSlidingWindowNormalization,
+)
 from dpks.quantification import TopN
 from dpks.differential_testing import DifferentialTest
 
@@ -38,6 +45,20 @@ class QuantMatrix:
 
         self.num_samples = len(design_matrix_file)
         self.num_rows = len(quantification_file)
+
+        rt_column = ""
+
+        if "RT" in quantification_file:
+
+            rt_column = "RT"
+
+        elif "RetentionTime" in quantification_file:
+
+            rt_column = "RetentionTime"
+
+        if rt_column:
+
+            quantification_file.sort_values(rt_column, inplace=True)
 
         quantitative_data = (
             quantification_file[list(design_matrix_file["sample"])]
@@ -124,23 +145,51 @@ class QuantMatrix:
 
         return self
 
-    def normalize(self, method: str) -> QuantMatrix:
+    def normalize(
+        self,
+        method: str,
+        log_transform: bool = True,
+        use_rt_sliding_window_filter: bool = False,
+        **kwargs: Union[int, bool, str]
+    ) -> QuantMatrix:
+
+        base_method: NormalizationMethod = NormalizationMethod()
 
         if method == "tic":
 
-            self.quantitative_data.X = TicNormalization().fit_transform(
-                self.quantitative_data.X
-            )
+            base_method = TicNormalization()
 
         elif method == "median":
 
-            self.quantitative_data.X = MedianNormalization().fit_transform(
-                self.quantitative_data.X
-            )
+            base_method = MedianNormalization()
 
         elif method == "mean":
 
-            self.quantitative_data.X = MeanNormalization().fit_transform(
+            base_method = MeanNormalization()
+
+        if use_rt_sliding_window_filter:
+
+            rt_window_normalization = RTSlidingWindowNormalization(
+                base_method=base_method,
+                minimum_data_points=cast(int, kwargs["minimum_data_points"]),
+                stride=cast(int, kwargs["stride"]),
+                use_overlapping_windows=cast(
+                    bool, kwargs.get("use_overlapping_windows", False)
+                ),
+                rt_unit=cast(str, kwargs.get("rt_unit", "minute")),
+            )
+
+            self.quantitative_data.X = rt_window_normalization.fit_transform(self)
+
+        else:
+
+            self.quantitative_data.X = base_method.fit_transform(
+                self.quantitative_data.X
+            )
+
+        if log_transform:
+
+            self.quantitative_data.X = Log2Normalization().fit_transform(
                 self.quantitative_data.X
             )
 
