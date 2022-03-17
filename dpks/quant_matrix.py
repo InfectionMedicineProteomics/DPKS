@@ -173,7 +173,9 @@ class QuantMatrix:
                 base_method=base_method,
                 minimum_data_points=cast(int, kwargs["minimum_data_points"]),
                 stride=cast(int, kwargs["stride"]),
-                use_overlapping_windows=cast(bool, kwargs.get("use_overlapping_windows", False)),
+                use_overlapping_windows=cast(
+                    bool, kwargs.get("use_overlapping_windows", False)
+                ),
                 rt_unit=cast(str, kwargs.get("rt_unit", "minute")),
             )
 

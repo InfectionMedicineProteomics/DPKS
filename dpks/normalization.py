@@ -11,7 +11,6 @@ else:
 
 
 class NormalizationMethod:
-
     def __init__(self) -> None:
 
         pass
@@ -22,7 +21,6 @@ class NormalizationMethod:
 
 
 class Log2Normalization(NormalizationMethod):
-
     def __init__(self) -> None:
 
         pass
@@ -33,7 +31,6 @@ class Log2Normalization(NormalizationMethod):
 
 
 class TicNormalization(NormalizationMethod):
-
     def __init__(self) -> None:
 
         pass
