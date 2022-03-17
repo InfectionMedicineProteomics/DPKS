@@ -75,7 +75,9 @@ Check the current release::
 
     git tag
 
-Describe the new release in HISTORY.rst
+Describe the new release in HISTORY.rst::
+
+    git log <current release tag>..HEAD --oneline
 
 Bump the version::
 
