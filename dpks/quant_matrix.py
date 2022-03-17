@@ -150,7 +150,7 @@ class QuantMatrix:
         method: str,
         log_transform: bool = True,
         use_rt_sliding_window_filter: bool = False,
-        **kwargs: Union[int, bool, str]
+        **kwargs: Union[int, bool, str],
     ) -> QuantMatrix:
 
         base_method: NormalizationMethod = NormalizationMethod()
