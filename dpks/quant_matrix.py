@@ -6,8 +6,14 @@ import numpy as np
 import pandas as pd  # type: ignore
 import anndata as ad  # type: ignore
 
-from dpks.normalization import TicNormalization, MedianNormalization, MeanNormalization, Log2Normalization, \
-    NormalizationMethod, RTSlidingWindowNormalization
+from dpks.normalization import (
+    TicNormalization,
+    MedianNormalization,
+    MeanNormalization,
+    Log2Normalization,
+    NormalizationMethod,
+    RTSlidingWindowNormalization,
+)
 from dpks.quantification import TopN
 from dpks.differential_testing import DifferentialTest
 
@@ -139,11 +145,13 @@ class QuantMatrix:
 
         return self
 
-    def normalize(self,
-                  method: str,
-                  log_transform: bool = True,
-                  use_rt_sliding_window_filter: bool = False,
-                  **kwargs: int) -> QuantMatrix:
+    def normalize(
+        self,
+        method: str,
+        log_transform: bool = True,
+        use_rt_sliding_window_filter: bool = False,
+        **kwargs: int
+    ) -> QuantMatrix:
 
         base_method: NormalizationMethod = NormalizationMethod()
 
@@ -163,13 +171,13 @@ class QuantMatrix:
 
             rt_window_normalization = RTSlidingWindowNormalization(
                 base_method=base_method,
-                window_length=kwargs["window_length"],
-                stride=kwargs["stride"]
+                minimum_data_points=kwargs["minimum_data_points"],
+                stride=kwargs["stride"],
+                use_overlapping_windows=kwargs.get("use_overlapping_windows", False),
+                rt_unit=kwargs.get("rt_unit", "minute"),
             )
 
-            self.quantitative_data.X = rt_window_normalization.fit_transform(
-                self
-            )
+            self.quantitative_data.X = rt_window_normalization.fit_transform(self)
 
         else:
 

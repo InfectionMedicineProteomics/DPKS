@@ -1,5 +1,5 @@
 """**normalizes quantitative matrices**, supports multiple methods as specified below"""
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, List
 
 import numpy as np
 import pandas as pd
@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 else:
     QuantMatrix = Any
 
-class NormalizationMethod:
 
+class NormalizationMethod:
     def __init__(self):
 
         pass
@@ -24,7 +24,6 @@ class NormalizationMethod:
 
 
 class Log2Normalization(NormalizationMethod):
-
     def __init__(self):
 
         pass
@@ -118,109 +117,155 @@ class MeanNormalization(NormalizationMethod):
 class RTSlidingWindowNormalization:
 
     base_method: NormalizationMethod
-    window_length: int
+    minimum_data_points: int
     stride: float
+    use_overlapping_windows: bool
+    rt_unit: str
 
-    def __init__(self,
-                 base_method: NormalizationMethod,
-                 window_length: int = 25,
-                 stride: float = 1.0,
-                 minimum_data_points: int = 100):
+    def __init__(
+        self,
+        base_method: NormalizationMethod,
+        stride: float = 1.0,
+        minimum_data_points: int = 250,
+        use_overlapping_windows: bool = True,
+        rt_unit: str = "minute",
+    ):
 
         self.base_method = base_method
-        self.window_length = window_length
         self.stride = stride
         self.minimum_data_points = minimum_data_points
+        self.use_overlapping_windows = use_overlapping_windows
+        self.rt_unit = rt_unit
+
+    def build_rt_windows(self, rts: np.ndarray) -> List[np.ndarray]:
+
+        if self.rt_unit == "seconds":
+
+            rts = rts / 60.0
+
+        rt_min = np.min(rts)
+        rt_max = np.max(rts)
+
+        rt_bins = np.arange(rt_min, rt_max, self.stride)
+
+        rt_indices = np.digitize(rts, rt_bins) - 1
+
+        bin_indices = []
+
+        for rt_idx in range(len(rt_bins)):
+
+            indices = np.argwhere(rt_indices == rt_idx)
+
+            if indices.reshape(-1).shape[0] < self.minimum_data_points:
+
+                expanded_indices = []
+
+                expanded_indices.append(indices)
+
+                for expand_index in range(1, len(rt_bins)):
+
+                    lower_bound_idx = rt_idx - expand_index
+
+                    upper_bound_idx = rt_idx + expand_index
+
+                    if lower_bound_idx < 0:
+
+                        expanded_indices.append(
+                            np.argwhere(rt_indices == upper_bound_idx)
+                        )
+
+                    elif expand_index >= len(rt_bins):
+
+                        expanded_indices.append(
+                            np.argwhere(rt_indices == lower_bound_idx)
+                        )
+
+                    else:
+
+                        expanded_indices.append(
+                            np.argwhere(rt_indices == lower_bound_idx)
+                        )
+
+                        expanded_indices.append(
+                            np.argwhere(rt_indices == upper_bound_idx)
+                        )
+
+                    if (
+                        np.concatenate(expanded_indices).reshape(-1).shape[0]
+                        >= self.minimum_data_points
+                    ):
+                        break
+
+                bin_indices.append(np.concatenate(expanded_indices).reshape(-1))
+
+            else:
+
+                bin_indices.append(indices.reshape(-1))
+
+        return bin_indices
+
+    def overlap_rt_windows(self, rt_windows: List[np.ndarray]) -> List[np.ndarray]:
+
+        new_rt_windows = []
+
+        for rt_idx, rt_window in enumerate(rt_windows):
+
+            if rt_idx == 0:
+
+                new_rt_window = np.concatenate(
+                    [
+                        rt_window,
+                        rt_windows[rt_idx + 1],
+                    ]
+                )
+
+            elif rt_idx == len(rt_windows) - 1:
+
+                new_rt_window = np.concatenate(
+                    [
+                        rt_window,
+                        rt_windows[rt_idx - 1],
+                    ]
+                )
+
+            else:
+
+                new_rt_window = np.concatenate(
+                    [
+                        rt_windows[rt_idx - 1],
+                        rt_window,
+                        rt_windows[rt_idx + 1],
+                    ]
+                )
+
+            new_rt_windows.append(new_rt_window)
+
+        return new_rt_windows
 
     def fit_transform(self, quantitative_data: QuantMatrix) -> np.ndarray:
 
-        quantitative_data.quantitative_data.obs["RT"] = quantitative_data.quantitative_data.obs["RT"] / 60.0
+        normalized_slices = []
 
-        rt_min = quantitative_data.quantitative_data.obs["RT"].min()
-        rt_max = quantitative_data.quantitative_data.obs["RT"].max()
-        step_size_minutes = self.stride
+        rt_windows = self.build_rt_windows(
+            rts=quantitative_data.quantitative_data.obs["RT"]
+        )
 
-        for window_start in np.arange(rt_min, rt_max, self.stride):
+        if self.use_overlapping_windows:
 
-            rt_slice = quantitative_data.quantitative_data[
-                (quantitative_data.quantitative_data.obs["RT"] >= window_start) &
-                (quantitative_data.quantitative_data.obs["RT"] < window_start + step_size_minutes)
-            ].obs.index
+            rt_windows = self.overlap_rt_windows(rt_windows=rt_windows)
 
-            if rt_slice.any():
+        for rt_window in rt_windows:
 
-                if len(rt_slice) < self.minimum_data_points:
+            normalized_slice = pd.DataFrame(
+                self.base_method.fit_transform(
+                    quantitative_data.quantitative_data[rt_window, :].X.copy()
+                )
+            ).set_index(pd.Index(rt_window))
 
-                    remaining_data_points = self.minimum_data_points - len(rt_slice)
+            normalized_slices.append(normalized_slice)
 
-                    pick_before = np.floor(remaining_data_points / 2).astype(int)
+        joined_slices = pd.concat(normalized_slices)
 
-                    pick_after = np.ceil(remaining_data_points / 2).astype(int)
+        joined_slices = joined_slices.reset_index().groupby("index", sort=False).mean()
 
-                    number_before = len(
-                        quantitative_data.quantitative_data[
-                            quantitative_data.quantitative_data.obs["RT"] < window_start
-                            ]
-                    )
-
-                    number_after = len(
-                        quantitative_data.quantitative_data[
-                            quantitative_data.quantitative_data.obs["RT"] >= window_start + step_size_minutes
-                            ]
-                    )
-
-                    if pick_before > number_before:
-
-                        diff = pick_before - number_before
-
-                        pick_after = pick_after + diff
-
-                        pick_before = pick_before - diff
-
-                    elif pick_after > number_after:
-
-                        diff = pick_after - number_after
-
-                        pick_before = pick_before + diff
-
-                        pick_after = pick_after - diff
-
-                    start_index = int(rt_slice[0])
-                    end_index = int(rt_slice[-1])
-
-                    quantitative_data.quantitative_data[(start_index - pick_before):(end_index + pick_after), :].X = self.base_method.fit_transform(
-                        quantitative_data.quantitative_data[(start_index - pick_before):(end_index + pick_after), :].X.copy()
-                    )
-
-                else:
-
-                    quantitative_data.quantitative_data[
-                        (quantitative_data.quantitative_data.obs["RT"] >= window_start) &
-                        (quantitative_data.quantitative_data.obs["RT"] < window_start + step_size_minutes)
-                    ].X = self.base_method.fit_transform(
-                        quantitative_data.quantitative_data[
-                            (quantitative_data.quantitative_data.obs["RT"] >= window_start) &
-                            (quantitative_data.quantitative_data.obs["RT"] < window_start + step_size_minutes)
-                        ].X.copy()
-                    )
-
-
-        # for rt_window in sliding_window_view(quantitative_data.row_annotations.index, self.window_length)[::self.stride, :]:
-        #
-        #     quantitative_data.quantitative_data[rt_window, :].X = self.base_method.fit_transform(
-        #         quantitative_data.quantitative_data[rt_window, :].X.copy()
-        #     )
-
-            # normalized_slice = pd.DataFrame(
-            #     self.base_method.fit_transform(
-            #         quantitative_data.quantitative_data[rt_window, :].X.copy()
-            #     )
-            # ).set_index(pd.Index(rt_window))
-            #
-            # normalized_slices.append(normalized_slice)
-
-        # joined_slices = pd.concat(normalized_slices)
-        #
-        # joined_slices = joined_slices.reset_index().groupby("index", sort=False).mean()
-
-        return quantitative_data.quantitative_data.X
+        return joined_slices.to_numpy()
