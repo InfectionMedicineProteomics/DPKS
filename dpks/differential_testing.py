@@ -135,7 +135,7 @@ class DifferentialTest:
             f"Group{self.group_b}RepCounts"
         ] = group_b_rep_counts
 
-        quantitative_data.row_annotations.sort_values("PValues4-6", inplace=True)
+        quantitative_data.row_annotations.sort_values(f"PValues{self.group_a}-{self.group_b}", inplace=True)
 
         correction_results = multipletests(
             quantitative_data.row_annotations[
