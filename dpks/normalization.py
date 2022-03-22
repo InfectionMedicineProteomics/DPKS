@@ -79,22 +79,33 @@ class MeanNormalization(NormalizationMethod):
 
     >>> from dpks.quant_matrix import QuantMatrix
     >>> quant_matrix = QuantMatrix( quantification_file="tests/input_files/minimal_matrix.tsv", design_matrix_file="tests/input_files/minimal_design_matrix.tsv")
-    >>> quant_matrix.to_df()
-        PeptideSequence  Charge  Decoy Protein  RetentionTime  PeptideQValue  ProteinQValue  SAMPLE_1.osw  SAMPLE_2.osw  SAMPLE_3.osw
-    0            PEPTIK       4      0  P00352        5736.15       0.000008       0.000117       29566.2       59295.7       24536.4
-    1         EFMEEVIQR       2      0  P04275        3155.50       0.000009       0.000117       69900.3      195571.0      403947.0
-    2  SSSGTPDLPVLLTDLK       2      0  P00352        5386.69       0.000008       0.000116      115684.0      132524.0      217962.0
+    >>> quant_matrix.to_df().sort_values(by="PeptideSequence").set_index("PeptideSequence").head(1).T
+    PeptideSequence EFMEEVIQR
+    Charge                  2
+    Decoy                   0
+    Protein            P04275
+    RetentionTime      3155.5
+    PeptideQValue    0.000009
+    ProteinQValue    0.000117
+    SAMPLE_1.osw      69900.3
+    SAMPLE_2.osw     195571.0
+    SAMPLE_3.osw     403947.0
 
     Applying the normalize method and specifying the method:
 
     >>> norm_quant_matrix = quant_matrix.normalize(method="mean")
-    >>> norm_quant_matrix.to_df()[["PeptideSequence", "SAMPLE_1.osw", "SAMPLE_2.osw", "SAMPLE_3.osw"]]
-        PeptideSequence  SAMPLE_1.osw  SAMPLE_2.osw  SAMPLE_3.osw
-    0            PEPTIK     15.804039     15.959574     13.947831
-    1         EFMEEVIQR     17.045388     17.681267     17.989002
-    2  SSSGTPDLPVLLTDLK     17.772207     17.119828     17.098912
+    >>> norm_quant_matrix.to_df()[["PeptideSequence", "SAMPLE_1.osw", "SAMPLE_2.osw", "SAMPLE_3.osw"]].sort_values(by="PeptideSequence").set_index("PeptideSequence").head(1).T
+    PeptideSequence  EFMEEVIQR
+    SAMPLE_1.osw     17.045388
+    SAMPLE_2.osw     17.681267
+    SAMPLE_3.osw     17.989002
 
     """
+
+    #        PeptideSequence  SAMPLE_1.osw  SAMPLE_2.osw  SAMPLE_3.osw
+    #    0         EFMEEVIQR     17.045388     17.681267     17.989002
+    #    2            PEPTIK     15.804039     15.959574     13.947831
+    #    1  SSSGTPDLPVLLTDLK     17.772207     17.119828     17.098912
 
     def __init__(self) -> None:
 
