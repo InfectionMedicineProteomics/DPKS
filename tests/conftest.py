@@ -4,6 +4,7 @@ import os
 import pytest
 from pathlib import Path
 from dpks.quant_matrix import QuantMatrix
+from dpks.plot import Plot
 
 base_dir = Path(os.getcwd())
 
@@ -32,3 +33,9 @@ def quant_matrix(paths):
         str(paths["design_matrix_path"]),
     )
     yield quant_matrix
+
+
+@pytest.fixture(scope="session")
+def plot_object():
+    """create a plot object"""
+    yield Plot()
