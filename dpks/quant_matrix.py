@@ -217,8 +217,12 @@ class QuantMatrix:
 
     def to_df(self) -> pd.DataFrame:
 
+        quant_data = self.quantitative_data[
+            self.row_annotations.index, :
+        ].to_df()
+
         merged = pd.concat(
-            [self.quantitative_data.obs, self.quantitative_data.to_df()], axis=1
+            [self.row_annotations, quant_data], axis=1
         )
 
         return merged

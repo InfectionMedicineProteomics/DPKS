@@ -4,6 +4,7 @@ import os
 import pytest
 from pathlib import Path
 from dpks.quant_matrix import QuantMatrix
+from dpks.plot import Plot
 
 base_dir = Path(os.getcwd())
 
@@ -18,6 +19,10 @@ def paths(tmpdir_factory):
     paths["baseline_matrix_path"] = base_dir / Path(
         "tests/input_files/pyprophet_baseline_matrix.tsv"
     )
+    paths["de_design_matrix_path"] = base_dir / Path(
+        "tests/input_files/de_design_matrix.tsv"
+    )
+    paths["de_matrix_path"] = base_dir / Path("tests/input_files/de_matrix.tsv")
 
     yield paths
 
@@ -32,3 +37,9 @@ def quant_matrix(paths):
         str(paths["design_matrix_path"]),
     )
     yield quant_matrix
+
+
+@pytest.fixture(scope="session")
+def plot_object():
+    """create a plot object"""
+    yield Plot()

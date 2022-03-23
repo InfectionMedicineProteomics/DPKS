@@ -2,10 +2,10 @@
 Modules
 =======
 
-The ``dpks`` module
-*******************
+The ``quant_matrix`` module
+***************************
 
-.. automodule:: dpks.dpks
+.. automodule:: dpks.quant_matrix
    :members:
    :undoc-members:
    :show-inheritance:
@@ -18,6 +18,30 @@ The ``normalization`` module
    :undoc-members:
    :show-inheritance:
 
+The ``quantification`` module
+*****************************
+
+.. automodule:: dpks.quantification
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+The ``differential_testing`` module
+***********************************
+
+.. automodule:: dpks.differential_testing
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+The ``dpks`` module
+*******************
+
+.. automodule:: dpks.dpks
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 The ``plot`` module
 *******************
 
@@ -26,18 +50,10 @@ The ``plot`` module
    :undoc-members:
    :show-inheritance:
 
-The ``quant_matrix`` module
-***************************
+The ``cli`` module
+******************
 
-.. automodule:: dpks.quant_matrix
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-The ``quantification`` module
-*****************************
-
-.. automodule:: dpks.quantification
+.. automodule:: dpks.cli
    :members:
    :undoc-members:
    :show-inheritance:
