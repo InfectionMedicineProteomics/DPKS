@@ -1,3 +1,11 @@
+"""quant_matrix module
+
+instanciate a quant matrix:
+
+>>> from dpks.quant_matrix import QuantMatrix
+>>> quant_matrix = QuantMatrix( quantification_file="tests/input_files/minimal_matrix.tsv", design_matrix_file="tests/input_files/minimal_design_matrix.tsv")
+
+"""
 from __future__ import annotations
 
 from typing import Union, List, cast
@@ -19,6 +27,7 @@ from dpks.differential_testing import DifferentialTest
 
 
 class QuantMatrix:
+    """holds a quantitative matrix and a design matrix, exposes an API to manipulate the quantitative matrix"""
 
     quantification_file_path: Union[str, pd.DataFrame]
     design_matrix_file: Union[str, pd.DataFrame]
@@ -32,6 +41,7 @@ class QuantMatrix:
         design_matrix_file: Union[str, pd.DataFrame],
         build_quant_graph: bool = False,
     ) -> None:
+        """init"""
 
         if isinstance(design_matrix_file, str):
 
@@ -83,11 +93,23 @@ class QuantMatrix:
 
     @property
     def proteins(self) -> List[str]:
+        """returns unique list of Proteins
+
+        >>> sorted(quant_matrix.proteins)[40:42]
+        ['sp|G5E8V9|ARFP1_MOUSE', 'sp|O08528|HXK2_MOUSE']
+
+        """
 
         return list(self.quantitative_data.obs["Protein"].unique())
 
     @property
     def precursors(self) -> List[str]:
+        """returns unique list of PrecursorIds
+
+        >>> sorted(quant_matrix.precursors)[0:2]
+        ['AAAAGALAPGPLPDLAAR_2', 'AAAEGVANLHLDEATGEMVSK_3']
+
+        """
 
         self.row_annotations["PrecursorId"] = (
             self.row_annotations["PeptideSequence"]
@@ -99,11 +121,30 @@ class QuantMatrix:
 
     @property
     def sample_annotations(self) -> pd.DataFrame:
+        """returns list of the sample annotations
+
+        >>> sorted(quant_matrix.sample_annotations)
+        ['group', 'sample']
+
+        """
 
         return self.quantitative_data.var
 
     @property
     def row_annotations(self) -> pd.DataFrame:
+        """returns the row observations
+
+        >>> sorted(quant_matrix.row_annotations)
+        ['Charge',
+         'Decoy',
+         'PeptideQValue',
+         'PeptideSequence',
+         'PrecursorId',
+         'Protein',
+         'ProteinQValue',
+         'RT']
+
+        """
 
         return self.quantitative_data.obs
 
@@ -113,6 +154,20 @@ class QuantMatrix:
         self.quantitative_data.obs = value
 
     def get_samples(self, group: int) -> List[str]:
+        """return sample names for wanted group
+
+        >>> sorted(quant_matrix.get_samples(group=4))
+        ['AAS_P2009_169',
+         'AAS_P2009_178',
+         'AAS_P2009_187',
+         'AAS_P2009_196',
+         'AAS_P2009_205',
+         'AAS_P2009_214',
+         'AAS_P2009_232',
+         'AAS_P2009_241',
+         'AAS_P2009_250']
+
+        """
 
         return list(
             self.sample_annotations[self.sample_annotations["group"] == group]["sample"]
@@ -125,6 +180,19 @@ class QuantMatrix:
         remove_decoys: bool = True,
         remove_contaminants: bool = True,
     ) -> QuantMatrix:
+        """filter the QuantMatrix
+
+        - removes decoys by default
+        - removes contaminants by default
+        - filters on peptide_q_value <= 0.01 by default
+        - filters on protein_q_value <= 0.01 by default
+
+        >>> print(quant_matrix.to_df().shape)
+        (16679, 26)
+        >>> print(quant_matrix.filter(peptide_q_value=0.001).to_df().shape)
+        (15355, 26)
+
+        """
 
         filtered_data = self.quantitative_data[
             (self.quantitative_data.obs["PeptideQValue"] <= peptide_q_value)
@@ -152,6 +220,16 @@ class QuantMatrix:
         use_rt_sliding_window_filter: bool = False,
         **kwargs: Union[int, bool, str],
     ) -> QuantMatrix:
+        """normalize the QuantMatrix
+
+        - need to specify a method
+        - log-transform by default
+        - can use a sliding window filter, not turned on by default
+
+        >>> isinstance(quant_matrix.normalize(method="tic"), QuantMatrix)
+        True
+
+        """
 
         base_method: NormalizationMethod = NormalizationMethod()
 
@@ -198,6 +276,15 @@ class QuantMatrix:
     def quantify(
         self, method: str, resolve_protein_groups: bool = False, **kwargs: int
     ) -> QuantMatrix:
+        """calculate protein quantities
+
+        - have to specify a method
+        - does not resolve protein groups by default
+
+        >>> quant_matrix.quantify(method="top_n", top_n=1).to_df().shape
+        (3738, 19)
+
+        """
 
         if resolve_protein_groups:
 
@@ -216,6 +303,12 @@ class QuantMatrix:
         return protein_quantifications
 
     def to_df(self) -> pd.DataFrame:
+        """to_df converts the QuantMatrix object to a pandas dataframe
+
+        >>> isinstance(quant_matrix.to_df(), pd.DataFrame)
+        True
+
+        """
 
         quant_data = self.quantitative_data[self.row_annotations.index, :].to_df()
 
@@ -232,6 +325,12 @@ class QuantMatrix:
         level: str = "protein",
         multiple_testing_correction_method: str = "fdr_tsbh",
     ) -> QuantMatrix:
+        """compare groups by differential testing
+
+        >>> isinstance(quant_matrix.compare_groups(method="linregress", group_a=4, group_b=6), QuantMatrix)
+        True
+
+        """
 
         differential_test = DifferentialTest(
             method,
@@ -249,17 +348,40 @@ class QuantMatrix:
         return self
 
     def impute(self) -> None:
+        """impute missing values
+
+        not implemented
+
+        """
 
         pass
 
     def outlier_detection(self) -> None:
+        """detect outlies
+
+
+        not implemented
+
+        """
 
         pass
 
     def flag_bad_runs(self) -> None:
+        """flag bad runs
+
+        not implemented"""
 
         pass
 
     def write(self, file_path: str = "") -> None:
+        """write the QuantMatrix to a tab-separated file
+
+        >>> from pathlib import Path
+        >>> filename = Path("protein.tsv")
+        >>> quant_matrix.write(str(filename))
+        >>>> filename.is_file()
+        True
+
+        """
 
         self.to_df().to_csv(file_path, sep="\t", index=False)
