@@ -31,7 +31,7 @@ class QuantMatrix:
         quantification_file: Union[str, pd.DataFrame],
         design_matrix_file: Union[str, pd.DataFrame],
         build_quant_graph: bool = False,
-    ):
+    ) -> None:
 
         if isinstance(design_matrix_file, str):
 
@@ -217,13 +217,9 @@ class QuantMatrix:
 
     def to_df(self) -> pd.DataFrame:
 
-        quant_data = self.quantitative_data[
-            self.row_annotations.index, :
-        ].to_df()
+        quant_data = self.quantitative_data[self.row_annotations.index, :].to_df()
 
-        merged = pd.concat(
-            [self.row_annotations, quant_data], axis=1
-        )
+        merged = pd.concat([self.row_annotations, quant_data], axis=1)
 
         return merged
 
