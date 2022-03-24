@@ -255,7 +255,7 @@ class RTSlidingWindowNormalization:
         normalized_slices = []
 
         rt_windows = self.build_rt_windows(
-            rts=quantitative_data.quantitative_data.obs["RT"]
+            rts=quantitative_data.quantitative_data.obs["RetentionTime"]
         )
 
         if self.use_overlapping_windows:
