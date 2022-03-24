@@ -96,9 +96,9 @@ class MeanNormalization(NormalizationMethod):
     >>> norm_quant_matrix = quant_matrix.normalize(method="mean")
     >>> norm_quant_matrix.to_df()[["PeptideSequence", "SAMPLE_1.osw", "SAMPLE_2.osw", "SAMPLE_3.osw"]].sort_values(by="PeptideSequence").set_index("PeptideSequence").head(1).T
     PeptideSequence  EFMEEVIQR
-    SAMPLE_1.osw     17.045388
-    SAMPLE_2.osw     17.681267
-    SAMPLE_3.osw     17.989002
+    SAMPLE_1.osw      5.131173
+    SAMPLE_2.osw      5.322592
+    SAMPLE_3.osw      5.415229
 
     """
 
