@@ -22,6 +22,10 @@ from dpks.normalization import (
     NormalizationMethod,
     RTSlidingWindowNormalization,
 )
+from dpks.scaling import (
+    ScalingMethod,
+    ZscoreScaling,
+)
 from dpks.quantification import TopN
 from dpks.differential_testing import DifferentialTest
 
@@ -210,6 +214,21 @@ class QuantMatrix:
             ].copy()
 
         self.quantitative_data = filtered_data
+
+        return self
+
+    def scale(
+        self,
+        method: str,
+    ) -> QuantMatrix:
+
+        base_method: ScalingMethod = ScalingMethod()
+
+        if method == "zscore":
+
+            base_method = ZscoreScaling()
+
+        self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
 
         return self
 

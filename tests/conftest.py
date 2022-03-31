@@ -27,7 +27,7 @@ def paths(tmpdir_factory):
     yield paths
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def quant_matrix(paths):
     """instanciate a quant_matrix"""
     assert paths["baseline_matrix_path"].is_file()
