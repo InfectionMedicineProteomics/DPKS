@@ -18,6 +18,14 @@ The ``normalization`` module
    :undoc-members:
    :show-inheritance:
 
+The ``scaling`` module
+****************************
+
+.. automodule:: dpks.scaling
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 The ``quantification`` module
 *****************************
 
