@@ -23,10 +23,12 @@ Data processing package for the analysis of mass spectrometry proteomics data
 * Documentation: https://dpks.readthedocs.io.
 
 
-Features
---------
+Getting started
+---------------
 
-* TODO
+* Take a look at the  :doc:`installation` instructions.
+* Take a look at the :doc:`usage` page to get started.
+* Take a look at the  :doc:`modules` page for more details.
 
 Credits
 -------
