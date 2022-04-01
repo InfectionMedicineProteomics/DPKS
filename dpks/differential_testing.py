@@ -57,6 +57,7 @@ class DifferentialTest:
         p_values = []
         group_a_rep_counts = []
         group_b_rep_counts = []
+        indices = []
 
         quantitative_data.quantitative_data.X[
             quantitative_data.quantitative_data.X == 0.0
@@ -67,6 +68,10 @@ class DifferentialTest:
             quant_data = quantitative_data.quantitative_data[
                 quantitative_data.row_annotations[self.level] == identifier, :
             ].copy()
+
+            indices.append(
+                quant_data.obs.index.to_numpy()[0]
+            )
 
             group_a_data = quant_data[
                 :, quantitative_data.get_samples(group=self.group_a)
@@ -135,14 +140,14 @@ class DifferentialTest:
             f"Group{self.group_b}RepCounts"
         ] = group_b_rep_counts
 
-        quantitative_data.row_annotations.sort_values(
-            f"PValues{self.group_a}-{self.group_b}", inplace=True
+        sorted_annotations = quantitative_data.row_annotations.sort_values(
+            f"PValues{self.group_a}-{self.group_b}"
         )
 
         correction_results = multipletests(
-            quantitative_data.row_annotations[
+            sorted_annotations[
                 ~np.isnan(
-                    quantitative_data.row_annotations[
+                    sorted_annotations[
                         f"PValues{self.group_a}-{self.group_b}"
                     ]
                 )
@@ -152,12 +157,17 @@ class DifferentialTest:
         )
 
         corrected_results = np.empty(
-            (len(quantitative_data.row_annotations),), dtype=np.float64
+            (len(sorted_annotations),), dtype=np.float64
         )
         corrected_results[:] = np.nan
 
         corrected_results[: len(correction_results[1])] = correction_results[1]
 
-        quantitative_data.row_annotations["CorrectedPValue"] = corrected_results
+        sorted_annotations["CorrectedPValue"] = corrected_results
+
+        quantitative_data.quantitative_data.obs = sorted_annotations
+        quantitative_data.quantitative_data.X = quantitative_data.quantitative_data[
+            sorted_annotations.index.astype(int), :
+        ].X.copy()
 
         return quantitative_data

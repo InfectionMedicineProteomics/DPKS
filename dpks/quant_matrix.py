@@ -329,7 +329,7 @@ class QuantMatrix:
 
         """
 
-        quant_data = self.quantitative_data[self.row_annotations.index, :].to_df()
+        quant_data = self.quantitative_data.to_df()
 
         merged = pd.concat([self.row_annotations, quant_data], axis=1)
 
@@ -362,7 +362,7 @@ class QuantMatrix:
 
         compared_data = differential_test.test(self)
 
-        self.row_annotations = compared_data.row_annotations.copy()
+        self.quantitative_data = compared_data.quantitative_data
 
         return self
 
