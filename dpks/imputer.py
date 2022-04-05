@@ -23,13 +23,13 @@ class ImputerMethod:
         pass
 
 
-class ImputerRandom(ImputerMethod):
-    """z-score scaling
+class UniformImputer(ImputerMethod):
+    """uniform imputer
 
     >>> from dpks.quant_matrix import QuantMatrix
     >>> quant_matrix = QuantMatrix( quantification_file="tests/input_files/minimal_matrix_missing.tsv", design_matrix_file="tests/input_files/minimal_design_matrix.tsv")
-    >>> random_imputed_df = quant_matrix.impute(method="random", minvalue=1, maxvalue=2).to_df()[["PeptideSequence", "SAMPLE_1.osw", "SAMPLE_2.osw", "SAMPLE_3.osw"]]
-    >>> random_imputed_df
+    >>> uniform_imputed_df = quant_matrix.impute(method="uniform", minvalue=1, maxvalue=2).to_df()[["PeptideSequence", "SAMPLE_1.osw", "SAMPLE_2.osw", "SAMPLE_3.osw"]]
+    >>> uniform_imputed_df
         PeptideSequence  SAMPLE_1.osw  SAMPLE_2.osw  SAMPLE_3.osw
     0         EFMEEVIQR       69900.3           1.0      403947.0
     1  SSSGTPDLPVLLTDLK      115684.0      132524.0      217962.0
@@ -37,7 +37,7 @@ class ImputerRandom(ImputerMethod):
 
     """
 
-    def __init__(self, minvalue: int = 1, maxvalue: int = 100) -> None:
+    def __init__(self, minvalue: int, maxvalue: int) -> None:
         """init"""
         self.minvalue = minvalue
         self.maxvalue = maxvalue
