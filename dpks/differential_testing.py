@@ -167,7 +167,7 @@ class DifferentialTest:
 
         quantitative_data.quantitative_data.obs = sorted_annotations
         quantitative_data.quantitative_data.X = quantitative_data.quantitative_data[
-            sorted_annotations.index.astype(int), :
+            sorted_annotations.index, :
         ].X.copy()
 
         return quantitative_data
