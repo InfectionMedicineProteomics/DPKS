@@ -12,7 +12,9 @@ def test_imputer(quant_matrix):
 
     assert isinstance(quant_matrix, QuantMatrix)
 
-    imputed_peptide_quantities = quant_matrix.impute(method="random")
+    imputed_peptide_quantities = quant_matrix.impute(
+        method="uniform", minvalue=1, maxvalue=100
+    )
 
     assert isinstance(imputed_peptide_quantities, QuantMatrix)
 
