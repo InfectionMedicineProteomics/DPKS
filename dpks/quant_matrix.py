@@ -26,6 +26,10 @@ from dpks.scaling import (
     ScalingMethod,
     ZscoreScaling,
 )
+from dpks.imputer import (
+    ImputerMethod,
+    UniformImputer,
+)
 from dpks.quantification import TopN
 from dpks.differential_testing import DifferentialTest
 
@@ -329,7 +333,7 @@ class QuantMatrix:
 
         """
 
-        quant_data = self.quantitative_data.to_df()
+        quant_data = self.quantitative_data[self.row_annotations.index, :].to_df()
 
         merged = pd.concat([self.row_annotations, quant_data], axis=1)
 
@@ -362,18 +366,30 @@ class QuantMatrix:
 
         compared_data = differential_test.test(self)
 
-        self.quantitative_data = compared_data.quantitative_data
+        self.row_annotations = compared_data.row_annotations.copy()
 
         return self
 
-    def impute(self) -> None:
+    def impute(self, method: str, **kwargs: int) -> QuantMatrix:
+
         """impute missing values
 
         not implemented
 
         """
 
-        pass
+        base_method: ImputerMethod = ImputerMethod()
+
+        if method == "uniform":
+
+            base_method = UniformImputer(
+                minvalue=cast(int, kwargs["minvalue"]),
+                maxvalue=cast(int, kwargs["maxvalue"]),
+            )
+
+        self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
+
+        return self
 
     def outlier_detection(self) -> None:
         """detect outlies

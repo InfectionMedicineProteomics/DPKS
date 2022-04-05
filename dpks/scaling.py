@@ -11,7 +11,6 @@
 """
 
 from typing import TYPE_CHECKING, Any
-import logging
 import numpy as np
 
 if TYPE_CHECKING:
@@ -63,8 +62,6 @@ class ZscoreScaling(ScalingMethod):
         """carry out the z-score normalization"""
 
         means = np.mean(X, axis=1)
-        logging.critical(means)
         stddevs = np.std(X, axis=1)
-        logging.critical(stddevs)
 
         return np.array((X - means[:, None]) / stddevs[:, None])
