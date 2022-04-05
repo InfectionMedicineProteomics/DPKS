@@ -69,7 +69,9 @@ class DifferentialTest:
                 quantitative_data.row_annotations[self.level] == identifier, :
             ].copy()
 
-            indices.append(quant_data.obs.index.to_numpy()[0])
+            indices.append(
+                quant_data.obs.index.to_numpy()[0]
+            )
 
             group_a_data = quant_data[
                 :, quantitative_data.get_samples(group=self.group_a)
@@ -144,13 +146,19 @@ class DifferentialTest:
 
         correction_results = multipletests(
             sorted_annotations[
-                ~np.isnan(sorted_annotations[f"PValues{self.group_a}-{self.group_b}"])
+                ~np.isnan(
+                    sorted_annotations[
+                        f"PValues{self.group_a}-{self.group_b}"
+                    ]
+                )
             ][f"PValues{self.group_a}-{self.group_b}"],
             method=self.multiple_testing_correction_method,
             is_sorted=False,
         )
 
-        corrected_results = np.empty((len(sorted_annotations),), dtype=np.float64)
+        corrected_results = np.empty(
+            (len(sorted_annotations),), dtype=np.float64
+        )
         corrected_results[:] = np.nan
 
         corrected_results[: len(correction_results[1])] = correction_results[1]
