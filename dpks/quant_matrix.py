@@ -28,7 +28,7 @@ from dpks.scaling import (
 )
 from dpks.imputer import (
     ImputerMethod,
-    ImputerRandom,
+    UniformImputer,
 )
 from dpks.quantification import TopN
 from dpks.differential_testing import DifferentialTest
@@ -380,9 +380,12 @@ class QuantMatrix:
 
         base_method: ImputerMethod = ImputerMethod()
 
-        if method == "random":
+        if method == "uniform":
 
-            base_method = ImputerRandom(**kwargs)
+            base_method = UniformImputer(
+                minvalue=cast(int, kwargs["minvalue"]),
+                maxvalue=cast(int, kwargs["maxvalue"]),
+            )
 
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
 
