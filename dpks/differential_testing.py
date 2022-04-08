@@ -140,14 +140,15 @@ class DifferentialTest:
             f"Group{self.group_b}RepCounts"
         ] = group_b_rep_counts
 
-        sorted_annotations = quantitative_data.row_annotations.sort_values(
-            f"PValues{self.group_a}-{self.group_b}"
+        quantitative_data.quantitative_data.obs.sort_values(
+            f"PValues{self.group_a}-{self.group_b}",
+            inplace=True
         )
 
         correction_results = multipletests(
-            sorted_annotations[
+            quantitative_data.quantitative_data.obs[
                 ~np.isnan(
-                    sorted_annotations[
+                    quantitative_data.quantitative_data.obs[
                         f"PValues{self.group_a}-{self.group_b}"
                     ]
                 )
@@ -157,17 +158,16 @@ class DifferentialTest:
         )
 
         corrected_results = np.empty(
-            (len(sorted_annotations),), dtype=np.float64
+            (len(quantitative_data.quantitative_data.obs),), dtype=np.float64
         )
         corrected_results[:] = np.nan
 
         corrected_results[: len(correction_results[1])] = correction_results[1]
 
-        sorted_annotations["CorrectedPValue"] = corrected_results
+        quantitative_data.quantitative_data.obs["CorrectedPValue"] = corrected_results
 
-        quantitative_data.quantitative_data.obs = sorted_annotations
-        quantitative_data.quantitative_data.X = quantitative_data.quantitative_data[
-            sorted_annotations.index, :
-        ].X.copy()
+        quantitative_data.quantitative_data.obs.index = quantitative_data.quantitative_data.obs.index.map(int)
+        quantitative_data.quantitative_data.obs.sort_index(inplace=True)
+        quantitative_data.quantitative_data.obs.index = quantitative_data.quantitative_data.obs.index.map(str)
 
         return quantitative_data
