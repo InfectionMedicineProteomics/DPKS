@@ -76,7 +76,9 @@ class QuantMatrix:
 
         if rt_column:
 
-            quantification_file.sort_values(rt_column, inplace=True)
+            quantification_file = quantification_file.sort_values(rt_column)
+
+        quantification_file = quantification_file.reset_index(drop=True)
 
         quantitative_data = (
             quantification_file[list(design_matrix_file["sample"])]
@@ -217,7 +219,22 @@ class QuantMatrix:
                 ~filtered_data.obs["Protein"].str.contains("contam")
             ].copy()
 
-        self.quantitative_data = filtered_data
+        self.num_rows = len(filtered_data)
+
+        quantitative_data = (
+            filtered_data.to_df()[list(filtered_data.var["sample"])]
+                .copy()
+                .set_index(np.arange(self.num_rows, dtype=int).astype(str))
+        )
+
+        row_obs = filtered_data.obs.set_index(np.arange(self.num_rows, dtype=int).astype(str))
+
+        self.quantitative_data = ad.AnnData(
+            quantitative_data,
+            obs=row_obs,
+            var=filtered_data.var,
+            dtype=np.float64,
+        )
 
         return self
 
