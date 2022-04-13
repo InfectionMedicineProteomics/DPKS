@@ -30,7 +30,7 @@ from dpks.imputer import (
     ImputerMethod,
     UniformImputer,
 )
-from dpks.quantification import TopN
+from dpks.quantification import TopN, MaxLFQ
 from dpks.differential_testing import DifferentialTest
 
 
@@ -314,7 +314,7 @@ class QuantMatrix:
         return self
 
     def quantify(
-        self, method: str, resolve_protein_groups: bool = False, **kwargs: int
+        self, method: str, resolve_protein_groups: bool = False, **kwargs: Union[int, str]
     ) -> QuantMatrix:
         """calculate protein quantities
 
@@ -333,6 +333,20 @@ class QuantMatrix:
         if method == "top_n":
 
             quantifications = TopN(top_n=kwargs["top_n"]).quantify(self)
+
+            design_matrix = self.quantitative_data.var
+
+            protein_quantifications = QuantMatrix(
+                quantifications, design_matrix_file=design_matrix
+            )
+
+        elif method == "maxlfq":
+
+            quantifications = MaxLFQ(
+                minimum_ratios=kwargs["minimum_ratios"],
+                level=kwargs["level"],
+                threads=kwargs["threads"]
+            )
 
             design_matrix = self.quantitative_data.var
 
