@@ -4,9 +4,11 @@ from multiprocessing import Pool
 
 import warnings
 
+import numba
 import numpy as np
 import pandas as pd  # type: ignore
-from numba import njit
+from numba import njit, jit
+from numpy.linalg import LinAlgError
 from scipy.optimize import minimize
 
 if TYPE_CHECKING:
@@ -76,14 +78,12 @@ def get_ratios(quantitative_data, sample_combinations, min_ratios):
 
     ratios[:] = np.nan
 
-    num_combos = sample_combinations.shape[0]
+    for combination in sample_combinations:
 
-    for combination in range(num_combos):
+        sample_a = combination[0]
+        sample_b = combination[1]
 
-        sample_a = sample_combinations[combination][0]
-        sample_b = sample_combinations[combination][1]
-
-        ratio = quantitative_data[:, sample_a] / quantitative_data[:, sample_b]
+        ratio =  - quantitative_data[:, sample_a] + quantitative_data[:, sample_b]
 
         non_nan = np.sum(~np.isnan(ratio))
 
@@ -99,49 +99,82 @@ def get_ratios(quantitative_data, sample_combinations, min_ratios):
 
     return ratios
 
-
 @njit
-def ss_loss(normalizations, ratios):
+def solve_profile(X, ratios, sample_combinations):
 
-    estimates = np.repeat(normalizations, len(normalizations)).reshape((len(normalizations), len(normalizations))).transpose()
+    if np.all(np.isnan(X)):
 
-    loss = (np.log(ratios) - np.log(estimates.T) + np.log(estimates)) ** 2
+        results = np.zeros((X.shape[1]))
 
-    return np.nansum(loss)
+    else:
+
+        num_samples = X.shape[1]
+
+        A = np.zeros((num_samples + 1, num_samples + 1))
+        b = np.zeros((num_samples + 1,))
+
+        for sample_combination in sample_combinations:
+
+            i = sample_combination[0]
+            j = sample_combination[1]
+
+            A[i][j] = -1.0
+            A[j][i] = -1.0
+            A[i][i] += 1.0
+            A[j][j] += 1.0
+
+            ratio = ratios[j, i]
+
+            if not np.isnan(ratio):
+                b[i] -= ratio
+                b[j] += ratio
+
+        formatted_a = 2.0 * A
+        formatted_a[:num_samples, num_samples] = 1
+        formatted_a[num_samples, :num_samples] = 1
+
+        formatted_b = 2.0 * b
+
+        sample_mean = np.nanmean(X)
+
+        if np.isnan(sample_mean):
+
+            sample_mean = 0.0
+
+        formatted_b[num_samples] = sample_mean * num_samples
+
+        nan_idx = np.argwhere(np.isnan(b))
+
+        for nan_value in nan_idx:
+
+            formatted_b[nan_value] = 0.0
+
+        results = np.linalg.lstsq(formatted_a, formatted_b, -1.0)[0][:X.shape[1]]
+
+    results[results == 0.0] = np.nan
+
+    return results
 
 
-def minimize_ratios(ratios, bounds, x0, method):
+def quantify_groups(groupings, sample_combinations, group_ids, minimum_ratios):
 
-    options = {}
+    num_groups = len(group_ids)
 
-    if method == "Powell":
+    results = numba.typed.List()
 
-        options = {
-            'disp': 0,
-            'maxiter':int(1e6)
-        }
+    for group_idx in range(num_groups):
 
-    elif method == "L-BFGS-B":
+        grouping = groupings[group_idx]
 
-        options = {
-            'disp': 0,
-            'maxiter':int(1e6),
-            'maxfun':int(ratios.shape[0]*2e4),
-            'eps': 1e-06
-        }
+        ratios = get_ratios(groupings[group_idx], sample_combinations, minimum_ratios)
 
-    minimize_results = minimize(
-        ss_loss,
-        args = ratios,
-        x0 = x0.ravel(),
-        bounds = bounds,
-        method=method,
-        options=options
-    )
+        quantified_group = solve_profile(groupings[group_idx], ratios, sample_combinations)
 
-    minimize_results.x = minimize_results.x / np.max(minimize_results.x)
+        results.append(
+            (group_ids[group_idx], quantified_group)
+        )
 
-    return minimize_results
+    return results
 
 
 class MaxLFQ:
@@ -180,16 +213,7 @@ class MaxLFQ:
 
         sample_combinations = np.array(list(combinations(column_idx, 2)))
 
-        with warnings.catch_warnings():
-
-            warnings.filterwarnings("ignore", category=RuntimeWarning)
-
-            with Pool(self.threads) as p:
-
-                quantified_groups = p.starmap(
-                    self.quantify_protein,
-                    zip(groupings, repeat(sample_combinations), group_ids)
-                )
+        quantified_groups = quantify_groups(groupings, sample_combinations, group_ids, self.minimum_ratios)
 
         return self._format_result_df(quantified_groups, quantitative_data.sample_annotations["sample"].values)
 
@@ -203,59 +227,16 @@ class MaxLFQ:
 
                 result_id = result[0]
                 result_data = result[1]
-                result_success = result[2]
 
                 row = {
                     "Protein": result_id,
                 }
 
-                if result_success:
 
-                    for idx, sample in enumerate(samples):
-                        row[sample] = result_data[idx]
+                for idx, sample in enumerate(samples):
+                    row[sample] = result_data[idx]
 
-                else:
-
-                    for idx, sample in enumerate(samples):
-                        row[sample] = np.nan
 
                 rows.append(row)
 
         return pd.DataFrame(rows)
-
-    def quantify_protein(self, grouping: np.ndarray, sample_combinations: np.ndarray, group_id: str) -> Tuple[str, np.ndarray, bool]:
-
-        ratios = get_ratios(grouping, sample_combinations, 1)
-
-        num_samples = ratios.shape[1]
-
-        x0 = np.ones(num_samples)
-
-        bounds = [(min(np.nanmin(ratios), 1 / np.nanmax(ratios)), 1) for _ in x0]
-
-        minimize_results = minimize_ratios(ratios, bounds, x0, "L-BFGS-B")
-
-        if not minimize_results.success:
-
-            minimize_results = minimize_ratios(ratios, bounds, x0, "Powell")
-
-            if not minimize_results.success:
-                minimize_results.x = np.zeros((num_samples,))
-
-                print(f"Failed to determin profile for grouping {group_id}")
-
-        sample_sums = np.nanmedian(grouping, axis=0)
-
-        total_sum = np.nansum(sample_sums)
-
-        corrected_values = total_sum * minimize_results.x
-
-        sample_sums[sample_sums == 0] = np.nan
-
-        nan_args = np.argwhere(np.isnan(sample_sums))
-
-        profile = corrected_values * total_sum / np.sum(corrected_values)
-
-        profile[nan_args] = np.nan
-
-        return group_id, profile, minimize_results.success

@@ -346,7 +346,7 @@ class QuantMatrix:
                 minimum_ratios=kwargs["minimum_ratios"],
                 level=kwargs["level"],
                 threads=kwargs["threads"]
-            )
+            ).quantify(self)
 
             design_matrix = self.quantitative_data.var
 
