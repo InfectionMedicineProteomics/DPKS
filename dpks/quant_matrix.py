@@ -223,11 +223,13 @@ class QuantMatrix:
 
         quantitative_data = (
             filtered_data.to_df()[list(filtered_data.var["sample"])]
-                .copy()
-                .set_index(np.arange(self.num_rows, dtype=int).astype(str))
+            .copy()
+            .set_index(np.arange(self.num_rows, dtype=int).astype(str))
         )
 
-        row_obs = filtered_data.obs.set_index(np.arange(self.num_rows, dtype=int).astype(str))
+        row_obs = filtered_data.obs.set_index(
+            np.arange(self.num_rows, dtype=int).astype(str)
+        )
 
         self.quantitative_data = ad.AnnData(
             quantitative_data,
@@ -314,7 +316,10 @@ class QuantMatrix:
         return self
 
     def quantify(
-        self, method: str, resolve_protein_groups: bool = False, **kwargs: Union[int, str]
+        self,
+        method: str,
+        resolve_protein_groups: bool = False,
+        **kwargs: Union[int, str],
     ) -> QuantMatrix:
         """calculate protein quantities
 
@@ -343,9 +348,9 @@ class QuantMatrix:
         elif method == "maxlfq":
 
             quantifications = MaxLFQ(
-                minimum_ratios=kwargs["minimum_ratios"],
                 level=kwargs["level"],
-                threads=kwargs["threads"]
+                threads=kwargs["threads"],
+                minimum_subgroups=kwargs["minimum_subgroups"],
             ).quantify(self)
 
             design_matrix = self.quantitative_data.var

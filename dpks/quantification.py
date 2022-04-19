@@ -7,7 +7,7 @@ import warnings
 import numba
 import numpy as np
 import pandas as pd  # type: ignore
-from numba import njit, jit
+from numba import njit, jit, prange
 from numpy.linalg import LinAlgError
 from scipy.optimize import minimize
 
@@ -66,15 +66,12 @@ class TopN:
         return protein_quantification
 
 
-@njit
-def get_ratios(quantitative_data, sample_combinations, min_ratios):
+@njit(nogil=True, debug=True)
+def get_ratios(quantitative_data, sample_combinations):
 
     num_samples = quantitative_data.shape[1]
 
-    ratios = np.empty(
-        (num_samples, num_samples),
-        dtype=np.float64
-    )
+    ratios = np.empty((num_samples, num_samples), dtype=np.float64)
 
     ratios[:] = np.nan
 
@@ -83,23 +80,16 @@ def get_ratios(quantitative_data, sample_combinations, min_ratios):
         sample_a = combination[0]
         sample_b = combination[1]
 
-        ratio =  - quantitative_data[:, sample_a] + quantitative_data[:, sample_b]
+        ratio = -quantitative_data[:, sample_a] + quantitative_data[:, sample_b]
 
-        non_nan = np.sum(~np.isnan(ratio))
-
-        if non_nan >= min_ratios:
-
-            ratio_median = np.nanmedian(ratio)
-
-        else:
-
-            ratio_median = np.nan
+        ratio_median = np.nanmedian(ratio)
 
         ratios[sample_b, sample_a] = ratio_median
 
     return ratios
 
-@njit
+
+@njit(nogil=True, debug=True)
 def solve_profile(X, ratios, sample_combinations):
 
     if np.all(np.isnan(X)):
@@ -149,57 +139,174 @@ def solve_profile(X, ratios, sample_combinations):
 
             formatted_b[nan_value] = 0.0
 
-        results = np.linalg.lstsq(formatted_a, formatted_b, -1.0)[0][:X.shape[1]]
+        results = np.linalg.lstsq(formatted_a, formatted_b, -1.0)[0][: X.shape[1]]
 
     results[results == 0.0] = np.nan
 
     return results
 
 
-def quantify_groups(groupings, sample_combinations, group_ids, minimum_ratios):
+@njit(nogil=True, debug=True)
+def build_connection_graph(grouping):
+
+    connected_sample_groups = numba.typed.Dict()
+
+    connected_indices = numba.typed.List()
+
+    sample_group_id = 0
+
+    for sample_idx in range(grouping.shape[1]):
+
+        if sample_idx not in connected_indices:
+
+            sample_group = []
+
+            for compared_sample_idx in range(grouping.shape[1]):
+
+                comparison = grouping[:, sample_idx] - grouping[:, compared_sample_idx]
+
+                if not np.isnan(comparison).all():
+                    sample_group.append(compared_sample_idx)
+
+                    connected_indices.append(compared_sample_idx)
+
+            if len(sample_group) > 0:
+
+                connected_sample_groups[sample_group_id] = np.array(sample_group)
+
+                sample_group_id += 1
+
+            else:
+
+                connected_sample_groups[sample_group_id] = np.array([sample_idx])
+
+                sample_group_id += 1
+
+    return connected_sample_groups
+
+
+@njit(nogil=True, debug=True)
+def build_combinations(subset):
+
+    column_idx = np.arange(0, subset.shape[1])
+
+    combos = []
+
+    for i in column_idx:
+        for j in range(i + 1, column_idx.shape[0]):
+            combos.append([i, j])
+
+    return np.array(combos)
+
+
+@njit(nogil=True)
+def mask_group(grouping):
+
+    nan_groups = []
+
+    for subgroup_idx in range(grouping.shape[0]):
+
+        if not np.isnan(grouping[subgroup_idx, :]).all():
+            nan_groups.append(subgroup_idx)
+
+    grouping = grouping[np.array(nan_groups), :]
+
+    return grouping
+
+
+@njit(nogil=True)
+def quantify_group(grouping, connected_graph):
+
+    profile = np.zeros((grouping.shape[1]))
+
+    for sample_group_id, graph in connected_graph.items():
+
+        if graph.shape[0] == 1:
+
+            subset = grouping[:, graph]
+
+            if np.isnan(subset).all():
+
+                profile[graph] = np.nan
+
+            else:
+
+                profile[graph] = np.nanmedian(subset)
+
+        if graph.shape[0] > 1:
+
+            subset = grouping[:, graph]
+
+            sample_combinations = build_combinations(subset)
+
+            ratios = get_ratios(subset, sample_combinations)
+
+            solved_profile = solve_profile(subset, ratios, sample_combinations)
+
+            for results_idx in range(solved_profile.shape[0]):
+                profile[graph[results_idx]] = solved_profile[results_idx]
+
+    return profile
+
+
+@njit(cache=True, parallel=True)
+def quantify_groups(groupings, group_ids, minimum_subgroups):
 
     num_groups = len(group_ids)
 
     results = numba.typed.List()
 
-    for group_idx in range(num_groups):
+    for group_idx in prange(num_groups):
 
-        grouping = groupings[group_idx]
+        grouping = mask_group(groupings[group_idx])
 
-        ratios = get_ratios(groupings[group_idx], sample_combinations, minimum_ratios)
+        if grouping.shape[0] >= minimum_subgroups:
 
-        quantified_group = solve_profile(groupings[group_idx], ratios, sample_combinations)
+            connected_graph = build_connection_graph(grouping)
 
-        results.append(
-            (group_ids[group_idx], quantified_group)
-        )
+            profile = quantify_group(grouping, connected_graph)
+
+        else:
+
+            profile = np.zeros((grouping.shape[1]))
+            profile[:] = np.nan
+
+        results.append((group_ids[group_idx], profile))
 
     return results
 
 
 class MaxLFQ:
 
-    minimum_ratios: int
     level: str
     threads: int
+    minimum_subgroups: int
 
-    def __init__(self, minimum_ratios:int = 1, level: str = "protein", threads: int = 1):
+    def __init__(
+        self, level: str = "protein", threads: int = 1, minimum_subgroups: int = 1
+    ):
 
-        self.minimum_ratios = minimum_ratios
         self.level = level
         self.threads = threads
+        self.minimum_subgroups = minimum_subgroups
+
+        numba.set_num_threads(threads)
 
     def quantify(self, quantitative_data: QuantMatrix) -> pd.DataFrame:
 
-        group_ids: List[str] = []
+        group_ids = numba.typed.List()
         key: str = ""
 
         if self.level == "protein":
 
-            group_ids = quantitative_data.proteins
+            group_ids = numba.typed.List(quantitative_data.proteins)
             key = "Protein"
 
-        groupings = []
+        elif self.level == "precursors":
+
+            group_ids = numba.typed.List(quantitative_data.precursors)
+
+        groupings = numba.typed.List()
 
         for group_id in group_ids:
 
@@ -209,15 +316,19 @@ class MaxLFQ:
                 ].X.copy()
             )
 
-        column_idx = np.arange(0, groupings[0].shape[1])
+        quantified_groups = quantify_groups(
+            groupings, group_ids, self.minimum_subgroups
+        )
 
-        sample_combinations = np.array(list(combinations(column_idx, 2)))
+        return self._format_result_df(
+            quantified_groups, quantitative_data.sample_annotations["sample"].values
+        )
 
-        quantified_groups = quantify_groups(groupings, sample_combinations, group_ids, self.minimum_ratios)
-
-        return self._format_result_df(quantified_groups, quantitative_data.sample_annotations["sample"].values)
-
-    def _format_result_df(self, quantified_groups: List[Tuple[str, Union[np.ndarray, np.ndarray], bool]], samples: np.ndarray) -> pd.DataFrame:
+    def _format_result_df(
+        self,
+        quantified_groups: List[Tuple[str, Union[np.ndarray, np.ndarray], bool]],
+        samples: np.ndarray,
+    ) -> pd.DataFrame:
 
         rows = []
 
@@ -232,10 +343,8 @@ class MaxLFQ:
                     "Protein": result_id,
                 }
 
-
                 for idx, sample in enumerate(samples):
                     row[sample] = result_data[idx]
-
 
                 rows.append(row)
 
