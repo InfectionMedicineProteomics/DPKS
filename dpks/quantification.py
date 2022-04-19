@@ -4,12 +4,12 @@ from multiprocessing import Pool
 
 import warnings
 
-import numba
+import numba  # type: ignore
 import numpy as np
+import numpy.typing as npt
 import pandas as pd  # type: ignore
-from numba import njit, jit, prange
-from numpy.linalg import LinAlgError
-from scipy.optimize import minimize
+from numba import njit, prange # type: ignore
+from numpy.linalg import LinAlgError # type: ignore
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
