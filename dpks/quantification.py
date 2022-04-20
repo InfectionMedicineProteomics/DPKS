@@ -1,15 +1,18 @@
 from typing import List, Any, TYPE_CHECKING, Tuple, Union
-from itertools import combinations, repeat
-from multiprocessing import Pool
 
-import warnings
+# from itertools import combinations, repeat  # not used yet
+# from multiprocessing import Pool  # not used yet
+
+#  import warnings  # not used yet
 
 import numba  # type: ignore
 import numpy as np
-import numpy.typing as npt
+
+# import numpy.typing as npt  # not used yet
 import pandas as pd  # type: ignore
-from numba import njit, prange # type: ignore
-from numpy.linalg import LinAlgError # type: ignore
+from numba import njit, prange  # type: ignore
+
+# from numpy.linalg import LinAlgError  # type: ignore
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
