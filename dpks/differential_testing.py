@@ -53,6 +53,8 @@ class DifferentialTest:
 
         group_a_means = []
         group_b_means = []
+        # group_a_stdev = []  # not used yet
+        # group_b_stdev = []  # not used yet
         log_fold_changes = []
         p_values = []
         group_a_rep_counts = []
@@ -69,9 +71,7 @@ class DifferentialTest:
                 quantitative_data.row_annotations[self.level] == identifier, :
             ].copy()
 
-            indices.append(
-                quant_data.obs.index.to_numpy()[0]
-            )
+            indices.append(quant_data.obs.index.to_numpy()[0])
 
             group_a_data = quant_data[
                 :, quantitative_data.get_samples(group=self.group_a)
@@ -141,8 +141,7 @@ class DifferentialTest:
         ] = group_b_rep_counts
 
         quantitative_data.quantitative_data.obs.sort_values(
-            f"PValues{self.group_a}-{self.group_b}",
-            inplace=True
+            f"PValues{self.group_a}-{self.group_b}", inplace=True
         )
 
         correction_results = multipletests(
@@ -166,8 +165,12 @@ class DifferentialTest:
 
         quantitative_data.quantitative_data.obs["CorrectedPValue"] = corrected_results
 
-        quantitative_data.quantitative_data.obs.index = quantitative_data.quantitative_data.obs.index.map(int)
+        quantitative_data.quantitative_data.obs.index = (
+            quantitative_data.quantitative_data.obs.index.map(int)
+        )
         quantitative_data.quantitative_data.obs.sort_index(inplace=True)
-        quantitative_data.quantitative_data.obs.index = quantitative_data.quantitative_data.obs.index.map(str)
+        quantitative_data.quantitative_data.obs.index = (
+            quantitative_data.quantitative_data.obs.index.map(str)
+        )
 
         return quantitative_data

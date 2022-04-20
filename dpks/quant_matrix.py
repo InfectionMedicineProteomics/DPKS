@@ -8,7 +8,7 @@ instanciate a quant matrix:
 """
 from __future__ import annotations
 
-from typing import Union, List, cast
+from typing import Union, List
 
 import numpy as np
 import pandas as pd  # type: ignore
@@ -30,7 +30,7 @@ from dpks.imputer import (
     ImputerMethod,
     UniformImputer,
 )
-from dpks.quantification import TopN
+from dpks.quantification import TopN, MaxLFQ
 from dpks.differential_testing import DifferentialTest
 
 
@@ -223,11 +223,13 @@ class QuantMatrix:
 
         quantitative_data = (
             filtered_data.to_df()[list(filtered_data.var["sample"])]
-                .copy()
-                .set_index(np.arange(self.num_rows, dtype=int).astype(str))
+            .copy()
+            .set_index(np.arange(self.num_rows, dtype=int).astype(str))
         )
 
-        row_obs = filtered_data.obs.set_index(np.arange(self.num_rows, dtype=int).astype(str))
+        row_obs = filtered_data.obs.set_index(
+            np.arange(self.num_rows, dtype=int).astype(str)
+        )
 
         self.quantitative_data = ad.AnnData(
             quantitative_data,
@@ -287,14 +289,17 @@ class QuantMatrix:
 
         if use_rt_sliding_window_filter:
 
+            minimum_data_points = int(kwargs.get("minimum_data_points", 100))
+            stride = int(kwargs.get("stride", 1))
+            use_overlapping_windows = bool(kwargs.get("use_overlapping_windows", True))
+            rt_unit = str(kwargs.get("rt_unit", "minute"))
+
             rt_window_normalization = RTSlidingWindowNormalization(
                 base_method=base_method,
-                minimum_data_points=cast(int, kwargs["minimum_data_points"]),
-                stride=cast(int, kwargs["stride"]),
-                use_overlapping_windows=cast(
-                    bool, kwargs.get("use_overlapping_windows", False)
-                ),
-                rt_unit=cast(str, kwargs.get("rt_unit", "minute")),
+                minimum_data_points=minimum_data_points,
+                stride=stride,
+                use_overlapping_windows=use_overlapping_windows,
+                rt_unit=rt_unit,
             )
 
             self.quantitative_data.X = rt_window_normalization.fit_transform(self)
@@ -314,7 +319,10 @@ class QuantMatrix:
         return self
 
     def quantify(
-        self, method: str, resolve_protein_groups: bool = False, **kwargs: int
+        self,
+        method: str,
+        resolve_protein_groups: bool = False,
+        **kwargs: Union[int, str],
     ) -> QuantMatrix:
         """calculate protein quantities
 
@@ -332,7 +340,27 @@ class QuantMatrix:
 
         if method == "top_n":
 
-            quantifications = TopN(top_n=kwargs["top_n"]).quantify(self)
+            top_n = int(kwargs.get("top_n", 1))
+
+            quantifications = TopN(top_n=top_n).quantify(self)
+
+            design_matrix = self.quantitative_data.var
+
+            protein_quantifications = QuantMatrix(
+                quantifications, design_matrix_file=design_matrix
+            )
+
+        elif method == "maxlfq":
+
+            level = str(kwargs.get("level", "protein"))
+            threads = int(kwargs.get("threads", 1))
+            minimum_subgroups = int(kwargs.get("minimum_subgroups", 1))
+
+            quantifications = MaxLFQ(
+                level=level,
+                threads=threads,
+                minimum_subgroups=minimum_subgroups,
+            ).quantify(self)
 
             design_matrix = self.quantitative_data.var
 
@@ -399,9 +427,12 @@ class QuantMatrix:
 
         if method == "uniform":
 
+            minvalue = int(kwargs.get("minvalue", 0))
+            maxvalue = int(kwargs.get("maxvalue", 1))
+
             base_method = UniformImputer(
-                minvalue=cast(int, kwargs["minvalue"]),
-                maxvalue=cast(int, kwargs["maxvalue"]),
+                minvalue=minvalue,
+                maxvalue=maxvalue,
             )
 
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
