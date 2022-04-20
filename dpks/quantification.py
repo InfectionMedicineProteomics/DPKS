@@ -252,14 +252,13 @@ def quantify_group(grouping, connected_graph):
     return profile
 
 
-@njit(cache=True, parallel=True)
 def quantify_groups(groupings, group_ids, minimum_subgroups):
 
     num_groups = len(group_ids)
 
     results = numba.typed.List()
 
-    for group_idx in prange(num_groups):
+    for group_idx in range(num_groups):
 
         grouping = mask_group(groupings[group_idx])
 
