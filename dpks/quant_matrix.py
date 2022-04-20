@@ -337,7 +337,7 @@ class QuantMatrix:
 
         if method == "top_n":
 
-            quantifications = TopN(top_n=kwargs["top_n"]).quantify(self)
+            quantifications = TopN(top_n=int(kwargs["top_n"])).quantify(self)
 
             design_matrix = self.quantitative_data.var
 
@@ -348,9 +348,9 @@ class QuantMatrix:
         elif method == "maxlfq":
 
             quantifications = MaxLFQ(
-                level=kwargs["level"],
-                threads=kwargs["threads"],
-                minimum_subgroups=kwargs["minimum_subgroups"],
+                level=str(kwargs["level"]),
+                threads=int(kwargs["threads"]),
+                minimum_subgroups=int(kwargs["minimum_subgroups"]),
             ).quantify(self)
 
             design_matrix = self.quantitative_data.var
