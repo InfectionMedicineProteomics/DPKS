@@ -69,7 +69,7 @@ class TopN:
         return protein_quantification
 
 
-@njit(nogil=True, debug=True)
+@njit(nogil=True)
 def get_ratios(quantitative_data, sample_combinations):
 
     num_samples = quantitative_data.shape[1]
@@ -92,7 +92,7 @@ def get_ratios(quantitative_data, sample_combinations):
     return ratios
 
 
-@njit(nogil=True, debug=True)
+@njit(nogil=True)
 def solve_profile(X, ratios, sample_combinations):
 
     if np.all(np.isnan(X)):
@@ -149,7 +149,7 @@ def solve_profile(X, ratios, sample_combinations):
     return results
 
 
-@njit(nogil=True, debug=True)
+@njit(nogil=True)
 def build_connection_graph(grouping):
 
     connected_sample_groups = numba.typed.Dict()
@@ -188,7 +188,7 @@ def build_connection_graph(grouping):
     return connected_sample_groups
 
 
-@njit(nogil=True, debug=True)
+@njit(nogil=True)
 def build_combinations(subset):
 
     column_idx = np.arange(0, subset.shape[1])
