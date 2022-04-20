@@ -53,8 +53,8 @@ class DifferentialTest:
 
         group_a_means = []
         group_b_means = []
-        group_a_stdev = []
-        group_b_stdev = []
+        # group_a_stdev = []  # not used yet
+        # group_b_stdev = []  # not used yet
         log_fold_changes = []
         p_values = []
         group_a_rep_counts = []
