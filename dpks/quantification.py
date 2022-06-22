@@ -304,9 +304,15 @@ class MaxLFQ:
             group_ids = numba.typed.List(quantitative_data.proteins)
             key = "Protein"
 
-        elif self.level == "precursors":
+        elif self.level == "precursor":
 
             group_ids = numba.typed.List(quantitative_data.precursors)
+            key = "PrecursorId"
+
+        elif self.level == "peptide":
+
+            group_ids = numba.typed.List(quantitative_data.peptides)
+            key = "PeptideSequence"
 
         groupings = numba.typed.List()
 
@@ -322,9 +328,38 @@ class MaxLFQ:
             groupings, group_ids, self.minimum_subgroups
         )
 
-        return self._format_result_df(
-            quantified_groups, quantitative_data.sample_annotations["sample"].values
-        )
+        if self.level == "protein":
+
+            results = self._format_result_df(
+                quantified_groups, quantitative_data.sample_annotations["sample"].values
+            )
+
+        elif self.level == "precursor":
+
+            results = self._format_result_df(
+                quantified_groups, quantitative_data.sample_annotations["sample"].values
+            )
+
+            results = results.set_index(key).join(
+                quantitative_data.quantitative_data.obs.set_index(key)
+            )
+
+        elif self.level == "peptide":
+
+            results = self._format_result_df(
+                quantified_groups, quantitative_data.sample_annotations["sample"].values
+            )
+
+            results = results.set_index(key).merge(
+                quantitative_data.quantitative_data.obs[~quantitative_data.quantitative_data.obs.duplicated(["PeptideSequence", "Protein"], )].set_index(key),
+                how="left",
+                left_index=True,
+                right_index=True
+            ).reset_index()
+
+        return results
+
+
 
     def _format_result_df(
         self,
@@ -343,6 +378,38 @@ class MaxLFQ:
 
                 row = {
                     "Protein": result_id,
+                }
+
+                for idx, sample in enumerate(samples):
+                    row[sample] = result_data[idx]
+
+                rows.append(row)
+
+        elif self.level == "precursor":
+
+            for result in quantified_groups:
+
+                result_id = result[0]
+                result_data = result[1]
+
+                row = {
+                    "PrecursorId": result_id,
+                }
+
+                for idx, sample in enumerate(samples):
+                    row[sample] = result_data[idx]
+
+                rows.append(row)
+
+        elif self.level == "peptide":
+
+            for result in quantified_groups:
+
+                result_id = result[0]
+                result_data = result[1]
+
+                row = {
+                    "PeptideSequence": result_id,
                 }
 
                 for idx, sample in enumerate(samples):

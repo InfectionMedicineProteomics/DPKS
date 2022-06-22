@@ -38,8 +38,12 @@ class DifferentialTest:
         if level == "precursor":
             self.level = "PrecursorId"
 
-        if level == "protein":
+        elif level == "protein":
             self.level = "Protein"
+
+        elif level == "peptide":
+
+            self.level = "PeptideSequence"
 
     def test(self, quantitative_data: QuantMatrix) -> QuantMatrix:
 
@@ -50,6 +54,10 @@ class DifferentialTest:
         elif self.level == "Protein":
 
             identifiers = quantitative_data.proteins
+
+        elif self.level == "PeptideSequence":
+
+            identifiers = quantitative_data.peptides
 
         group_a_means = []
         group_b_means = []
