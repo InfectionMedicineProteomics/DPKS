@@ -113,6 +113,17 @@ class QuantMatrix:
         return list(self.quantitative_data.obs["Protein"].unique())
 
     @property
+    def peptides(self) -> List[str]:
+        """returns unique list of PeptideSequences
+
+        >>> sorted(quant_matrix.peptides)[0:2]
+        ['AAAAGALAPGPLPDLAAR', 'AAAEGVANLHLDEATGEMVSK']
+
+        """
+
+        return list(self.quantitative_data.obs["PeptideSequence"].unique())
+
+    @property
     def precursors(self) -> List[str]:
         """returns unique list of PrecursorIds
 

@@ -12,7 +12,7 @@ with open("HISTORY.rst") as history_file:
 
 requirements = [
     "Click>=7.0",
-    "numpy==1.21",
+    "numpy==1.21.5",
     "numba",
     "scipy",
     "networkx",
