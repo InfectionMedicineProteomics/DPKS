@@ -7,7 +7,7 @@ instanciate a quant matrix:
 
 """
 from __future__ import annotations
-from annotate_proteins import get_protein_labels
+from dpks.annotate_proteins import get_protein_labels
 from typing import Union, List
 
 import numpy as np
