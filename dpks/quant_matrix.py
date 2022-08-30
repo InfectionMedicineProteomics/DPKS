@@ -7,7 +7,7 @@ instanciate a quant matrix:
 
 """
 from __future__ import annotations
-
+from annotate_proteins import get_protein_labels
 from typing import Union, List
 
 import numpy as np
@@ -48,6 +48,7 @@ class QuantMatrix:
         quantification_file: Union[str, pd.DataFrame],
         design_matrix_file: Union[str, pd.DataFrame],
         build_quant_graph: bool = False,
+        annotate_proteins: bool = True,
     ) -> None:
         """init"""
 
@@ -100,11 +101,16 @@ class QuantMatrix:
         if build_quant_graph:
 
             pass
+        
+        if annotate_proteins:
+            
+            quantitative_data.obs['Protein'] = get_protein_labels(quantitative_data.obs['Protein'].values)
+
 
     @property
     def proteins(self) -> List[str]:
-        """returns unique list of Proteins
-
+        """returns unique list of Proteins.
+        
         >>> sorted(quant_matrix.proteins)[40:42]
         ['sp|G5E8V9|ARFP1_MOUSE', 'sp|O08528|HXK2_MOUSE']
 
