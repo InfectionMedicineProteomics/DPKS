@@ -55,7 +55,7 @@ setup(
     install_requires=requirements,
     license="MIT license",
     long_description=readme + "\n\n" + history,
-    include_package_data=False,
+    include_package_data=True,
     keywords="dpks",
     name="dpks",
     packages=find_packages(include=["dpks", "dpks.*"], exclude=["tests", "tests.*"]),
@@ -65,4 +65,5 @@ setup(
     url="https://github.com/arnscott/dpks",
     version="0.1.1",
     zip_safe=False,
+
 )
