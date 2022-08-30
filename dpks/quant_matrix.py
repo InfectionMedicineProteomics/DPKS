@@ -91,10 +91,6 @@ class QuantMatrix:
             list(design_matrix_file["sample"]), axis=1
         ).set_index(np.arange(self.num_rows, dtype=int).astype(str))
 
-        if annotate_proteins:
-            
-            quantitative_data['ProteinLabel'] = get_protein_labels(quantitative_data['Protein'].values)
-
         self.quantitative_data = ad.AnnData(
             quantitative_data,
             obs=row_obs,
@@ -106,6 +102,9 @@ class QuantMatrix:
 
             pass
         
+        if annotate_proteins:
+            
+            self.quantitative_data.obs['ProteinLabel'] = get_protein_labels(self.quantitative_data.obs['Protein'].values)
 
 
     @property
