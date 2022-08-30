@@ -103,8 +103,8 @@ class QuantMatrix:
             pass
         
         if annotate_proteins:
-            
-            self.quantitative_data.obs['ProteinLabel'] = get_protein_labels(self.quantitative_data.obs['Protein'].values)
+            print(self.quantitative_data.obs)
+            self.quantitative_data.obs['ProteinLabel'] = get_protein_labels(self.quantitative_data.obs["Protein"].values)
 
 
     @property
