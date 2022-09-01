@@ -47,8 +47,9 @@ class QuantMatrix:
         self,
         quantification_file: Union[str, pd.DataFrame],
         design_matrix_file: Union[str, pd.DataFrame],
+        annotation_fasta_file: str = None,
         build_quant_graph: bool = False,
-        annotate_proteins: bool = True,
+
     ) -> None:
         """init"""
 
@@ -91,9 +92,9 @@ class QuantMatrix:
             list(design_matrix_file["sample"]), axis=1
         ).set_index(np.arange(self.num_rows, dtype=int).astype(str))
         
-        if annotate_proteins:
+        if annotation_fasta_file is not None:
 
-            row_obs["ProteinLabel"] = get_protein_labels(row_obs['Protein'])
+            row_obs["ProteinLabel"] = get_protein_labels(row_obs['Protein'], annotation_fasta_file)
             
         self.quantitative_data = ad.AnnData(
             quantitative_data,

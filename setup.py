@@ -21,6 +21,7 @@ requirements = [
     "anndata",
     "sklearn",
     "statsmodels",
+    "biopython",
 ]
 
 setup_requirements = [

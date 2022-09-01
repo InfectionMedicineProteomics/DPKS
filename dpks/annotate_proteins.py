@@ -1,33 +1,45 @@
-import pandas as pd
+from Bio import SeqIO
+import gzip
 
-def get_protein_labels(proteins):
-    """Maps UniProt ID to more common names. P69905 --> HBA_HUMAN
+def parse_fasta(fasta):
+    fasta_dict = {}
+    for record in SeqIO.parse(fasta, "fasta"):
+        id = record.id
+        accession = id.split('|')[1]
+        name = id.split('|')[2]
+        fasta_dict[accession] = name
+    return fasta_dict 
+
+def fasta_to_dict(fasta_path: str) -> dict:
+    fasta_dict = {}
+    if fasta_path.endswith('gz'):
+        with gzip.open(fasta_path, "rt") as handle:
+            fasta_dict = parse_fasta(handle)
+    else:
+        fasta_dict = parse_fasta(fasta_path, 'fasta')
+    return fasta_dict
+
+
+
+def get_protein_labels(accessions : list[str], fasta_path : str) -> list[str]:
+    """Maps UniProt ID (accession) to more common names. P69905 --> HBA_HUMAN
     Args:
-        proteins list: Input protein list.
+        accession list: Input protein list and input fasta_file_path
     Returns:
-        list: More common protein names.
+        list: More common protein names. If accession not in human_proteome.gz, use accession.
     """
-    human_proteome = pd.read_csv('DPKS/dpks/data/human_proteome.gz')
-    
-    def format_protein_name(protein):
-        """
-        formats protein name. 
-        sp|XXXX|ALBU_HUMAN --> XXXX
-        XXXX --> XXXX
-        """
-        if '|' in protein:
-            protein = protein.split('|')[1]
-        if '_' in protein:
-            protein = protein.split('_')[0]
+    fasta_dict = fasta_to_dict(fasta_path)
+    protein_labels = []
+    for accession in accessions:
+        try: 
+            protein_label = fasta_dict[accession]
+        except KeyError:
+            # If accession not in fasta file, put accession instead of protein label
+            protein_label = accession
+        protein_labels.append(protein_label)
+    return protein_labels
 
-        return protein
-    human_proteome['accession'] = human_proteome['accession'].map(format_protein_name)
-    names = []
-    for protein in proteins:
-        m = human_proteome['trivname'].to_numpy()[human_proteome['accession'].to_numpy() == protein]
-        if len(m) == 0:
-            m = protein
-        else: 
-            m = m[0].split('_')[0]
-        names.append(m)
-    return names
+
+
+    
+    
