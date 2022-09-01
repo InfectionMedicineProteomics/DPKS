@@ -16,7 +16,7 @@ def fasta_to_dict(fasta_path: str) -> dict:
         with gzip.open(fasta_path, "rt") as handle:
             fasta_dict = parse_fasta(handle)
     else:
-        fasta_dict = parse_fasta(fasta_path, 'fasta')
+        fasta_dict = parse_fasta(fasta_path)
     return fasta_dict
 
 
@@ -24,9 +24,10 @@ def fasta_to_dict(fasta_path: str) -> dict:
 def get_protein_labels(accessions : list[str], fasta_path : str) -> list[str]:
     """Maps UniProt ID (accession) to more common names. P69905 --> HBA_HUMAN
     Args:
-        accession list: Input protein list and input fasta_file_path
+        accessions list[str]: Input protein list 
+        fasta_path str: fasta file path used for mapping
     Returns:
-        list: More common protein names. If accession not in human_proteome.gz, use accession.
+        protein_labels list[str]: More common protein names. If accession not in human_proteome.gz, use accession.
     """
     fasta_dict = fasta_to_dict(fasta_path)
     protein_labels = []
