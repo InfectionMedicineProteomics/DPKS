@@ -37,10 +37,8 @@ class UniformImputer(ImputerMethod):
 
     """
 
-    def __init__(self, minvalue: int, maxvalue: int, percentile: float) -> None:
+    def __init__(self, percentile: float) -> None:
         """init"""
-        self.minvalue = minvalue
-        self.maxvalue = maxvalue
         self.percentile = percentile
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
