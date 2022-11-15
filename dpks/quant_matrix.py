@@ -445,13 +445,11 @@ class QuantMatrix:
         base_method: ImputerMethod = ImputerMethod()
 
         if method == "uniform":
+            percentile = float(kwargs.get("percentile", 0.1))
 
-            minvalue = int(kwargs.get("minvalue", 0))
-            maxvalue = int(kwargs.get("maxvalue", 1))
 
             base_method = UniformImputer(
-                minvalue=minvalue,
-                maxvalue=maxvalue,
+                percentile = percentile
             )
 
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
