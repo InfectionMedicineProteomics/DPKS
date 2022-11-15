@@ -37,18 +37,21 @@ class UniformImputer(ImputerMethod):
 
     """
 
-    def __init__(self, minvalue: int, maxvalue: int) -> None:
+    def __init__(self, minvalue: int, maxvalue: int, percentile: float) -> None:
         """init"""
         self.minvalue = minvalue
         self.maxvalue = maxvalue
+        self.percentile = percentile
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
         """fit the transform"""
+        X_no_zero = X[X != 0]
+        minvalue = X_no_zero.min() 
+        maxvalue = X_no_zero.max() * self.percentile + minvalue 
 
         mask = X == 0
         c = np.count_nonzero(mask)
-        nums = np.random.randint(self.minvalue, self.maxvalue, c)
-
+        nums = np.random.uniform(minvalue, maxvalue, c)
         X[mask] = nums
-
+        
         return X
