@@ -23,23 +23,13 @@ class ImputerMethod:
         pass
 
 
-class UniformImputer(ImputerMethod):
-    """uniform imputer
-
-    >>> from dpks.quant_matrix import QuantMatrix
-    >>> quant_matrix = QuantMatrix( quantification_file="tests/input_files/minimal_matrix_missing.tsv", design_matrix_file="tests/input_files/minimal_design_matrix.tsv")
-    >>> uniform_imputed_df = quant_matrix.impute(method="uniform", minvalue=1, maxvalue=2).to_df()[["PeptideSequence", "SAMPLE_1.osw", "SAMPLE_2.osw", "SAMPLE_3.osw"]]
-    >>> uniform_imputed_df
-        PeptideSequence  SAMPLE_1.osw  SAMPLE_2.osw  SAMPLE_3.osw
-    0         EFMEEVIQR       69900.3           1.0      403947.0
-    1  SSSGTPDLPVLLTDLK      115684.0      132524.0      217962.0
-    2            PEPTIK           1.0       59295.7       24536.4
-
-    """
+class UniformPercentileImputer(ImputerMethod):
+    """uniform percentile imputer"""
 
     def __init__(self, percentile: float) -> None:
         """init"""
         self.percentile = percentile
+
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
         """fit the transform"""
@@ -53,4 +43,33 @@ class UniformImputer(ImputerMethod):
         nums = np.random.uniform(minvalue, maxvalue, c)
         X[mask] = nums
         
+        return X
+
+
+class UniformRangeImputer(ImputerMethod):
+    """uniform imputer
+    >>> from dpks.quant_matrix import QuantMatrix
+    >>> quant_matrix = QuantMatrix( quantification_file="tests/input_files/minimal_matrix_missing.tsv", design_matrix_file="tests/input_files/minimal_design_matrix.tsv")
+    >>> uniform_imputed_df = quant_matrix.impute(method="uniform", minvalue=1, maxvalue=2).to_df()[["PeptideSequence", "SAMPLE_1.osw", "SAMPLE_2.osw", "SAMPLE_3.osw"]]
+    >>> uniform_imputed_df
+        PeptideSequence  SAMPLE_1.osw  SAMPLE_2.osw  SAMPLE_3.osw
+    0         EFMEEVIQR       69900.3           1.0      403947.0
+    1  SSSGTPDLPVLLTDLK      115684.0      132524.0      217962.0
+    2            PEPTIK           1.0       59295.7       24536.4
+    """
+
+    def __init__(self, minvalue: int, maxvalue: int) -> None:
+        """init"""
+        self.minvalue = minvalue
+        self.maxvalue = maxvalue
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+        """fit the transform"""
+
+        mask = X == 0
+        c = np.count_nonzero(mask)
+        nums = np.random.randint(self.minvalue, self.maxvalue, c)
+
+        X[mask] = nums
+
         return X
