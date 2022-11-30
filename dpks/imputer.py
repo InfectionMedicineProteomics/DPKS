@@ -65,10 +65,10 @@ class UniformRangeImputer(ImputerMethod):
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
         """fit the transform"""
-
+        X = np.nan_to_num(X) # Replace NaN with 0
         mask = X == 0
         c = np.count_nonzero(mask)
-        nums = np.random.randint(self.minvalue, self.maxvalue, c)
+        nums = np.random.uniform(self.minvalue, self.maxvalue, c)
 
         X[mask] = nums
 
