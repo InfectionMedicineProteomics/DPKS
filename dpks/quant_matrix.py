@@ -28,7 +28,8 @@ from dpks.scaling import (
 )
 from dpks.imputer import (
     ImputerMethod,
-    UniformImputer,
+    UniformRangeImputer,
+    UniformPercentileImputer,
 )
 from dpks.quantification import TopN, MaxLFQ
 from dpks.differential_testing import DifferentialTest
@@ -438,21 +439,25 @@ class QuantMatrix:
 
         """impute missing values
 
-        not implemented
-
         """
 
         base_method: ImputerMethod = ImputerMethod()
 
-        if method == "uniform":
-
-            minvalue = int(kwargs.get("minvalue", 0))
+        if method == "uniform_percentile":
+            
+            percentile = float(kwargs.get("percentile", 0.1))
+            
+            base_method = UniformPercentileImputer(
+                percentile = percentile)
+            
+        elif method == "uniform_range":
+            
             maxvalue = int(kwargs.get("maxvalue", 1))
-
-            base_method = UniformImputer(
-                minvalue=minvalue,
-                maxvalue=maxvalue,
-            )
+            minvalue = int(kwargs.get("minvalue",0))
+            
+            base_method = UniformRangeImputer(
+                maxvalue = maxvalue, 
+                minvalue=minvalue)
 
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
 
