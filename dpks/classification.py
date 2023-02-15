@@ -18,6 +18,7 @@ class Classifier:
     Y: np.array
     shap_values: list
     mean_importance: list
+    shap_algorithm: str
 
     def __init__(self, classifier, quantitative_data: QuantMatrix, scale: bool = True):
         self.X, self.Y = self._generate_data_matrices(quantitative_data, scale)
@@ -46,10 +47,12 @@ class Classifier:
 
     def recursive_feature_elimination(
         self,
-        k_folds: int = 5,
+        quantitative_data,
+        k_folds: int = 3,
         scoring: str = "accuracy",
         min_features_to_select: int = 10,
-        step: int = 10,
+        step: int = 3,
+        importance_getter: str = "auto",
     ):
         selector = RFECV(
             self.clf,
@@ -57,28 +60,30 @@ class Classifier:
             min_features_to_select=min_features_to_select,
             scoring=scoring,
             cv=k_folds,
+            importance_getter=importance_getter,
         )
 
         selector = selector.fit(self.X, self.Y)
         print(f"Number of selected features: {selector.n_features_}")
-        print(selector.support_)
-        print(selector.ranking_)
+        quantitative_data.row_annotations[f"RFE_ranking"] = selector.ranking_
+        return selector.cv_results_
 
-    def interpret(self, quantitative_data, algorithm: str = "auto") -> QuantMatrix:
+    def interpret(
+        self, quantitative_data, algorithm: str = "auto", annotate: bool = True
+    ) -> QuantMatrix:
+        self.shap_algorithm = algorithm
         clf = self.fit()
 
         if algorithm == "permutation":
             explainer = shap.Explainer(clf.predict, self.X, algorithm=algorithm)
             self.shap_values = explainer(self.X, max_evals=2 * self.X.shape[1] + 1)
-        elif algorithm == "tree":
+        elif algorithm == "tree" or algorithm == "auto":
             explainer = shap.Explainer(clf, algorithm=algorithm)
-            self.shap_values = explainer.shap_values(self.X)
-        elif algorithm == "auto":
-            explainer = shap.Explainer(clf, self.X, algorithm=algorithm)
             self.shap_values = explainer.shap_values(self.X)
 
         self.mean_importance = np.mean(abs(self.shap_values), axis=0)
-        quantitative_data.row_annotations[f"SHAP"] = self.mean_importance
+        if annotate:
+            quantitative_data.row_annotations[f"SHAP"] = self.mean_importance
 
         return quantitative_data
 
@@ -95,4 +100,7 @@ class Classifier:
 
     @property
     def feature_importances_(self):
+        self.interpret(
+            quantitative_data=None, algorithm=self.shap_algorithm, annotate=False
+        )
         return self.mean_importance
