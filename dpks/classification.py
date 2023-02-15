@@ -6,6 +6,7 @@ import numpy as np
 import shap
 from sklearn.feature_selection import RFECV
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.utils.validation import check_is_fitted
 
 
 if TYPE_CHECKING:
@@ -18,36 +19,43 @@ class Classifier(BaseEstimator, ClassifierMixin):
     X: np.array
     Y: np.array
     shap_values: list
-    mean_importance: list
     shap_algorithm: str
     quantitative_data: QuantMatrix
+    mean_importance: list
 
-    def __init__(self, classifier, quantitative_data: QuantMatrix, scale: bool = True):
+    def __init__(
+        self,
+        classifier,
+        quantitative_data: QuantMatrix,
+        scale: bool = True,
+        shap_algorithm: str = "auto",
+    ):
         self.X, self.Y = self._generate_data_matrices(quantitative_data, scale)
         if isinstance(classifier, str):
             if classifier == "xgboost":
-                self.clf = xgboost.XGBClassifier(max_depth=30)
+                self.classifier = xgboost.XGBClassifier(max_depth=30)
         else:
             fit_method = getattr(classifier, "fit", None)
             predict_method = getattr(classifier, "predict", None)
             if callable(fit_method) and callable(predict_method):
-                self.clf = classifier
+                self.classifier = classifier
             else:
                 raise ValueError(
                     "The classifier does not have a fit and/or predict method"
                 )
-        self.classifier = self.clf
         self.quantitative_data = quantitative_data
         self.scale = scale
+        self.shap_algorithm = shap_algorithm
 
     def fit(self, X, Y):
-        return self.clf.fit(X, Y)
+        self.classifier.fit(X, Y)
+        return self
 
     def predict(self, X):
-        return self.clf.predict(X)
+        return self.classifier.predict(X)
 
     def cross_validation(self, k_folds: int = 5):
-        scores = cross_val_score(self.clf, self.X, self.Y, cv=k_folds)
+        scores = cross_val_score(self.classifier, self.X, self.Y, cv=k_folds)
         print(
             "%0.2f accuracy with a standard deviation of %0.2f"
             % (scores.mean(), scores.std())
@@ -55,7 +63,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
 
     def recursive_feature_elimination(
         self,
-        quantitative_data: QuantMatrix,
         k_folds: int = 3,
         scoring: str = "accuracy",
         min_features_to_select: int = 10,
@@ -63,38 +70,39 @@ class Classifier(BaseEstimator, ClassifierMixin):
         importance_getter: str = "auto",
     ):
         selector = RFECV(
-            self,
+            estimator=self,
             step=step,
             min_features_to_select=min_features_to_select,
             scoring=scoring,
             cv=k_folds,
             importance_getter=importance_getter,
         )
-        print(selector)
+
         selector = selector.fit(self.X, self.Y)
         print(f"Number of selected features: {selector.n_features_}")
-        quantitative_data.row_annotations[f"RFE_ranking"] = selector.ranking_
+        self.quantitative_data.row_annotations[f"RFE_ranking"] = selector.ranking_
         return selector.cv_results_
 
-    def interpret(
-        self, quantitative_data, algorithm: str = "auto", annotate: bool = True
-    ) -> QuantMatrix:
-        self.shap_algorithm = algorithm
-        self.clf = self.fit(self.X, self.Y)
+    def interpret(self, annotate: bool = True) -> QuantMatrix:
+        self.fit(
+            self.X, self.Y
+        )  # TODO: I guess this is wrong since self.X is wrong size.
 
-        if algorithm == "permutation":
-            explainer = shap.Explainer(self.clf.predict, self.X, algorithm=algorithm)
+        if self.shap_algorithm == "permutation":
+            explainer = shap.Explainer(
+                self.classifier.predict, self.X, algorithm=self.shap_algorithm
+            )
             self.shap_values = explainer(self.X, max_evals=2 * self.X.shape[1] + 1)
-        elif algorithm == "tree" or algorithm == "auto":
-            explainer = shap.Explainer(self.clf, algorithm=algorithm)
+        elif self.shap_algorithm == "tree" or self.shap_algorithm == "auto":
+            explainer = shap.Explainer(self.classifier, algorithm=self.shap_algorithm)
             self.shap_values = explainer.shap_values(self.X)
 
         self.mean_importance = np.mean(abs(self.shap_values), axis=0)
 
         if annotate:
-            quantitative_data.row_annotations[f"SHAP"] = self.mean_importance
+            self.quantitative_data.row_annotations[f"SHAP"] = self.mean_importance
 
-        return quantitative_data
+        return self.quantitative_data
 
     def _generate_data_matrices(
         self, quantitative_data: QuantMatrix, scale: bool
@@ -109,7 +117,5 @@ class Classifier(BaseEstimator, ClassifierMixin):
 
     @property
     def feature_importances_(self):
-        self.interpret(
-            quantitative_data=None, algorithm=self.shap_algorithm, annotate=False
-        )
+        self.interpret(annotate=False)
         return self.mean_importance
