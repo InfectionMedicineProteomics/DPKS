@@ -5,6 +5,7 @@ from sklearn.model_selection import cross_val_score
 import numpy as np
 import shap
 from sklearn.feature_selection import RFECV
+from sklearn.base import BaseEstimator, ClassifierMixin
 
 
 if TYPE_CHECKING:
@@ -13,12 +14,13 @@ else:
     QuantMatrix = Any
 
 
-class Classifier:
+class Classifier(BaseEstimator, ClassifierMixin):
     X: np.array
     Y: np.array
     shap_values: list
     mean_importance: list
     shap_algorithm: str
+    quantitative_data: QuantMatrix
 
     def __init__(self, classifier, quantitative_data: QuantMatrix, scale: bool = True):
         self.X, self.Y = self._generate_data_matrices(quantitative_data, scale)
@@ -34,9 +36,15 @@ class Classifier:
                 raise ValueError(
                     "The classifier does not have a fit and/or predict method"
                 )
+        self.classifier = self.clf
+        self.quantitative_data = quantitative_data
+        self.scale = scale
 
-    def fit(self):
-        return self.clf.fit(self.X, self.Y)
+    def fit(self, X, Y):
+        return self.clf.fit(X, Y)
+
+    def predict(self, X):
+        return self.clf.predict(X)
 
     def cross_validation(self, k_folds: int = 5):
         scores = cross_val_score(self.clf, self.X, self.Y, cv=k_folds)
@@ -47,7 +55,7 @@ class Classifier:
 
     def recursive_feature_elimination(
         self,
-        quantitative_data,
+        quantitative_data: QuantMatrix,
         k_folds: int = 3,
         scoring: str = "accuracy",
         min_features_to_select: int = 10,
@@ -55,14 +63,14 @@ class Classifier:
         importance_getter: str = "auto",
     ):
         selector = RFECV(
-            self.clf,
+            self,
             step=step,
             min_features_to_select=min_features_to_select,
             scoring=scoring,
             cv=k_folds,
             importance_getter=importance_getter,
         )
-
+        print(selector)
         selector = selector.fit(self.X, self.Y)
         print(f"Number of selected features: {selector.n_features_}")
         quantitative_data.row_annotations[f"RFE_ranking"] = selector.ranking_
@@ -72,16 +80,17 @@ class Classifier:
         self, quantitative_data, algorithm: str = "auto", annotate: bool = True
     ) -> QuantMatrix:
         self.shap_algorithm = algorithm
-        clf = self.fit()
+        self.clf = self.fit(self.X, self.Y)
 
         if algorithm == "permutation":
-            explainer = shap.Explainer(clf.predict, self.X, algorithm=algorithm)
+            explainer = shap.Explainer(self.clf.predict, self.X, algorithm=algorithm)
             self.shap_values = explainer(self.X, max_evals=2 * self.X.shape[1] + 1)
         elif algorithm == "tree" or algorithm == "auto":
-            explainer = shap.Explainer(clf, algorithm=algorithm)
+            explainer = shap.Explainer(self.clf, algorithm=algorithm)
             self.shap_values = explainer.shap_values(self.X)
 
         self.mean_importance = np.mean(abs(self.shap_values), axis=0)
+
         if annotate:
             quantitative_data.row_annotations[f"SHAP"] = self.mean_importance
 
