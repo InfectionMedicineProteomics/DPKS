@@ -79,7 +79,12 @@ class Classifier(BaseEstimator, ClassifierMixin):
                 self.classifier.predict, X, algorithm=self.shap_algorithm
             )
             self.shap_values = explainer(X, max_evals=2 * X.shape[1] + 1)
-        elif self.shap_algorithm == "tree" or self.shap_algorithm == "auto":
+        elif (
+            self.shap_algorithm == "tree"
+            or self.shap_algorithm == "auto"
+            or self.shap_algorithm == "linear"
+            or self.shap_algorithm == "partition"
+        ):
             explainer = shap.Explainer(self.classifier, algorithm=self.shap_algorithm)
             self.shap_values = explainer.shap_values(X)
 
