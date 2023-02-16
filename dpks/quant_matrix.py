@@ -429,6 +429,7 @@ class QuantMatrix:
         rfe_step: int = 1,
         rfe_min_features_to_select: int = 1,
         min_samples_per_group: int = 2,
+        run_rfe: bool = True,
     ) -> QuantMatrix:
         identifiers = self.proteins
 
@@ -443,7 +444,6 @@ class QuantMatrix:
             index = int(quant_data.obs.index.to_numpy()[0])
 
             group_a_data = quant_data[:, self.get_samples(group=group_a)].X.copy()
-
             group_b_data = quant_data[:, self.get_samples(group=group_b)].X.copy()
 
             group_a_nonan = len(group_a_data[~np.isnan(group_a_data)])
@@ -468,17 +468,19 @@ class QuantMatrix:
         self.clf.fit(X, Y)
 
         shap_values = self.clf.feature_importances_.tolist()
-        selector = self.clf.recursive_feature_elimination(
-            X, Y, min_features_to_select=rfe_min_features_to_select, step=rfe_step
-        )
-        feature_rank_values = selector.ranking_.tolist()
 
         for index in drop_indexes:
             shap_values.insert(index, np.nan)
-            feature_rank_values.insert(index, np.nan)
-
-        self.quantitative_data.obs["FeatureRank"] = feature_rank_values
         self.quantitative_data.obs["SHAP"] = shap_values
+        
+        if run_rfe:
+            selector = self.clf.recursive_feature_elimination(
+                X, Y, min_features_to_select=rfe_min_features_to_select, step=rfe_step
+            )
+            feature_rank_values = selector.ranking_.tolist()
+            for index in drop_indexes:
+                feature_rank_values.insert(index, np.nan)
+            self.quantitative_data.obs["FeatureRank"] = feature_rank_values
 
         return self
 
