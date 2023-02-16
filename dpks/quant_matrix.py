@@ -422,24 +422,63 @@ class QuantMatrix:
     def classify(
         self,
         classifier,
+        group_a: int,
+        group_b: int,
         shap_algorithm: str = "auto",
         scale: bool = True,
         rfe_step: int = 1,
         rfe_min_features_to_select: int = 1,
+        min_samples_per_group: int = 2,
     ) -> QuantMatrix:
+        identifiers = self.proteins
+
+        quant_copy = self.quantitative_data.copy()
+        quant_copy.X[quant_copy.X == 0.0] = np.nan
+        drop_indexes = []
+        for identifier in identifiers:
+            quant_data = quant_copy[
+                self.row_annotations["Protein"] == identifier, :
+            ].copy()
+
+            index = int(quant_data.obs.index.to_numpy()[0])
+
+            group_a_data = quant_data[:, self.get_samples(group=group_a)].X.copy()
+
+            group_b_data = quant_data[:, self.get_samples(group=group_b)].X.copy()
+
+            group_a_nonan = len(group_a_data[~np.isnan(group_a_data)])
+            group_b_nonan = len(group_b_data[~np.isnan(group_b_data)])
+
+            if (group_a_nonan < min_samples_per_group) or (
+                group_b_nonan < min_samples_per_group
+            ):
+                drop_indexes.append(index)
+
         le = LabelEncoder()
         Y = le.fit_transform(self.quantitative_data.var["group"].values)
         X = self.quantitative_data.X.copy().transpose()
+        X = np.delete(X, drop_indexes, 1)
         X = np.nan_to_num(X, copy=True, nan=0.0)
+
         if scale:
-            X = StandardScaler().fit_transform(X)
-        clf = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
-        clf.fit(X, Y)
-        self.quantitative_data.obs["SHAP"] = clf.feature_importances_
-        selector = clf.recursive_feature_elimination(
+            self.scaler = StandardScaler()
+            X = self.scaler.fit_transform(X)
+
+        self.clf = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+        self.clf.fit(X, Y)
+
+        shap_values = self.clf.feature_importances_.tolist()
+        selector = self.clf.recursive_feature_elimination(
             X, Y, min_features_to_select=rfe_min_features_to_select, step=rfe_step
         )
-        self.quantitative_data.obs["RFE_rank"] = selector.ranking_
+        feature_rank_values = selector.ranking_.tolist()
+
+        for index in drop_indexes:
+            shap_values.insert(index, np.nan)
+            feature_rank_values.insert(index, np.nan)
+
+        self.quantitative_data.obs["FeatureRank"] = feature_rank_values
+        self.quantitative_data.obs["SHAP"] = shap_values
 
         return self
 

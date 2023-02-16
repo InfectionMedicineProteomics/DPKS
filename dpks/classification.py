@@ -49,11 +49,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
         return self.classifier.predict(X)
 
     def cross_validation(self, X, y, k_folds: int = 5):
-        scores = cross_val_score(self.classifier, X, y, cv=k_folds)
-        print(
-            "%0.2f accuracy with a standard deviation of %0.2f"
-            % (scores.mean(), scores.std())
-        )
+        self.scores = cross_val_score(self.classifier, X, y, cv=k_folds)
 
     def recursive_feature_elimination(
         self,
@@ -75,7 +71,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
         )
 
         selector = selector.fit(X, y)
-        print(f"Number of selected features: {selector.n_features_}")
         return selector
 
     def interpret(self, X):
