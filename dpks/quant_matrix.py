@@ -13,6 +13,7 @@ from typing import Union, List
 import numpy as np
 import pandas as pd  # type: ignore
 import anndata as ad  # type: ignore
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 from dpks.normalization import (
     TicNormalization,
@@ -33,6 +34,7 @@ from dpks.imputer import (
 )
 from dpks.quantification import TopN, MaxLFQ
 from dpks.differential_testing import DifferentialTest
+from dpks.classification import Classifier
 
 
 class QuantMatrix:
@@ -54,13 +56,11 @@ class QuantMatrix:
         """init"""
 
         if isinstance(design_matrix_file, str):
-
             design_matrix_file = pd.read_csv(design_matrix_file, sep="\t")
 
             design_matrix_file.columns = map(str.lower, design_matrix_file.columns)
 
         if isinstance(quantification_file, str):
-
             quantification_file = pd.read_csv(quantification_file, sep="\t")
 
         self.num_samples = len(design_matrix_file)
@@ -69,15 +69,12 @@ class QuantMatrix:
         rt_column = ""
 
         if "RT" in quantification_file:
-
             rt_column = "RT"
 
         elif "RetentionTime" in quantification_file:
-
             rt_column = "RetentionTime"
 
         if rt_column:
-
             quantification_file = quantification_file.sort_values(rt_column)
 
         quantification_file = quantification_file.reset_index(drop=True)
@@ -93,7 +90,6 @@ class QuantMatrix:
         ).set_index(np.arange(self.num_rows, dtype=int).astype(str))
 
         if annotation_fasta_file is not None:
-
             row_obs["ProteinLabel"] = get_protein_labels(
                 row_obs["Protein"], annotation_fasta_file
             )
@@ -106,7 +102,6 @@ class QuantMatrix:
         )
 
         if build_quant_graph:
-
             pass
 
     @property
@@ -179,7 +174,6 @@ class QuantMatrix:
 
     @row_annotations.setter
     def row_annotations(self, value: pd.DataFrame) -> None:
-
         self.quantitative_data.obs = value
 
     def get_samples(self, group: int) -> List[str]:
@@ -229,11 +223,9 @@ class QuantMatrix:
         ].copy()
 
         if remove_decoys:
-
             filtered_data = filtered_data[filtered_data.obs["Decoy"] == 0].copy()
 
         if remove_contaminants:
-
             filtered_data = filtered_data[
                 ~filtered_data.obs["Protein"].str.contains("contam")
             ].copy()
@@ -267,11 +259,9 @@ class QuantMatrix:
         self,
         method: str,
     ) -> QuantMatrix:
-
         base_method: ScalingMethod = ScalingMethod()
 
         if method == "zscore":
-
             base_method = ZscoreScaling()
 
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
@@ -299,19 +289,15 @@ class QuantMatrix:
         base_method: NormalizationMethod = NormalizationMethod()
 
         if method == "tic":
-
             base_method = TicNormalization()
 
         elif method == "median":
-
             base_method = MedianNormalization()
 
         elif method == "mean":
-
             base_method = MeanNormalization()
 
         if use_rt_sliding_window_filter:
-
             minimum_data_points = int(kwargs.get("minimum_data_points", 100))
             stride = int(kwargs.get("stride", 1))
             use_overlapping_windows = bool(kwargs.get("use_overlapping_windows", True))
@@ -328,13 +314,11 @@ class QuantMatrix:
             self.quantitative_data.X = rt_window_normalization.fit_transform(self)
 
         else:
-
             self.quantitative_data.X = base_method.fit_transform(
                 self.quantitative_data.X
             )
 
         if log_transform:
-
             self.quantitative_data.X = Log2Normalization().fit_transform(
                 self.quantitative_data.X
             )
@@ -358,11 +342,9 @@ class QuantMatrix:
         """
 
         if resolve_protein_groups:
-
             pass
 
         if method == "top_n":
-
             top_n = int(kwargs.get("top_n", 1))
 
             quantifications = TopN(top_n=top_n).quantify(self)
@@ -374,7 +356,6 @@ class QuantMatrix:
             )
 
         elif method == "maxlfq":
-
             level = str(kwargs.get("level", "protein"))
             threads = int(kwargs.get("threads", 1))
             minimum_subgroups = int(kwargs.get("minimum_subgroups", 1))
@@ -438,29 +419,45 @@ class QuantMatrix:
 
         return self
 
+    def classify(
+        self,
+        classifier,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
+        rfe_step: int = 1,
+        rfe_min_features_to_select: int = 1,
+    ) -> QuantMatrix:
+        le = LabelEncoder()
+        Y = le.fit_transform(self.quantitative_data.var["group"].values)
+        X = self.quantitative_data.X.copy().transpose()
+        X = np.nan_to_num(X, copy=True, nan=0.0)
+        if scale:
+            X = StandardScaler().fit_transform(X)
+        clf = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+        clf.fit(X, Y)
+        self.quantitative_data.obs["SHAP"] = clf.feature_importances_
+        selector = clf.recursive_feature_elimination(
+            X, Y, min_features_to_select=rfe_min_features_to_select, step=rfe_step
+        )
+        self.quantitative_data.obs["RFE_rank"] = selector.ranking_
+
+        return self
+
     def impute(self, method: str, **kwargs: int) -> QuantMatrix:
-
-        """impute missing values
-
-        """
+        """impute missing values"""
 
         base_method: ImputerMethod = ImputerMethod()
 
         if method == "uniform_percentile":
-            
             percentile = float(kwargs.get("percentile", 0.1))
-            
-            base_method = UniformPercentileImputer(
-                percentile = percentile)
-            
+
+            base_method = UniformPercentileImputer(percentile=percentile)
+
         elif method == "uniform_range":
-            
             maxvalue = int(kwargs.get("maxvalue", 1))
-            minvalue = int(kwargs.get("minvalue",0))
-            
-            base_method = UniformRangeImputer(
-                maxvalue = maxvalue, 
-                minvalue=minvalue)
+            minvalue = int(kwargs.get("minvalue", 0))
+
+            base_method = UniformRangeImputer(maxvalue=maxvalue, minvalue=minvalue)
 
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
 
