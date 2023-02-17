@@ -431,6 +431,30 @@ class QuantMatrix:
         min_samples_per_group: int = 2,
         run_rfe: bool = True,
     ) -> QuantMatrix:
+        """Train a classifier to identify group_a and group_b.
+        Run SHAP on the classifier to identify important features. Run recursive feature elimination based on SHAP values.
+
+
+        Args:
+            classifier (_type_): string or classifier with fit_predict method.
+            group_a (int): label for group.
+            group_b (int): label for group.
+            shap_algorithm (str, optional): Algorithm to use to calculate SHAP values. See documentation (shap).
+            Defaults to "auto".
+            scale (bool, optional): Scales the values in QuantMatrix using the sklearn.StandardScaler.
+            Defaults to True.
+            rfe_step (int, optional): Number of features to remove each iteration in recursive feature elimination.
+            See documentation (sci-kit learn). Defaults to 1.
+            rfe_min_features_to_select (int, optional): Minimum features to select in recursive feature elimination.
+            See documentation (sci-kit learn). Defaults to 1.
+            min_samples_per_group (int, optional): Minimum number of detections per group per protein.
+            Proteins not satisfying the threshold are discarded. Defaults to 2.
+            run_rfe (bool, optional): If False, will not run recursive feature elimination.
+            Defaults to True.
+
+        Returns:
+            QuantMatrix: Returns a QuantMatrix with added 'SHAP' and 'FeatureRank' columns.
+        """
         identifiers = self.proteins
 
         quant_copy = self.quantitative_data.copy()
@@ -472,7 +496,7 @@ class QuantMatrix:
         for index in drop_indexes:
             shap_values.insert(index, np.nan)
         self.quantitative_data.obs["SHAP"] = shap_values
-        
+
         if run_rfe:
             selector = self.clf.recursive_feature_elimination(
                 X, Y, min_features_to_select=rfe_min_features_to_select, step=rfe_step

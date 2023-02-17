@@ -19,11 +19,14 @@ There are notebooks with examples on how to use dpks in `GitHub Notebooks`_; the
      - Demonstrates how to compute differences between two experimental conditions.
    * - `RT sliding window normalization`_
      - Demonstrates how to used the sliding retention time normalization.
+   * - `Classifier`_
+     - Demonstrates how to compute SHAP values and run recursive feature elimination using a classifier.
 
 .. _GitHub Notebooks: https://github.com/InfectionMedicineProteomics/DPKS/tree/main/notebooks
 .. _Differential Expression: https://github.com/InfectionMedicineProteomics/DPKS/blob/main/notebooks/differential_expression.ipynb
 .. _Quant Matrix: https://github.com/InfectionMedicineProteomics/DPKS/blob/main/notebooks/quant_matrix.ipynb
 .. _RT sliding window normalization: https://github.com/InfectionMedicineProteomics/DPKS/blob/main/notebooks/rt_sliding_window_normalization.ipynb
+.. _Classification: https://github.com/InfectionMedicineProteomics/DPKS/blob/main/notebooks/classifier.ipynb
 
 
 Getting started

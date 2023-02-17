@@ -42,6 +42,14 @@ The ``differential_testing`` module
    :undoc-members:
    :show-inheritance:
 
+The ``classification`` module
+***********************************
+
+.. automodule:: dpks.classification
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 The ``dpks`` module
 *******************
 
