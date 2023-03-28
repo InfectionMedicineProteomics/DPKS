@@ -7,6 +7,9 @@ instanciate a quant matrix:
 
 """
 from __future__ import annotations
+
+from sklearn.feature_selection import RFECV, RFE
+
 from dpks.annotate_proteins import get_protein_labels
 from typing import Union, List
 
@@ -45,6 +48,7 @@ class QuantMatrix:
     num_rows: int
     num_samples: int
     quantitative_data: ad.AnnData
+    selector: Union[RFECV, RFE]
 
     def __init__(
         self,
@@ -481,6 +485,7 @@ class QuantMatrix:
             for index in drop_indexes:
                 feature_rank_values.insert(index, np.nan)
             self.quantitative_data.obs["FeatureRank"] = feature_rank_values
+            self.selector = selector
 
         return self
 

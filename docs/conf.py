@@ -30,7 +30,7 @@ author = "Aaron Scott"
 version = dpks.__version__
 release = dpks.__version__
 
-language = None
+language = 'en'
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = "sphinx"
 todo_include_todos = False
