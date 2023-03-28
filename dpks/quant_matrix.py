@@ -39,6 +39,8 @@ from dpks.quantification import TopN, MaxLFQ
 from dpks.differential_testing import DifferentialTest
 from dpks.classification import Classifier
 
+from dpks.parsers import parse_diann
+
 
 class QuantMatrix:
     """holds a quantitative matrix and a design matrix, exposes an API to manipulate the quantitative matrix"""
@@ -56,6 +58,8 @@ class QuantMatrix:
         design_matrix_file: Union[str, pd.DataFrame],
         annotation_fasta_file: str = None,
         build_quant_graph: bool = False,
+        quant_type: str = "gps",
+        diann_qvalue: float = 0.01
     ) -> None:
         """init"""
 
@@ -65,7 +69,20 @@ class QuantMatrix:
             design_matrix_file.columns = map(str.lower, design_matrix_file.columns)
 
         if isinstance(quantification_file, str):
-            quantification_file = pd.read_csv(quantification_file, sep="\t")
+
+            if quant_type == "gps":
+
+                quantification_file = pd.read_csv(quantification_file, sep="\t")
+
+            elif quant_type == "diann":
+
+                quantification_file = parse_diann(quantification_file, diann_qvalue)
+
+        else:
+
+            if quant_type == "diann":
+
+                quantification_file = parse_diann(quantification_file, diann_qvalue)
 
         self.num_samples = len(design_matrix_file)
         self.num_rows = len(quantification_file)
@@ -206,6 +223,7 @@ class QuantMatrix:
         protein_q_value: float = 0.01,
         remove_decoys: bool = True,
         remove_contaminants: bool = True,
+        remove_non_proteotypic: bool = True
     ) -> QuantMatrix:
         """filter the QuantMatrix
 
@@ -227,7 +245,10 @@ class QuantMatrix:
         ].copy()
 
         if remove_decoys:
-            filtered_data = filtered_data[filtered_data.obs["Decoy"] == 0].copy()
+
+            if "Decoy" in filtered_data.obs:
+
+                filtered_data = filtered_data[filtered_data.obs["Decoy"] == 0].copy()
 
         if remove_contaminants:
             filtered_data = filtered_data[
@@ -236,6 +257,12 @@ class QuantMatrix:
 
             filtered_data = filtered_data[
                 ~filtered_data.obs["Protein"].str.contains("cont_crap")
+            ].copy()
+
+        if remove_non_proteotypic:
+
+            filtered_data = filtered_data[
+                ~filtered_data.obs["Protein"].str.contains(";")
             ].copy()
 
         self.num_rows = len(filtered_data)
