@@ -30,6 +30,7 @@ from dpks.scaling import (
     ScalingMethod,
     ZscoreScaling,
     MinMaxScaling,
+    AbsMaxScaling,
 )
 from dpks.imputer import (
     ImputerMethod,
@@ -290,6 +291,9 @@ class QuantMatrix:
 
         elif method == "minmax":
             base_method = MinMaxScaling()
+
+        elif method == "absmax":
+            base_method = AbsMaxScaling()
 
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
 

@@ -89,3 +89,24 @@ class MinMaxScaling(ScalingMethod):
         maxes = np.max(X, axis=1)
 
         return np.array((X - mins[:, None]) / (maxes[:, None] - mins[:, None]))
+
+
+class AbsMaxScaling(ScalingMethod):
+    """abs-max scaling
+
+    Computes the abs-max scaling: X / X_max
+
+    Resulting values are in range [-1 1]
+    """
+
+    def __init__(self) -> None:
+        """init"""
+
+        pass
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+        """carry out the min-max normalization"""
+
+        maxes = np.max(X, axis=1)
+
+        return np.array(X / maxes[:, None])
