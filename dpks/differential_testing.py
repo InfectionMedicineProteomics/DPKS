@@ -176,9 +176,9 @@ class DifferentialTest:
 
             corrected_results[: len(correction_results[1])] = correction_results[1]
 
-        quantitative_data.quantitative_data.obs[
-            f"CorrectedPValue{self.group_a}-{self.group_b}"
-        ] = corrected_results
+            quantitative_data.quantitative_data.obs[
+                f"CorrectedPValue{self.group_a}-{self.group_b}"
+            ] = corrected_results
 
             quantitative_data.quantitative_data.obs.index = (
                 quantitative_data.quantitative_data.obs.index.map(int)
