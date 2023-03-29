@@ -59,7 +59,7 @@ class QuantMatrix:
         annotation_fasta_file: str = None,
         build_quant_graph: bool = False,
         quant_type: str = "gps",
-        diann_qvalue: float = 0.01
+        diann_qvalue: float = 0.01,
     ) -> None:
         """init"""
 
@@ -69,19 +69,14 @@ class QuantMatrix:
             design_matrix_file.columns = map(str.lower, design_matrix_file.columns)
 
         if isinstance(quantification_file, str):
-
             if quant_type == "gps":
-
                 quantification_file = pd.read_csv(quantification_file, sep="\t")
 
             elif quant_type == "diann":
-
                 quantification_file = parse_diann(quantification_file, diann_qvalue)
 
         else:
-
             if quant_type == "diann":
-
                 quantification_file = parse_diann(quantification_file, diann_qvalue)
 
         self.num_samples = len(design_matrix_file)
@@ -223,7 +218,7 @@ class QuantMatrix:
         protein_q_value: float = 0.01,
         remove_decoys: bool = True,
         remove_contaminants: bool = True,
-        remove_non_proteotypic: bool = True
+        remove_non_proteotypic: bool = True,
     ) -> QuantMatrix:
         """filter the QuantMatrix
 
@@ -245,9 +240,7 @@ class QuantMatrix:
         ].copy()
 
         if remove_decoys:
-
             if "Decoy" in filtered_data.obs:
-
                 filtered_data = filtered_data[filtered_data.obs["Decoy"] == 0].copy()
 
         if remove_contaminants:
@@ -260,7 +253,6 @@ class QuantMatrix:
             ].copy()
 
         if remove_non_proteotypic:
-
             filtered_data = filtered_data[
                 ~filtered_data.obs["Protein"].str.contains(";")
             ].copy()
@@ -422,8 +414,7 @@ class QuantMatrix:
     def compare_groups(
         self,
         method: str,
-        group_a: int,
-        group_b: int,
+        comparisons: list,
         min_samples_per_group: int = 2,
         level: str = "protein",
         multiple_testing_correction_method: str = "fdr_tsbh",
@@ -437,8 +428,7 @@ class QuantMatrix:
 
         differential_test = DifferentialTest(
             method,
-            group_a,
-            group_b,
+            comparisons,
             min_samples_per_group,
             level,
             multiple_testing_correction_method,
@@ -503,7 +493,7 @@ class QuantMatrix:
         for index in drop_indexes:
             shap_values.insert(index, np.nan)
         self.quantitative_data.obs["SHAP"] = shap_values
-        
+
         if run_rfe:
             selector = self.clf.recursive_feature_elimination(
                 X, Y, min_features_to_select=rfe_min_features_to_select, step=rfe_step
