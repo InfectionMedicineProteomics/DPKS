@@ -117,6 +117,9 @@ class DifferentialTest:
                     elif self.method == "linregress":
                         test_results = stats.linregress(x=expression_data, y=labels)
 
+                    elif self.method == "anova":
+                        test_results = stats.f_oneway(group_a_data, group_b_data)
+
                     group_a_mean = np.mean(group_a_data)
                     group_b_mean = np.mean(group_b_data)
                     group_a_stdev = np.std(group_a_data)
@@ -131,8 +134,9 @@ class DifferentialTest:
                     p_values.append(test_results.pvalue)
 
             log_p_values = [-np.log(p) for p in p_values]
-            max_log_p_value = max(log_p_values)
-            max_log_fold_change = max([abs(fc) for fc in log_fold_changes])
+            max_log_p_value = np.nanmax(log_p_values)
+            max_log_fold_change = np.nanmax([abs(fc) for fc in log_fold_changes])
+            print(max_log_p_value, max_log_fold_change)
             de_scores = [
                 np.sqrt((p / max_log_p_value) ** 2 + (fc / max_log_fold_change) ** 2)
                 for p, fc in zip(log_p_values, log_fold_changes)
