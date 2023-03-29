@@ -67,3 +67,25 @@ class ZscoreScaling(ScalingMethod):
         stddevs = np.std(X, axis=1)
 
         return np.array((X - means[:, None]) / stddevs[:, None])
+
+
+class MinMaxScaling(ScalingMethod):
+    """min-max scaling
+
+    Computes the min max scaling: (X - X_min) / (X_max - X_min)
+
+    Resulting values are in range [0 1]
+    """
+
+    def __init__(self) -> None:
+        """init"""
+
+        pass
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+        """carry out the min-max normalization"""
+
+        mins = np.min(X, axis=1)
+        maxes = np.max(X, axis=1)
+
+        return np.array((X - mins[:, None]) / (maxes[:, None] - mins[:, None]))
