@@ -35,7 +35,7 @@ class ScalingMethod:
         pass
 
 
-class ZscoreScaling(ScalingMethod):
+class ZScoreScaling(ScalingMethod):
     """z-score scaling
 
     >>> from dpks.quant_matrix import QuantMatrix

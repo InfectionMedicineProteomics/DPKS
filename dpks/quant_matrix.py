@@ -28,7 +28,7 @@ from dpks.normalization import (
 )
 from dpks.scaling import (
     ScalingMethod,
-    ZscoreScaling,
+    ZScoreScaling,
     MinMaxScaling,
     AbsMaxScaling,
 )
@@ -287,7 +287,7 @@ class QuantMatrix:
         base_method: ScalingMethod = ScalingMethod()
 
         if method == "zscore":
-            base_method = ZscoreScaling()
+            base_method = ZScoreScaling()
 
         elif method == "minmax":
             base_method = MinMaxScaling()
