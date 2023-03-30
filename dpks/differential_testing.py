@@ -136,7 +136,6 @@ class DifferentialTest:
             log_p_values = [-np.log(p) for p in p_values]
             max_log_p_value = np.nanmax(log_p_values)
             max_log_fold_change = np.nanmax([abs(fc) for fc in log_fold_changes])
-            print(max_log_p_value, max_log_fold_change)
             de_scores = [
                 np.sqrt((p / max_log_p_value) ** 2 + (fc / max_log_fold_change) ** 2)
                 for p, fc in zip(log_p_values, log_fold_changes)
