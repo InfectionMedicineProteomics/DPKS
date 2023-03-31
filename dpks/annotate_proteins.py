@@ -8,8 +8,13 @@ def parse_fasta(fasta):
     fasta_dict = {}
     for record in SeqIO.parse(fasta, "fasta"):
         id = record.id
-        accession = id.split("|")[1]
-        name = id.split("|")[2]
+
+        if "|" in id:
+            accession = id.split("|")[1]
+            name = id.split("|")[2]
+        else:
+            accession = id
+            name = id
         fasta_dict[accession] = name
     return fasta_dict
 
