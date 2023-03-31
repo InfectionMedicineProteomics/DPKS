@@ -453,10 +453,10 @@ class QuantMatrix:
         classifier,
         shap_algorithm: str = "auto",
         scale: bool = True,
-        rfe_step: int = 1,
-        rfe_min_features_to_select: int = 1,
         min_samples_per_group: int = 2,
         run_rfe: bool = True,
+        run_param_search: bool = False,
+        **kwargs: Union[dict, int, str],
     ) -> QuantMatrix:
         identifiers = self.proteins
 
@@ -491,6 +491,18 @@ class QuantMatrix:
             X = self.scaler.fit_transform(X)
 
         self.clf = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+
+        if run_param_search:
+            param_grid = dict(kwargs.get("param_grid", {}))
+            random_state = int(kwargs.get("random_state", None))
+            folds = int(kwargs.get("folds", 3))
+            n_iter = int(kwargs.get("n_iter", 30))
+            n_jobs = int(kwargs.get("n_jobs", 4))
+            scoring = str(kwargs.get("scoring", "accuracy"))
+            self.clf.get_best_estimator(
+                X, Y, param_grid, folds, random_state, n_iter, n_jobs, scoring
+            )
+
         self.clf.fit(X, Y)
 
         shap_values = self.clf.feature_importances_.tolist()
@@ -500,6 +512,10 @@ class QuantMatrix:
         self.quantitative_data.obs["SHAP"] = shap_values
 
         if run_rfe:
+            rfe_step = int(kwargs.get("rfe_step", 1))
+            rfe_min_features_to_select = int(
+                kwargs.get("rfe_min_features_to_select", 1)
+            )
             selector = self.clf.recursive_feature_elimination(
                 X, Y, min_features_to_select=rfe_min_features_to_select, step=rfe_step
             )
