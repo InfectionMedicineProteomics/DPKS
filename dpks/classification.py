@@ -41,6 +41,8 @@ class Classifier(BaseEstimator, ClassifierMixin):
         self.shap_algorithm = shap_algorithm
 
     def fit(self, X, y):
+        self.X = X
+        self.y = y
         self.classifier.fit(X, y)
         self.interpret(X)
         return self

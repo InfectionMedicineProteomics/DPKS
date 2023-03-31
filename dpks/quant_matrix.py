@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd  # type: ignore
 import anndata as ad  # type: ignore
 from sklearn.preprocessing import LabelEncoder, StandardScaler
+import matplotlib
 
 from dpks.normalization import (
     TicNormalization,
@@ -37,6 +38,7 @@ from dpks.imputer import (
     UniformRangeImputer,
     UniformPercentileImputer,
 )
+from dpks.plot import Plot, SHAPPlot
 from dpks.quantification import TopN, MaxLFQ
 from dpks.differential_testing import DifferentialTest
 from dpks.classification import Classifier
@@ -530,6 +532,21 @@ class QuantMatrix:
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
 
         return self
+
+    def plot(
+        self, plot_type: str, save: bool = False, **kwargs: Union[np.ndarray, int]
+    ) -> matplotlib.pyplot.Figure:
+        if plot_type == "shap_summary":
+            n_display = int(kwargs.get("n_display", 5))
+            plot = SHAPPlot(self.clf.shap_values, self.clf.X, self)
+            fig = plot.plot(n_display)
+
+        if save:
+            filepath = str(kwargs.get("n_display", "plot.png"))
+            dpi = int(kwargs.get("dpi", 300))
+            matplotlib.pyplot.savefig(filepath, dpi=dpi)
+
+        return fig
 
     def outlier_detection(self) -> None:
         """detect outlies
