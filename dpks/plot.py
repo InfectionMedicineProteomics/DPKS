@@ -39,7 +39,7 @@ class SHAPPlot(Plot):
         qm: QuantMatrix,
         cmap: Union[list, str],
         n_display: int = 5,
-    ) -> plt.Figure:
+    ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         """Creates a SHAP summary plot-like figure.
 
         Args:
@@ -50,7 +50,6 @@ class SHAPPlot(Plot):
         Returns:
             plt.Figure: figure object
         """
-        assert shap_values.shape[0] == X.shape[0]
         self.shap_values = shap_values
         self.X = X
         self.qm = qm
