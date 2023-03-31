@@ -38,7 +38,7 @@ from dpks.imputer import (
     UniformRangeImputer,
     UniformPercentileImputer,
 )
-from dpks.plot import Plot, SHAPPlot
+from dpks.plot import Plot, SHAPPlot, RFEPCA
 from dpks.quantification import TopN, MaxLFQ
 from dpks.differential_testing import DifferentialTest
 from dpks.classification import Classifier
@@ -537,8 +537,8 @@ class QuantMatrix:
         self,
         plot_type: str,
         save: bool = False,
-        fig=None,
-        ax=None,
+        fig: matplotlib.Figure.figure = None,
+        ax: Union(list, matplotlib.Axes.axes) = None,
         **kwargs: Union[
             np.ndarray,
             int,
@@ -573,6 +573,13 @@ class QuantMatrix:
                 qm=self,
                 cmap=cmap,
                 n_display=n_display,
+            ).plot()
+
+        if plot_type == "rfe_pca":
+            cmap = kwargs.get("cmap", "coolwarm")
+            cutoffs = list(kwargs.get("cutoffs", [100, 50, 10]))
+            fig, ax = RFEPCA(
+                fig=fig, axs=ax, qm=self, cutoffs=cutoffs, cmap=cmap
             ).plot()
 
         if save:
