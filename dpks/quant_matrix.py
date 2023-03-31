@@ -534,19 +534,53 @@ class QuantMatrix:
         return self
 
     def plot(
-        self, plot_type: str, save: bool = False, **kwargs: Union[np.ndarray, int]
+        self,
+        plot_type: str,
+        save: bool = False,
+        fig=None,
+        ax=None,
+        **kwargs: Union[
+            np.ndarray,
+            int,
+            list,
+            str,
+        ],
     ) -> matplotlib.pyplot.Figure:
+        """generate plots"""
+
         if plot_type == "shap_summary":
+            try:
+                getattr(self.clf, "shap_values")
+            except AttributeError:
+                print("SHAP values have not been generated")
             n_display = int(kwargs.get("n_display", 5))
-            plot = SHAPPlot(self.clf.shap_values, self.clf.X, self)
-            fig = plot.plot(n_display)
+            cmap = kwargs.get(
+                "cmap",
+                [
+                    "#ff4800",
+                    "#ff4040",
+                    "#a836ff",
+                    "#405cff",
+                    "#05c9fa",
+                ],
+            )
+
+            fig, ax = SHAPPlot(
+                fig=fig,
+                ax=ax,
+                shap_values=self.clf.shap_values,
+                X=self.clf.X,
+                qm=self,
+                cmap=cmap,
+                n_display=n_display,
+            ).plot()
 
         if save:
-            filepath = str(kwargs.get("n_display", "plot.png"))
+            filepath = str(kwargs.get("filepath", f"{plot_type}.png"))
             dpi = int(kwargs.get("dpi", 300))
             matplotlib.pyplot.savefig(filepath, dpi=dpi)
 
-        return fig
+        return fig, ax
 
     def outlier_detection(self) -> None:
         """detect outlies
