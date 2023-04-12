@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd  # type: ignore
 import anndata as ad  # type: ignore
 from sklearn.preprocessing import LabelEncoder, StandardScaler
+import matplotlib
 
 from dpks.normalization import (
     TicNormalization,
@@ -37,6 +38,7 @@ from dpks.imputer import (
     UniformRangeImputer,
     UniformPercentileImputer,
 )
+from dpks.plot import Plot, SHAPPlot
 from dpks.quantification import TopN, MaxLFQ
 from dpks.differential_testing import DifferentialTest
 from dpks.classification import Classifier
@@ -546,6 +548,55 @@ class QuantMatrix:
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
 
         return self
+
+    def plot(
+        self,
+        plot_type: str,
+        save: bool = False,
+        fig=None,
+        ax=None,
+        **kwargs: Union[
+            np.ndarray,
+            int,
+            list,
+            str,
+        ],
+    ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
+        """generate plots"""
+
+        if plot_type == "shap_summary":
+            try:
+                getattr(self.clf, "shap_values")
+            except AttributeError:
+                print("SHAP values have not been generated")
+            n_display = int(kwargs.get("n_display", 5))
+            cmap = kwargs.get(
+                "cmap",
+                [
+                    "#ff4800",
+                    "#ff4040",
+                    "#a836ff",
+                    "#405cff",
+                    "#05c9fa",
+                ],
+            )
+
+            fig, ax = SHAPPlot(
+                fig=fig,
+                ax=ax,
+                shap_values=self.clf.shap_values,
+                X=self.clf.X,
+                qm=self,
+                cmap=cmap,
+                n_display=n_display,
+            ).plot()
+
+        if save:
+            filepath = str(kwargs.get("filepath", f"{plot_type}.png"))
+            dpi = int(kwargs.get("dpi", 300))
+            matplotlib.pyplot.savefig(filepath, dpi=dpi)
+
+        return fig, ax
 
     def outlier_detection(self) -> None:
         """detect outlies
