@@ -32,14 +32,14 @@ class Plot:
 class SHAPPlot(Plot):
     def __init__(
         self,
-        fig,
-        ax,
+        fig: matplotlib.figure.Figure,
+        ax: matplotlib.axes.Axes,
         shap_values: np.ndarray,
         X: np.ndarray,
         qm: QuantMatrix,
         cmap: Union[list, str],
         n_display: int = 5,
-    ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
+    ) -> "tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]":
         """Creates a SHAP summary plot-like figure.
 
         Args:
@@ -130,3 +130,54 @@ class SHAPPlot(Plot):
         self.ax.set_ylabel("Feature")
 
         return self.fig, self.ax
+
+
+class RFEPCA(Plot):
+    def __init__(
+        self,
+        fig: matplotlib.figure.Figure,
+        axs: list(matplotlib.axes.Axes),
+        qm: QuantMatrix,
+        cutoffs: list,
+        cmap: Union[list, str],
+    ) -> plt.Figure:
+        self.qm = qm
+        self.cutoffs = cutoffs
+        self.fig = fig
+        if isinstance(axs, list):
+            axs = np.array(axs)
+        self.axs = axs
+        self.cmap = cmap
+        if not fig:
+            self.fig, self.axs = plt.subplots(1, 1, figsize=(5, 5))
+
+    def plot(self):
+        qdf = self.qm.to_df()
+
+        samples1 = self.qm.get_samples(group=1)
+        samples2 = self.qm.get_samples(group=2)
+
+        y = [1 for _ in samples1] + [2 for _ in samples2]
+        if isinstance(self.cmap, list):
+            cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+                "customcmap", self.cmap
+            )
+        else:
+            cmap = plt.get_cmap(self.cmap)
+        for ax, cutoff in zip(self.axs.ravel(), self.cutoffs):
+            qdf_f = qdf[qdf.FeatureRank <= cutoff]
+            qdf_f = qdf_f[samples1 + samples2]
+            X = qdf_f.values.T
+            X = sklearn.preprocessing.StandardScaler().fit_transform(X)
+            pca = sklearn.decomposition.PCA(n_components=2)
+            pca.fit(X)
+            X = pca.transform(X)
+            explained_variance = pca.explained_variance_ratio_
+            sns.scatterplot(x=X[:, 0], y=X[:, 1], hue=y, palette=cmap, ax=ax)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xlabel(f"PC1 ({100*explained_variance[0]:.1f}%)")
+            ax.set_ylabel(f"PC2 ({100*explained_variance[1]:.1f}%)")
+            sns.despine()
+
+        return self.fig, self.axs
