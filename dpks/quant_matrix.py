@@ -561,7 +561,7 @@ class QuantMatrix:
             list,
             str,
         ],
-    ) -> matplotlib.pyplot.Figure:
+    ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         """generate plots"""
 
         if plot_type == "shap_summary":
