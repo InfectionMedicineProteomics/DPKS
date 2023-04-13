@@ -39,7 +39,7 @@ class SHAPPlot(Plot):
         qm: QuantMatrix,
         cmap: Union[list, str],
         n_display: int = 5,
-    ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
+    ) -> "tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]":
         """Creates a SHAP summary plot-like figure.
 
         Args:
