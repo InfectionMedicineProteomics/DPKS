@@ -553,8 +553,8 @@ class QuantMatrix:
         self,
         plot_type: str,
         save: bool = False,
-        fig: matplotlib.Figure.figure = None,
-        ax: Union(list, matplotlib.Axes.axes) = None,
+        fig: matplotlib.figure.Figure = None,
+        ax: Union(list, matplotlib.axes.Axes) = None,
         **kwargs: Union[
             np.ndarray,
             int,

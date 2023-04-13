@@ -32,8 +32,8 @@ class Plot:
 class SHAPPlot(Plot):
     def __init__(
         self,
-        fig,
-        ax,
+        fig: matplotlib.figure.Figure,
+        ax: matplotlib.axes.Axes,
         shap_values: np.ndarray,
         X: np.ndarray,
         qm: QuantMatrix,
@@ -135,8 +135,8 @@ class SHAPPlot(Plot):
 class RFEPCA(Plot):
     def __init__(
         self,
-        fig,
-        axs,
+        fig: matplotlib.figure.Figure,
+        axs: list(matplotlib.axes.Axes),
         qm: QuantMatrix,
         cutoffs: list,
         cmap: Union[list, str],
