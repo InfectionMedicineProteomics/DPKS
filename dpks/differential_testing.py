@@ -143,8 +143,8 @@ class DifferentialTest:
             quantitative_data.row_annotations[f"DEScore"] = de_scores
             quantitative_data.row_annotations[f"Group{group_a}Mean"] = group_a_means
             quantitative_data.row_annotations[f"Group{group_b}Mean"] = group_b_means
-            quantitative_data.row_annotations[f"Group{group_a}Stdev"] = group_a_stdev
-            quantitative_data.row_annotations[f"Group{group_b}Stdev"] = group_b_stdev
+            quantitative_data.row_annotations[f"Group{group_a}Stdev"] = group_a_stdevs
+            quantitative_data.row_annotations[f"Group{group_b}Stdev"] = group_b_stdevs
             quantitative_data.row_annotations[
                 f"Log2FoldChange{group_a}-{group_b}"
             ] = log_fold_changes
