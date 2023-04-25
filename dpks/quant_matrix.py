@@ -8,17 +8,24 @@ instanciate a quant matrix:
 """
 from __future__ import annotations
 
-from sklearn.feature_selection import RFECV, RFE
-
-from dpks.annotate_proteins import get_protein_labels
 from typing import Union, List
 
+import anndata as ad  # type: ignore
+import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
-import anndata as ad  # type: ignore
+from sklearn.feature_selection import RFECV, RFE
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-import matplotlib
 
+from dpks.annotate_proteins import get_protein_labels
+from dpks.classification import Classifier
+from dpks.differential_testing import DifferentialTest
+from dpks.feature_ranking import FeatureRankerRFE
+from dpks.imputer import (
+    ImputerMethod,
+    UniformRangeImputer,
+    UniformPercentileImputer,
+)
 from dpks.normalization import (
     TicNormalization,
     MedianNormalization,
@@ -27,23 +34,15 @@ from dpks.normalization import (
     NormalizationMethod,
     RTSlidingWindowNormalization,
 )
+from dpks.parsers import parse_diann
+from dpks.plot import SHAPPlot, RFEPCA
+from dpks.quantification import TopN, MaxLFQ
 from dpks.scaling import (
     ScalingMethod,
     ZScoreScaling,
     MinMaxScaling,
     AbsMaxScaling,
 )
-from dpks.imputer import (
-    ImputerMethod,
-    UniformRangeImputer,
-    UniformPercentileImputer,
-)
-from dpks.plot import Plot, SHAPPlot, RFEPCA
-from dpks.quantification import TopN, MaxLFQ
-from dpks.differential_testing import DifferentialTest
-from dpks.classification import Classifier
-
-from dpks.parsers import parse_diann
 
 
 class QuantMatrix:
@@ -54,16 +53,16 @@ class QuantMatrix:
     num_rows: int
     num_samples: int
     quantitative_data: ad.AnnData
-    selector: Union[RFECV, RFE]
+    selector: FeatureRankerRFE
 
     def __init__(
-        self,
-        quantification_file: Union[str, pd.DataFrame],
-        design_matrix_file: Union[str, pd.DataFrame],
-        annotation_fasta_file: str = None,
-        build_quant_graph: bool = False,
-        quant_type: str = "gps",
-        diann_qvalue: float = 0.01,
+            self,
+            quantification_file: Union[str, pd.DataFrame],
+            design_matrix_file: Union[str, pd.DataFrame],
+            annotation_fasta_file: str = None,
+            build_quant_graph: bool = False,
+            quant_type: str = "gps",
+            diann_qvalue: float = 0.01,
     ) -> None:
         """init"""
 
@@ -156,9 +155,9 @@ class QuantMatrix:
         """
 
         self.row_annotations["PrecursorId"] = (
-            self.row_annotations["PeptideSequence"]
-            + "_"
-            + self.row_annotations["Charge"].astype(str)
+                self.row_annotations["PeptideSequence"]
+                + "_"
+                + self.row_annotations["Charge"].astype(str)
         )
 
         return list(self.row_annotations["PrecursorId"].unique())
@@ -217,12 +216,12 @@ class QuantMatrix:
         )
 
     def filter(
-        self,
-        peptide_q_value: float = 0.01,
-        protein_q_value: float = 0.01,
-        remove_decoys: bool = True,
-        remove_contaminants: bool = True,
-        remove_non_proteotypic: bool = True,
+            self,
+            peptide_q_value: float = 0.01,
+            protein_q_value: float = 0.01,
+            remove_decoys: bool = True,
+            remove_contaminants: bool = True,
+            remove_non_proteotypic: bool = True,
     ) -> QuantMatrix:
         """filter the QuantMatrix
 
@@ -239,13 +238,11 @@ class QuantMatrix:
         """
 
         if "PeptideQValue" in self.quantitative_data.obs:
-
             filtered_data = self.quantitative_data[
                 (self.quantitative_data.obs["PeptideQValue"] <= peptide_q_value)
             ].copy()
 
         if "ProteinQValue" in self.quantitative_data.obs:
-
             filtered_data = self.quantitative_data[
                 (self.quantitative_data.obs["ProteinQValue"] <= protein_q_value)
             ].copy()
@@ -290,8 +287,8 @@ class QuantMatrix:
         return self
 
     def scale(
-        self,
-        method: str,
+            self,
+            method: str,
     ) -> QuantMatrix:
         base_method: ScalingMethod = ScalingMethod()
 
@@ -309,11 +306,11 @@ class QuantMatrix:
         return self
 
     def normalize(
-        self,
-        method: str,
-        log_transform: bool = True,
-        use_rt_sliding_window_filter: bool = False,
-        **kwargs: Union[int, bool, str],
+            self,
+            method: str,
+            log_transform: bool = True,
+            use_rt_sliding_window_filter: bool = False,
+            **kwargs: Union[int, bool, str],
     ) -> QuantMatrix:
         """normalize the QuantMatrix
 
@@ -366,10 +363,10 @@ class QuantMatrix:
         return self
 
     def quantify(
-        self,
-        method: str,
-        resolve_protein_groups: bool = False,
-        **kwargs: Union[int, str],
+            self,
+            method: str,
+            resolve_protein_groups: bool = False,
+            **kwargs: Union[int, str],
     ) -> QuantMatrix:
         """calculate protein quantities
 
@@ -429,12 +426,12 @@ class QuantMatrix:
         return merged
 
     def compare_groups(
-        self,
-        method: str,
-        comparisons: list,
-        min_samples_per_group: int = 2,
-        level: str = "protein",
-        multiple_testing_correction_method: str = "fdr_tsbh",
+            self,
+            method: str,
+            comparisons: list,
+            min_samples_per_group: int = 2,
+            level: str = "protein",
+            multiple_testing_correction_method: str = "fdr_tsbh",
     ) -> QuantMatrix:
         """compare groups by differential testing
 
@@ -458,14 +455,15 @@ class QuantMatrix:
         return self
 
     def classify(
-        self,
-        classifier,
-        shap_algorithm: str = "auto",
-        scale: bool = True,
-        min_samples_per_group: int = 2,
-        run_rfe: bool = True,
-        run_param_search: bool = False,
-        **kwargs: Union[dict, int, str],
+            self,
+            classifier,
+            shap_algorithm: str = "auto",
+            scale: bool = True,
+            min_samples_per_group: int = 2,
+            feature_importance_method: str = "rfecv",
+            calculate_feature_importance: bool = True,
+            run_param_search: bool = False,
+            **kwargs: Union[dict, int, str],
     ) -> QuantMatrix:
         identifiers = self.proteins
 
@@ -477,8 +475,8 @@ class QuantMatrix:
         for group in groups:
             for identifier in identifiers:
                 quant_data = quant_copy[
-                    self.row_annotations["Protein"] == identifier, :
-                ].copy()
+                             self.row_annotations["Protein"] == identifier, :
+                             ].copy()
 
                 index = int(quant_data.obs.index.to_numpy()[0])
 
@@ -508,7 +506,7 @@ class QuantMatrix:
             n_iter = int(kwargs.get("n_iter", 30))
             n_jobs = int(kwargs.get("n_jobs", 4))
             scoring = str(kwargs.get("scoring", "accuracy"))
-            self.clf.get_best_estimator(
+            classifier = self.clf.get_best_estimator(
                 X, Y, param_grid, folds, random_state, n_iter, n_jobs, scoring
             )
 
@@ -520,19 +518,47 @@ class QuantMatrix:
             shap_values.insert(index, np.nan)
         self.quantitative_data.obs["SHAP"] = shap_values
 
-        if run_rfe:
-            rfe_step = int(kwargs.get("rfe_step", 1))
-            rfe_min_features_to_select = int(
-                kwargs.get("rfe_min_features_to_select", 1)
-            )
-            selector = self.clf.recursive_feature_elimination(
-                X, Y, min_features_to_select=rfe_min_features_to_select, step=rfe_step
-            )
-            feature_rank_values = selector.ranking_.tolist()
-            for index in drop_indexes:
-                feature_rank_values.insert(index, np.nan)
-            self.quantitative_data.obs["FeatureRank"] = feature_rank_values
-            self.selector = selector
+        if calculate_feature_importance:
+
+            if feature_importance_method == "rfecv":
+
+                rfe_step = int(kwargs.get("rfe_step", 1))
+                rfe_min_features_to_select = int(
+                    kwargs.get("rfe_min_features_to_select", 1)
+                )
+
+                k_folds = int(
+                    kwargs.get("k_folds", 2)
+                )
+
+                threads = int(
+                    kwargs.get("threads", 1)
+                )
+
+                verbose = bool(
+                    kwargs.get("verbose", False)
+                )
+
+                selector = FeatureRankerRFE(
+                    min_features_to_select=rfe_min_features_to_select,
+                    step=rfe_step,
+                    importance_getter="auto",
+                    scoring="accuracy",
+                    k_folds=k_folds,
+                    threads=threads,
+                    verbose=verbose
+                )
+
+                selector.rank_features(
+                    X, Y, classifier
+                )
+
+                feature_rank_values = selector.ranking_.tolist()
+                for index in drop_indexes:
+                    feature_rank_values.insert(index, np.nan)
+                self.quantitative_data.obs["FeatureRank"] = feature_rank_values
+
+                self.selector = selector
 
         return self
 
@@ -557,17 +583,17 @@ class QuantMatrix:
         return self
 
     def plot(
-        self,
-        plot_type: str,
-        save: bool = False,
-        fig: matplotlib.figure.Figure = None,
-        ax: Union(list, matplotlib.axes.Axes) = None,
-        **kwargs: Union[
-            np.ndarray,
-            int,
-            list,
-            str,
-        ],
+            self,
+            plot_type: str,
+            save: bool = False,
+            fig: matplotlib.figure.Figure = None,
+            ax: Union(list, matplotlib.axes.Axes) = None,
+            **kwargs: Union[
+                np.ndarray,
+                int,
+                list,
+                str,
+            ],
     ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         """generate plots"""
 
