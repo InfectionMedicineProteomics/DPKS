@@ -1,5 +1,5 @@
 import seaborn as sns  # type: ignore # noqa: F401
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -37,9 +37,9 @@ class SHAPPlot(Plot):
         shap_values: np.ndarray,
         X: np.ndarray,
         qm: QuantMatrix,
-        cmap: Union[list, str],
+        cmap: Union[List, str],
         n_display: int = 5,
-    ) -> "tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]":
+    ):
         """Creates a SHAP summary plot-like figure.
 
         Args:
@@ -64,7 +64,7 @@ class SHAPPlot(Plot):
             self.fig = fig
             self.ax = ax
 
-    def plot(self):
+    def plot(self) -> Tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         plot_frame = pd.DataFrame(columns=["feature", "x", "y"])
         col_sum = np.mean(np.abs(self.shap_values), axis=0)
         sort_index = np.argsort(-col_sum)
@@ -136,11 +136,11 @@ class RFEPCA(Plot):
     def __init__(
         self,
         fig: matplotlib.figure.Figure,
-        axs: list(matplotlib.axes.Axes),
+        axs: List[matplotlib.axes.Axes],
         qm: QuantMatrix,
-        cutoffs: list,
+        cutoffs: List,
         cmap: Union[list, str],
-    ) -> plt.Figure:
+    ):
         self.qm = qm
         self.cutoffs = cutoffs
         self.fig = fig
@@ -151,7 +151,7 @@ class RFEPCA(Plot):
         if not fig:
             self.fig, self.axs = plt.subplots(1, 1, figsize=(5, 5))
 
-    def plot(self):
+    def plot(self) -> Tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         qdf = self.qm.to_df()
 
         samples1 = self.qm.get_samples(group=1)

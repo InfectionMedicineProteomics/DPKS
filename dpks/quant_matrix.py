@@ -238,10 +238,17 @@ class QuantMatrix:
 
         """
 
-        filtered_data = self.quantitative_data[
-            (self.quantitative_data.obs["PeptideQValue"] <= peptide_q_value)
-            & (self.quantitative_data.obs["ProteinQValue"] <= protein_q_value)
-        ].copy()
+        if "PeptideQValue" in self.quantitative_data.obs:
+
+            filtered_data = self.quantitative_data[
+                (self.quantitative_data.obs["PeptideQValue"] <= peptide_q_value)
+            ].copy()
+
+        if "ProteinQValue" in self.quantitative_data.obs:
+
+            filtered_data = self.quantitative_data[
+                (self.quantitative_data.obs["ProteinQValue"] <= protein_q_value)
+            ].copy()
 
         if remove_decoys:
             if "Decoy" in filtered_data.obs:
