@@ -1,22 +1,26 @@
 import numpy as np
 from sklearn.feature_selection import RFE
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score, StratifiedKFold
+from sklearn.model_selection import (
+    RepeatedStratifiedKFold,
+    cross_val_score,
+    StratifiedKFold,
+)
 
 from dpks.classification import Classifier
 
 
 class FeatureRankerRFE:
-
-    def __init__(self,
-                 min_features_to_select: int = 10,
-                 step: int = 3,
-                 importance_getter: str = "auto",
-                 scoring: str = "accuracy",
-                 k_folds: int = 3,
-                 threads: int = 1,
-                 verbose: bool = False
-                 ) -> None:
+    def __init__(
+        self,
+        min_features_to_select: int = 10,
+        step: int = 3,
+        importance_getter: str = "auto",
+        scoring: str = "accuracy",
+        k_folds: int = 3,
+        threads: int = 1,
+        verbose: bool = False,
+    ) -> None:
         self.selector = None
         self.results = dict()
         self.verbose = verbose
@@ -30,10 +34,7 @@ class FeatureRankerRFE:
 
     def _evaluate_model(self, classifier, X, y):
 
-        cv = RepeatedStratifiedKFold(
-            n_splits=self.k_folds,
-            random_state=42
-        )
+        cv = RepeatedStratifiedKFold(n_splits=self.k_folds, random_state=42)
 
         scores = cross_val_score(
             classifier,
@@ -46,17 +47,20 @@ class FeatureRankerRFE:
 
         return scores
 
-    def rank_features(self,
-                      X,
-                      y,
-                      classifier,
-                      ) -> None:
+    def rank_features(
+        self,
+        X,
+        y,
+        classifier,
+    ) -> None:
 
         selector = RFE(
-            estimator=Classifier(classifier=classifier, shap_algorithm=self.importance_getter),
+            estimator=Classifier(
+                classifier=classifier, shap_algorithm=self.importance_getter
+            ),
             step=self.step,
             n_features_to_select=1,
-            importance_getter=self.importance_getter
+            importance_getter=self.importance_getter,
         )
 
         selector.fit(X, y)
@@ -85,7 +89,9 @@ class FeatureRankerRFE:
                     X_train = X_train.reshape(-1, 1)
                     X_test = X_test.reshape(-1, 1)
 
-                clf = Classifier(classifier=classifier, shap_algorithm=self.importance_getter)
+                clf = Classifier(
+                    classifier=classifier, shap_algorithm=self.importance_getter
+                )
 
                 clf.fit(X_train, y_train)
 
@@ -96,7 +102,9 @@ class FeatureRankerRFE:
             self.results[feature_num] = scores
 
             if self.verbose:
-                print(f"Model ({feature_num} features): {np.mean(scores)} {np.std(scores)}")
+                print(
+                    f"Model ({feature_num} features): {np.mean(scores)} {np.std(scores)}"
+                )
 
         self.selector = selector
 

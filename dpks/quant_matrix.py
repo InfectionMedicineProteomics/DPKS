@@ -56,13 +56,13 @@ class QuantMatrix:
     selector: FeatureRankerRFE
 
     def __init__(
-            self,
-            quantification_file: Union[str, pd.DataFrame],
-            design_matrix_file: Union[str, pd.DataFrame],
-            annotation_fasta_file: str = None,
-            build_quant_graph: bool = False,
-            quant_type: str = "gps",
-            diann_qvalue: float = 0.01,
+        self,
+        quantification_file: Union[str, pd.DataFrame],
+        design_matrix_file: Union[str, pd.DataFrame],
+        annotation_fasta_file: str = None,
+        build_quant_graph: bool = False,
+        quant_type: str = "gps",
+        diann_qvalue: float = 0.01,
     ) -> None:
         """init"""
 
@@ -155,9 +155,9 @@ class QuantMatrix:
         """
 
         self.row_annotations["PrecursorId"] = (
-                self.row_annotations["PeptideSequence"]
-                + "_"
-                + self.row_annotations["Charge"].astype(str)
+            self.row_annotations["PeptideSequence"]
+            + "_"
+            + self.row_annotations["Charge"].astype(str)
         )
 
         return list(self.row_annotations["PrecursorId"].unique())
@@ -216,12 +216,12 @@ class QuantMatrix:
         )
 
     def filter(
-            self,
-            peptide_q_value: float = 0.01,
-            protein_q_value: float = 0.01,
-            remove_decoys: bool = True,
-            remove_contaminants: bool = True,
-            remove_non_proteotypic: bool = True,
+        self,
+        peptide_q_value: float = 0.01,
+        protein_q_value: float = 0.01,
+        remove_decoys: bool = True,
+        remove_contaminants: bool = True,
+        remove_non_proteotypic: bool = True,
     ) -> QuantMatrix:
         """filter the QuantMatrix
 
@@ -287,8 +287,8 @@ class QuantMatrix:
         return self
 
     def scale(
-            self,
-            method: str,
+        self,
+        method: str,
     ) -> QuantMatrix:
         base_method: ScalingMethod = ScalingMethod()
 
@@ -306,11 +306,11 @@ class QuantMatrix:
         return self
 
     def normalize(
-            self,
-            method: str,
-            log_transform: bool = True,
-            use_rt_sliding_window_filter: bool = False,
-            **kwargs: Union[int, bool, str],
+        self,
+        method: str,
+        log_transform: bool = True,
+        use_rt_sliding_window_filter: bool = False,
+        **kwargs: Union[int, bool, str],
     ) -> QuantMatrix:
         """normalize the QuantMatrix
 
@@ -363,10 +363,10 @@ class QuantMatrix:
         return self
 
     def quantify(
-            self,
-            method: str,
-            resolve_protein_groups: bool = False,
-            **kwargs: Union[int, str],
+        self,
+        method: str,
+        resolve_protein_groups: bool = False,
+        **kwargs: Union[int, str],
     ) -> QuantMatrix:
         """calculate protein quantities
 
@@ -426,12 +426,12 @@ class QuantMatrix:
         return merged
 
     def compare_groups(
-            self,
-            method: str,
-            comparisons: list,
-            min_samples_per_group: int = 2,
-            level: str = "protein",
-            multiple_testing_correction_method: str = "fdr_tsbh",
+        self,
+        method: str,
+        comparisons: list,
+        min_samples_per_group: int = 2,
+        level: str = "protein",
+        multiple_testing_correction_method: str = "fdr_tsbh",
     ) -> QuantMatrix:
         """compare groups by differential testing
 
@@ -455,15 +455,15 @@ class QuantMatrix:
         return self
 
     def classify(
-            self,
-            classifier,
-            shap_algorithm: str = "auto",
-            scale: bool = True,
-            min_samples_per_group: int = 2,
-            feature_importance_method: str = "rfecv",
-            calculate_feature_importance: bool = True,
-            run_param_search: bool = False,
-            **kwargs: Union[dict, int, str],
+        self,
+        classifier,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
+        min_samples_per_group: int = 2,
+        feature_importance_method: str = "rfecv",
+        calculate_feature_importance: bool = True,
+        run_param_search: bool = False,
+        **kwargs: Union[dict, int, str],
     ) -> QuantMatrix:
         identifiers = self.proteins
 
@@ -475,8 +475,8 @@ class QuantMatrix:
         for group in groups:
             for identifier in identifiers:
                 quant_data = quant_copy[
-                             self.row_annotations["Protein"] == identifier, :
-                             ].copy()
+                    self.row_annotations["Protein"] == identifier, :
+                ].copy()
 
                 index = int(quant_data.obs.index.to_numpy()[0])
 
@@ -527,17 +527,11 @@ class QuantMatrix:
                     kwargs.get("rfe_min_features_to_select", 1)
                 )
 
-                k_folds = int(
-                    kwargs.get("k_folds", 2)
-                )
+                k_folds = int(kwargs.get("k_folds", 2))
 
-                threads = int(
-                    kwargs.get("threads", 1)
-                )
+                threads = int(kwargs.get("threads", 1))
 
-                verbose = bool(
-                    kwargs.get("verbose", False)
-                )
+                verbose = bool(kwargs.get("verbose", False))
 
                 selector = FeatureRankerRFE(
                     min_features_to_select=rfe_min_features_to_select,
@@ -546,12 +540,10 @@ class QuantMatrix:
                     scoring="accuracy",
                     k_folds=k_folds,
                     threads=threads,
-                    verbose=verbose
+                    verbose=verbose,
                 )
 
-                selector.rank_features(
-                    X, Y, classifier
-                )
+                selector.rank_features(X, Y, classifier)
 
                 feature_rank_values = selector.ranking_.tolist()
                 for index in drop_indexes:
@@ -583,17 +575,17 @@ class QuantMatrix:
         return self
 
     def plot(
-            self,
-            plot_type: str,
-            save: bool = False,
-            fig: matplotlib.figure.Figure = None,
-            ax: Union(list, matplotlib.axes.Axes) = None,
-            **kwargs: Union[
-                np.ndarray,
-                int,
-                list,
-                str,
-            ],
+        self,
+        plot_type: str,
+        save: bool = False,
+        fig: matplotlib.figure.Figure = None,
+        ax: Union(list, matplotlib.axes.Axes) = None,
+        **kwargs: Union[
+            np.ndarray,
+            int,
+            list,
+            str,
+        ],
     ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         """generate plots"""
 

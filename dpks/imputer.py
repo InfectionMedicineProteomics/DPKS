@@ -30,19 +30,18 @@ class UniformPercentileImputer(ImputerMethod):
         """init"""
         self.percentile = percentile
 
-
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
         """fit the transform"""
-        X = np.nan_to_num(X) # Replace NaN with 0
+        X = np.nan_to_num(X)  # Replace NaN with 0
         X_no_zero = X[X != 0]
-        minvalue = X_no_zero.min() 
-        maxvalue = X_no_zero.max() * self.percentile + minvalue 
+        minvalue = X_no_zero.min()
+        maxvalue = X_no_zero.max() * self.percentile + minvalue
 
         mask = X == 0
         c = np.count_nonzero(mask)
         nums = np.random.uniform(minvalue, maxvalue, c)
         X[mask] = nums
-        
+
         return X
 
 
@@ -65,7 +64,7 @@ class UniformRangeImputer(ImputerMethod):
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
         """fit the transform"""
-        X = np.nan_to_num(X) # Replace NaN with 0
+        X = np.nan_to_num(X)  # Replace NaN with 0
         mask = X == 0
         c = np.count_nonzero(mask)
         nums = np.random.uniform(self.minvalue, self.maxvalue, c)
