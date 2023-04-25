@@ -1,13 +1,13 @@
 from typing import TYPE_CHECKING, Any
 import xgboost
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, RepeatedStratifiedKFold
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import cross_val_score
 import numpy as np
 import shap
-from sklearn.feature_selection import RFECV
+from sklearn.feature_selection import RFECV, RFE
 from sklearn.base import BaseEstimator, ClassifierMixin
-
+from sklearn.pipeline import Pipeline
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
@@ -29,7 +29,12 @@ class Classifier(BaseEstimator, ClassifierMixin):
     ):
         if isinstance(classifier, str):
             if classifier == "xgboost":
-                self.classifier = xgboost.XGBClassifier(max_depth=30)
+                self.classifier = xgboost.XGBClassifier(
+                    max_depth=30,
+                    eval_metric="logloss",
+                    use_label_encoder=False,
+                    verbosity=0,
+                )
         else:
             fit_method = getattr(classifier, "fit", None)
             predict_method = getattr(classifier, "predict", None)
@@ -80,28 +85,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
 
     def cross_validation(self, X, y, k_folds: int = 5):
         self.scores = cross_val_score(self.classifier, X, y, cv=k_folds)
-
-    def recursive_feature_elimination(
-        self,
-        X,
-        y,
-        k_folds: int = 3,
-        scoring: str = "accuracy",
-        min_features_to_select: int = 10,
-        step: int = 3,
-        importance_getter: str = "auto",
-    ):
-        selector = RFECV(
-            estimator=self,
-            step=step,
-            min_features_to_select=min_features_to_select,
-            scoring=scoring,
-            cv=k_folds,
-            importance_getter=importance_getter,
-        )
-
-        selector = selector.fit(X, y)
-        return selector
 
     def interpret(self, X):
         if self.shap_algorithm == "permutation":

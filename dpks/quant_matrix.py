@@ -8,17 +8,24 @@ instanciate a quant matrix:
 """
 from __future__ import annotations
 
-from sklearn.feature_selection import RFECV, RFE
-
-from dpks.annotate_proteins import get_protein_labels
 from typing import Union, List
 
+import anndata as ad  # type: ignore
+import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
-import anndata as ad  # type: ignore
+from sklearn.feature_selection import RFECV, RFE
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-import matplotlib
 
+from dpks.annotate_proteins import get_protein_labels
+from dpks.classification import Classifier
+from dpks.differential_testing import DifferentialTest
+from dpks.feature_ranking import FeatureRankerRFE
+from dpks.imputer import (
+    ImputerMethod,
+    UniformRangeImputer,
+    UniformPercentileImputer,
+)
 from dpks.normalization import (
     TicNormalization,
     MedianNormalization,
@@ -27,23 +34,15 @@ from dpks.normalization import (
     NormalizationMethod,
     RTSlidingWindowNormalization,
 )
+from dpks.parsers import parse_diann
+from dpks.plot import SHAPPlot, RFEPCA
+from dpks.quantification import TopN, MaxLFQ
 from dpks.scaling import (
     ScalingMethod,
     ZScoreScaling,
     MinMaxScaling,
     AbsMaxScaling,
 )
-from dpks.imputer import (
-    ImputerMethod,
-    UniformRangeImputer,
-    UniformPercentileImputer,
-)
-from dpks.plot import Plot, SHAPPlot, RFEPCA
-from dpks.quantification import TopN, MaxLFQ
-from dpks.differential_testing import DifferentialTest
-from dpks.classification import Classifier
-
-from dpks.parsers import parse_diann
 
 
 class QuantMatrix:
@@ -54,7 +53,7 @@ class QuantMatrix:
     num_rows: int
     num_samples: int
     quantitative_data: ad.AnnData
-    selector: Union[RFECV, RFE]
+    selector: FeatureRankerRFE
 
     def __init__(
         self,
@@ -239,13 +238,11 @@ class QuantMatrix:
         """
 
         if "PeptideQValue" in self.quantitative_data.obs:
-
             filtered_data = self.quantitative_data[
                 (self.quantitative_data.obs["PeptideQValue"] <= peptide_q_value)
             ].copy()
 
         if "ProteinQValue" in self.quantitative_data.obs:
-
             filtered_data = self.quantitative_data[
                 (self.quantitative_data.obs["ProteinQValue"] <= protein_q_value)
             ].copy()
@@ -463,7 +460,8 @@ class QuantMatrix:
         shap_algorithm: str = "auto",
         scale: bool = True,
         min_samples_per_group: int = 2,
-        run_rfe: bool = True,
+        feature_importance_method: str = "rfecv",
+        calculate_feature_importance: bool = True,
         run_param_search: bool = False,
         **kwargs: Union[dict, int, str],
     ) -> QuantMatrix:
@@ -508,7 +506,7 @@ class QuantMatrix:
             n_iter = int(kwargs.get("n_iter", 30))
             n_jobs = int(kwargs.get("n_jobs", 4))
             scoring = str(kwargs.get("scoring", "accuracy"))
-            self.clf.get_best_estimator(
+            classifier = self.clf.get_best_estimator(
                 X, Y, param_grid, folds, random_state, n_iter, n_jobs, scoring
             )
 
@@ -520,19 +518,39 @@ class QuantMatrix:
             shap_values.insert(index, np.nan)
         self.quantitative_data.obs["SHAP"] = shap_values
 
-        if run_rfe:
-            rfe_step = int(kwargs.get("rfe_step", 1))
-            rfe_min_features_to_select = int(
-                kwargs.get("rfe_min_features_to_select", 1)
-            )
-            selector = self.clf.recursive_feature_elimination(
-                X, Y, min_features_to_select=rfe_min_features_to_select, step=rfe_step
-            )
-            feature_rank_values = selector.ranking_.tolist()
-            for index in drop_indexes:
-                feature_rank_values.insert(index, np.nan)
-            self.quantitative_data.obs["FeatureRank"] = feature_rank_values
-            self.selector = selector
+        if calculate_feature_importance:
+
+            if feature_importance_method == "rfecv":
+
+                rfe_step = int(kwargs.get("rfe_step", 1))
+                rfe_min_features_to_select = int(
+                    kwargs.get("rfe_min_features_to_select", 1)
+                )
+
+                k_folds = int(kwargs.get("k_folds", 2))
+
+                threads = int(kwargs.get("threads", 1))
+
+                verbose = bool(kwargs.get("verbose", False))
+
+                selector = FeatureRankerRFE(
+                    min_features_to_select=rfe_min_features_to_select,
+                    step=rfe_step,
+                    importance_getter="auto",
+                    scoring="accuracy",
+                    k_folds=k_folds,
+                    threads=threads,
+                    verbose=verbose,
+                )
+
+                selector.rank_features(X, Y, classifier)
+
+                feature_rank_values = selector.ranking_.tolist()
+                for index in drop_indexes:
+                    feature_rank_values.insert(index, np.nan)
+                self.quantitative_data.obs["FeatureRank"] = feature_rank_values
+
+                self.selector = selector
 
         return self
 
