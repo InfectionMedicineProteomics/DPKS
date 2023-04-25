@@ -15,10 +15,19 @@ def parse_diann(diann_file: Union[str, pd.DataFrame], diann_qvalue: float = 0.01
 
     quantification_file = quantification_file[quantification_file["Q.Value"] <= diann_qvalue]
 
-    if "Lib.PG.Q.Value" in quantification_file:
+    used_columns = []
+
+    scoring_columns = []
+
+    if ("Lib.PG.Q.Value" in quantification_file) or ("Lib.Q.Value" in quantification_file):
+
+        if "Lib.PG.Q.Value" not in quantification_file:
+
+            quantification_file["Lib.PG.Q.Value"] = 0.0
 
         columns = [
             "Protein.Ids",
+            "Genes",
             "Precursor.Id",
             "Modified.Sequence",
             "Precursor.Charge",
@@ -28,10 +37,22 @@ def parse_diann(diann_file: Union[str, pd.DataFrame], diann_qvalue: float = 0.01
             "Lib.Q.Value"
         ]
 
+        scoring_columns = [
+            "Lib.PG.Q.Value",
+            "Lib.Q.Value"
+        ]
+
+        for col in columns:
+
+            if col in quantification_file:
+
+                used_columns.append(col)
+
     else:
 
         columns = [
             "Protein.Ids",
+            "Genes",
             "Precursor.Id",
             "Modified.Sequence",
             "Precursor.Charge",
@@ -41,18 +62,44 @@ def parse_diann(diann_file: Union[str, pd.DataFrame], diann_qvalue: float = 0.01
             "Global.Q.Value"
         ]
 
-    long_results = quantification_file[
-        ["Run"] + columns
+        scoring_columns = [
+            "Global.PG.Q.Value",
+            "Global.Q.Value"
+        ]
+
+        for col in columns:
+
+            if col in quantification_file:
+
+                used_columns.append(col)
+
+
+    file_column = "Run"
+
+    if "Run" in quantification_file:
+
+        long_results = quantification_file[
+            ["Run"] + used_columns
+            ].copy()
+
+    elif "File.Name" in quantification_file:
+
+        file_column = "File.Name"
+
+        long_results = quantification_file[
+            ["File.Name"] + used_columns
         ].copy()
 
+
     # Removes file extension (mzml, d, etc) and then rebuilds sample name
-    long_results["Run"] = long_results["Run"].str.rsplit(".", 1).str[0]
+    long_results[file_column] = long_results[file_column].str.rsplit(".", 1).str[0]
 
     retention_times = long_results[
-        ['Protein.Ids', 'Precursor.Id', 'Modified.Sequence', 'Precursor.Charge', 'RT']
+        ['Protein.Ids', "Genes", 'Precursor.Id', 'Modified.Sequence', 'Precursor.Charge', 'RT']
     ].groupby(
         [
             "Protein.Ids",
+            "Genes",
             "Precursor.Id",
             "Modified.Sequence",
             "Precursor.Charge"
@@ -60,31 +107,31 @@ def parse_diann(diann_file: Union[str, pd.DataFrame], diann_qvalue: float = 0.01
     ).agg('median')
 
     wide_results = long_results.pivot(
-        columns="Run",
+        columns=file_column,
         index=[
             "Precursor.Id",
             "Protein.Ids",
+            "Genes",
             "Modified.Sequence",
             "Precursor.Charge",
-            "Lib.PG.Q.Value",
-            "Lib.Q.Value"
-        ],
+        ] + scoring_columns,
         values="Precursor.Quantity").reset_index().copy()
 
     wide_results.columns.name = None
 
     wide_results = wide_results.set_index(
-        ['Protein.Ids', 'Precursor.Id', 'Modified.Sequence', 'Precursor.Charge']
+        ['Protein.Ids', "Genes", 'Precursor.Id', 'Modified.Sequence', 'Precursor.Charge']
     ).join(
         retention_times
     ).reset_index()
 
-    if "Lib.PG.Q.Value" in quantification_file:
+    if ("Lib.PG.Q.Value" in quantification_file) or ("Lib.Q.Value" in quantification_file):
 
         wide_results.rename(
             columns={
                 "Precursor.Id": "PrecursorId",
                 "Protein.Ids": "Protein",
+                "Genes": "ProteinLabel",
                 "Modified.Sequence": "PeptideSequence",
                 "Precursor.Charge": "Charge",
                 "Lib.PG.Q.Value": "ProteinQValue",
@@ -100,6 +147,7 @@ def parse_diann(diann_file: Union[str, pd.DataFrame], diann_qvalue: float = 0.01
             columns={
                 "Precursor.Id": "PrecursorId",
                 "Protein.Ids": "Protein",
+                "Genes": "ProteinLabel",
                 "Modified.Sequence": "PeptideSequence",
                 "Precursor.Charge": "Charge",
                 "Global.PG.Q.Value": "ProteinQValue",
