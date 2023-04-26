@@ -39,6 +39,10 @@ class SHAPPlot(Plot):
         qm: QuantMatrix,
         cmap: Union[List, str],
         n_display: int = 5,
+        jitter: float = 0.1,
+        alpha: float = 0.75,
+        feature_column: str = "Protein",
+        n_bins=100,
     ):
         """Creates a SHAP summary plot-like figure.
 
@@ -55,6 +59,10 @@ class SHAPPlot(Plot):
         self.qm = qm
         self.n_display = n_display
         self.cmap = cmap
+        self.jitter = jitter
+        self.alpha = alpha
+        self.feature_column = feature_column
+        self.n_bins = n_bins
 
         if not fig:
             self.fig, self.ax = plt.subplots(
@@ -68,9 +76,12 @@ class SHAPPlot(Plot):
         plot_frame = pd.DataFrame(columns=["feature", "x", "y"])
         col_sum = np.mean(np.abs(self.shap_values), axis=0)
         sort_index = np.argsort(-col_sum)
-
-        for feature_idx in sort_index[0 : self.n_display]:
-            feature_name = self.qm.quantitative_data.obs["Protein"][feature_idx]
+        feature_names = []
+        for idx, feature_idx in enumerate(sort_index[0 : self.n_display]):
+            feature_name = self.qm.quantitative_data.obs[self.feature_column][
+                feature_idx
+            ]
+            feature_names.append(feature_name)
             sv = self.shap_values[:, feature_idx]
             fv = self.X[:, feature_idx]
             plot_frame = pd.concat(
@@ -81,6 +92,7 @@ class SHAPPlot(Plot):
                             "feature": len(fv) * [feature_name],
                             "sv": sv,
                             "fv": fv,
+                            "feature_idx": idx,
                         }
                     ),
                 ]
@@ -101,20 +113,10 @@ class SHAPPlot(Plot):
             colors.update({cval: cmap(norm(cval))})
 
         self.ax.axvline([0], c="#f5f5f5", zorder=-1)
-        sns.stripplot(
-            data=plot_frame,
-            x="sv",
-            y="feature",
-            dodge=False,
-            jitter=1,
-            alpha=0.95,
-            size=5,
-            palette=colors,
-            hue="fv",
-            ax=self.ax,
-        )
-        self.ax.get_legend().remove()
-        cb = self.fig.colorbar(cm.ScalarMappable(cmap=cmap, norm=norm), ax=self.ax)
+
+        plot_frame = self._jitter(plot_frame)
+        plot_frame["y"] = plot_frame["feature_idx"] + plot_frame["jitter"]
+        c = plot_frame["fv"].map(colors)
         sns.violinplot(
             data=plot_frame,
             x="sv",
@@ -124,12 +126,40 @@ class SHAPPlot(Plot):
             linewidth=0,
             ax=self.ax,
         )
+        sns.scatterplot(
+            x=plot_frame["sv"],
+            y=plot_frame["y"],
+            c=c,
+            alpha=self.alpha,
+            linewidth=0,
+            ax=self.ax,
+        )
+        cb = self.fig.colorbar(cm.ScalarMappable(cmap=cmap, norm=norm), ax=self.ax)
+
         cb.outline.set_visible(False)
         sns.despine(ax=self.ax, left=True, right=True, top=True)
+
         self.ax.set_xlabel("SHAP value")
         self.ax.set_ylabel("Feature")
-
+        self.ax.set_yticks(range(self.n_display), feature_names)
         return self.fig, self.ax
+
+    def _jitter(self, plot_frame):
+        plot_frame["bin"] = pd.cut(
+            plot_frame["sv"], bins=self.n_bins, labels=range(self.n_bins)
+        )
+        bins = plot_frame["bin"].value_counts()
+
+        bins_desc = bins.index.values.tolist()
+        bins_desc.reverse()
+        jitters = []
+        for row in plot_frame.iterrows():
+            b = row[1].bin
+            i = bins_desc.index(b)
+            jitter = np.random.normal(scale=self.jitter) * i / self.n_bins
+            jitters.append(jitter)
+        plot_frame["jitter"] = jitters
+        return plot_frame
 
 
 class RFEPCA(Plot):

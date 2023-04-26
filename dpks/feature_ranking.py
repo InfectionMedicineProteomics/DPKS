@@ -65,7 +65,7 @@ class FeatureRankerRFE:
 
         selector.fit(X, y)
 
-        for feature_num in range(self.min_features_to_select, X.shape[1]):
+        for feature_num in range(self.min_features_to_select, X.shape[1] + 1):
 
             X_subset = X[:, (selector.ranking_ <= feature_num)]
 
