@@ -614,6 +614,7 @@ class QuantMatrix:
                 jitter=kwargs.get("jitter", 0.1),
                 alpha=kwargs.get("alpha", 0.75),
                 n_bins=kwargs.get("n_bins", 100),
+                feature_column=kwargs.get("feature_column", "Protein")
             ).plot()
 
         if plot_type == "rfe_pca":

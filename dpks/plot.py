@@ -125,6 +125,7 @@ class SHAPPlot(Plot):
             color="lightgray",
             linewidth=0,
             ax=self.ax,
+            scale="count"
         )
         sns.scatterplot(
             x=plot_frame["sv"],
