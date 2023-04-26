@@ -39,6 +39,8 @@ class SHAPPlot(Plot):
         qm: QuantMatrix,
         cmap: Union[List, str],
         n_display: int = 5,
+        jitter: float = 0.1,
+        alpha: float = 0.75
     ):
         """Creates a SHAP summary plot-like figure.
 
@@ -55,6 +57,8 @@ class SHAPPlot(Plot):
         self.qm = qm
         self.n_display = n_display
         self.cmap = cmap
+        self.jitter = jitter
+        self.alpha = alpha
 
         if not fig:
             self.fig, self.ax = plt.subplots(
@@ -106,8 +110,8 @@ class SHAPPlot(Plot):
             x="sv",
             y="feature",
             dodge=False,
-            jitter=1,
-            alpha=0.95,
+            jitter=self.jitter,
+            alpha=self.alpha,
             size=5,
             palette=colors,
             hue="fv",

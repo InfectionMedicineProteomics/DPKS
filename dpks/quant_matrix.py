@@ -614,6 +614,8 @@ class QuantMatrix:
                 qm=self,
                 cmap=cmap,
                 n_display=n_display,
+                jitter=kwargs.get("jitter", 0.1),
+                alpha=kwargs.get("alpha", 0.75)
             ).plot()
 
         if plot_type == "rfe_pca":
