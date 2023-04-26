@@ -519,9 +519,7 @@ class QuantMatrix:
         self.quantitative_data.obs["SHAP"] = shap_values
 
         if calculate_feature_importance:
-
             if feature_importance_method == "rfecv":
-
                 rfe_step = int(kwargs.get("rfe_step", 1))
                 rfe_min_features_to_select = int(
                     kwargs.get("rfe_min_features_to_select", 1)
@@ -594,7 +592,6 @@ class QuantMatrix:
                 getattr(self.clf, "shap_values")
             except AttributeError:
                 print("SHAP values have not been generated")
-            n_display = int(kwargs.get("n_display", 5))
             cmap = kwargs.get(
                 "cmap",
                 [
@@ -613,9 +610,10 @@ class QuantMatrix:
                 X=self.clf.X,
                 qm=self,
                 cmap=cmap,
-                n_display=n_display,
+                n_display=kwargs.get("n_display", 5),
                 jitter=kwargs.get("jitter", 0.1),
-                alpha=kwargs.get("alpha", 0.75)
+                alpha=kwargs.get("alpha", 0.75),
+                n_bins=kwargs.get("n_bins", 100),
             ).plot()
 
         if plot_type == "rfe_pca":
