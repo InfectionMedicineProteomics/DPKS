@@ -42,19 +42,18 @@ class GeneticAlgorithmSearch:
         return pop
 
     def generation_pass(self, pop, X, y):
-        evaluated_pop = {}
+        evaluated_pop = []
         for _, params in pop:
             clf_individual = clone(self.classifier)
             clf_individual.set_params(**params)
             acc = self.get_accuracy(clf_individual, X, y)
-            acc = acc + random.uniform(0, 0.001)
-            evaluated_pop[acc] = params
+            evaluated_pop.append((acc, params))
         return evaluated_pop
 
     def kill(self, pop):
-        sorted_pop = sorted(pop.items(), reverse=True)
-        sorted_pop = sorted_pop[: self.n_survive]
-        return sorted_pop
+        pop.sort(key=lambda x: x[0], reverse=True)
+        reduced_pop = pop[: self.n_survive]
+        return reduced_pop
 
     def procreate(self, pop):
         new_pop = pop.copy()
