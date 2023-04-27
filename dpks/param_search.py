@@ -1,7 +1,6 @@
 import numpy as np
 from sklearn.model_selection import cross_val_score
 import random
-from dpks.classification import Classifier
 from sklearn.base import clone
 
 
@@ -69,7 +68,7 @@ class GeneticAlgorithmSearch:
             new_pop.append((random_initializer, individual))
         return new_pop
 
-    def run_genetic_algorithm(self, X, y):
+    def run_genetic_algorithm(self, X, y) -> dict:
         pop = self.initiate_pop(self.param_grid)
         for generation in range(self.n_generations):
             evaluated_pop = self.generation_pass(pop, X, y)
