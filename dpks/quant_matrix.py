@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from typing import Union, List
 
-import anndata as ad  # type: ignore
+import anndata as ad
+from dpks.param_search import GeneticAlgorithmSearch  # type: ignore
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
@@ -500,15 +501,32 @@ class QuantMatrix:
         self.clf = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
         if run_param_search:
+            param_search_method = str(kwargs.get("param_search_method", "genetic"))
             param_grid = dict(kwargs.get("param_grid", {}))
+            threads = int(kwargs.get("threads", 4))
             random_state = int(kwargs.get("random_state", None))
             folds = int(kwargs.get("folds", 3))
-            n_iter = int(kwargs.get("n_iter", 30))
-            n_jobs = int(kwargs.get("n_jobs", 4))
-            scoring = str(kwargs.get("scoring", "accuracy"))
-            classifier = self.clf.get_best_estimator(
-                X, Y, param_grid, folds, random_state, n_iter, n_jobs, scoring
-            )
+
+            if param_search_method == "genetic":
+                gas = GeneticAlgorithmSearch(
+                    self.clf.classifier,
+                    param_grid=param_grid,
+                    threads=threads,
+                    folds=folds,
+                    n_survive=kwargs.get("n_survive", 5),
+                    pop_size=kwargs.get("pop_size", 10),
+                    n_generations=kwargs.get("n_generations", 20),
+                    verbose=kwargs.get("verbose", False),
+                )
+                gas.run_genetic_algorithm(X, Y)
+                classifier = gas.best_estimator_()
+
+            elif param_search_method == "grid":
+                n_iter = int(kwargs.get("n_iter", 30))
+                scoring = str(kwargs.get("scoring", "accuracy"))
+                classifier = self.clf.get_best_estimator(
+                    X, Y, param_grid, folds, random_state, n_iter, threads, scoring
+                )
 
         self.clf.fit(X, Y)
 
@@ -614,7 +632,7 @@ class QuantMatrix:
                 jitter=kwargs.get("jitter", 0.1),
                 alpha=kwargs.get("alpha", 0.75),
                 n_bins=kwargs.get("n_bins", 100),
-                feature_column=kwargs.get("feature_column", "Protein")
+                feature_column=kwargs.get("feature_column", "Protein"),
             ).plot()
 
         if plot_type == "rfe_pca":
