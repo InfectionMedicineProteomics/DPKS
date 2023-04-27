@@ -14,14 +14,14 @@ class GeneticAlgorithmSearch:
         pop_size: int = 10,
         n_survive: int = 5,
         threads: int = 1,
-        k_folds: int = 3,
+        folds: int = 3,
         verbose: bool = False,
     ) -> None:
         self.classifier = classifier
         self.param_grid = param_grid
         self.threads = threads
         self.pop_size = pop_size
-        self.k_folds = k_folds
+        self.folds = folds
         self.n_generations = n_generations
         self.n_survive = n_survive
         self.n_procreate = pop_size - n_survive
@@ -29,7 +29,7 @@ class GeneticAlgorithmSearch:
         self.verbose = verbose
 
     def get_accuracy(self, classifier, X, y):
-        scores = cross_val_score(classifier, X, y, n_jobs=self.threads, cv=self.k_folds)
+        scores = cross_val_score(classifier, X, y, n_jobs=self.threads, cv=self.folds)
         return np.mean(scores)
 
     def initiate_pop(self, param_grid):
@@ -86,7 +86,6 @@ class GeneticAlgorithmSearch:
     def best_estimator_(self):
         if len(self.populations) == 0:
             raise Exception("The genetic algorithm has not been run")
-
         acc, best_params = self.populations[0][0]
         if self.verbose:
             print("Accuracy: ", acc)

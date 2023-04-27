@@ -462,9 +462,9 @@ class QuantMatrix:
         scale: bool = True,
         min_samples_per_group: int = 2,
         feature_importance_method: str = "rfecv",
-        calculate_feature_importance: bool = True,
+        calculate_feature_importance: bool = False,
         run_param_search: bool = False,
-        **kwargs: Union[dict, int, str],
+        **kwargs: Union[dict, int, str, bool],
     ) -> QuantMatrix:
         identifiers = self.proteins
 
@@ -500,11 +500,12 @@ class QuantMatrix:
 
         self.clf = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
+        verbose = bool(kwargs.get("verbose", False))
         if run_param_search:
-            param_search_method = str(kwargs.get("param_search_method", "genetic"))
+            param_search_method = kwargs.get("param_search_method", "genetic")
             param_grid = dict(kwargs.get("param_grid", {}))
-            threads = int(kwargs.get("threads", 4))
-            random_state = int(kwargs.get("random_state", None))
+            threads = int(kwargs.get("threads", 1))
+            random_state = kwargs.get("random_state", None)
             folds = int(kwargs.get("folds", 3))
 
             if param_search_method == "genetic":
@@ -516,10 +517,11 @@ class QuantMatrix:
                     n_survive=kwargs.get("n_survive", 5),
                     pop_size=kwargs.get("pop_size", 10),
                     n_generations=kwargs.get("n_generations", 20),
-                    verbose=kwargs.get("verbose", False),
+                    verbose=verbose,
                 )
-                gas.run_genetic_algorithm(X, Y)
-                classifier = gas.best_estimator_()
+                parameter_populations = gas.run_genetic_algorithm(X, Y)
+                self.parameter_populations = parameter_populations
+                classifier = gas.best_estimator_
 
             elif param_search_method == "grid":
                 n_iter = int(kwargs.get("n_iter", 30))
@@ -546,8 +548,6 @@ class QuantMatrix:
                 k_folds = int(kwargs.get("k_folds", 2))
 
                 threads = int(kwargs.get("threads", 1))
-
-                verbose = bool(kwargs.get("verbose", False))
 
                 selector = FeatureRankerRFE(
                     min_features_to_select=rfe_min_features_to_select,
