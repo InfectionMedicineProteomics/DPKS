@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from typing import Union, List
 
-import anndata as ad  # type: ignore
+import anndata as ad
+from dpks.param_search import GeneticAlgorithmSearch  # type: ignore
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
@@ -461,9 +462,9 @@ class QuantMatrix:
         scale: bool = True,
         min_samples_per_group: int = 2,
         feature_importance_method: str = "rfecv",
-        calculate_feature_importance: bool = True,
+        calculate_feature_importance: bool = False,
         run_param_search: bool = False,
-        **kwargs: Union[dict, int, str],
+        **kwargs: Union[dict, int, str, bool],
     ) -> QuantMatrix:
         identifiers = self.proteins
 
@@ -499,16 +500,35 @@ class QuantMatrix:
 
         self.clf = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
+        verbose = bool(kwargs.get("verbose", False))
         if run_param_search:
+            param_search_method = kwargs.get("param_search_method", "genetic")
             param_grid = dict(kwargs.get("param_grid", {}))
-            random_state = int(kwargs.get("random_state", None))
+            threads = int(kwargs.get("threads", 1))
+            random_state = kwargs.get("random_state", None)
             folds = int(kwargs.get("folds", 3))
-            n_iter = int(kwargs.get("n_iter", 30))
-            n_jobs = int(kwargs.get("n_jobs", 4))
-            scoring = str(kwargs.get("scoring", "accuracy"))
-            classifier = self.clf.get_best_estimator(
-                X, Y, param_grid, folds, random_state, n_iter, n_jobs, scoring
-            )
+
+            if param_search_method == "genetic":
+                gas = GeneticAlgorithmSearch(
+                    self.clf.classifier,
+                    param_grid=param_grid,
+                    threads=threads,
+                    folds=folds,
+                    n_survive=kwargs.get("n_survive", 5),
+                    pop_size=kwargs.get("pop_size", 10),
+                    n_generations=kwargs.get("n_generations", 20),
+                    verbose=verbose,
+                )
+                parameter_populations = gas.run_genetic_algorithm(X, Y)
+                self.parameter_populations = parameter_populations
+                classifier = gas.best_estimator_
+
+            elif param_search_method == "grid":
+                n_iter = int(kwargs.get("n_iter", 30))
+                scoring = str(kwargs.get("scoring", "accuracy"))
+                classifier = self.clf.get_best_estimator(
+                    X, Y, param_grid, folds, random_state, n_iter, threads, scoring
+                )
 
         self.clf.fit(X, Y)
 
@@ -528,8 +548,6 @@ class QuantMatrix:
                 k_folds = int(kwargs.get("k_folds", 2))
 
                 threads = int(kwargs.get("threads", 1))
-
-                verbose = bool(kwargs.get("verbose", False))
 
                 selector = FeatureRankerRFE(
                     min_features_to_select=rfe_min_features_to_select,
@@ -614,7 +632,7 @@ class QuantMatrix:
                 jitter=kwargs.get("jitter", 0.1),
                 alpha=kwargs.get("alpha", 0.75),
                 n_bins=kwargs.get("n_bins", 100),
-                feature_column=kwargs.get("feature_column", "Protein")
+                feature_column=kwargs.get("feature_column", "Protein"),
             ).plot()
 
         if plot_type == "rfe_pca":
