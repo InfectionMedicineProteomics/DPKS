@@ -6,7 +6,8 @@ from sklearn.model_selection import (
     cross_val_score,
     StratifiedKFold,
 )
-
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics.cluster import rand_score
 from dpks.classification import Classifier
 
 
@@ -112,3 +113,55 @@ class FeatureRankerRFE:
     def ranking_(self):
 
         return self.selector.ranking_
+
+
+class HierarchicalRanker:
+    def __init__(
+        self,
+        min_features_to_select: int = 10,
+        step: int = 3,
+        k_folds: int = 3,
+        threads: int = 1,
+        verbose: bool = False,
+        affinity: str = "euclidean",
+        metric :str = "ward",
+        linkage = 'ward'
+    ) -> None:
+        self.selector = None
+        self.results = dict()
+        self.verbose = verbose
+        self.threads = threads
+        self.k_folds = k_folds
+        self.models = dict()
+        self.min_features_to_select = min_features_to_select
+        self.step = step
+        self.affinty = affinity
+        self.metric = metric
+        self.linkage = linkage
+
+    def _evaluate_model(self, X, y):
+        n_clusters = len(list(set(y)))
+        clustering = AgglomerativeClustering(n_clusters=n_clusters, metric=self.metric, affinity = self.affinity, linkage = self.linkage).fit(X)
+        pred = clustering.labels_
+
+        score = rand_score(y, pred)
+
+        return score
+
+    def rank_features(
+        self,
+        X,
+        y,
+        )    -> None:
+        """
+        For each iteration:
+            for each feature:
+                remove feature
+                compute rand score
+                save to all scores
+            remove feature with smallest score
+            
+        """
+        pass
+
+
