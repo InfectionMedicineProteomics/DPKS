@@ -48,6 +48,8 @@ class TopN:
         elif self.level in quant_matrix.quantitative_data.obs.columns:
             key = self.level
             entities = list(quant_matrix.quantitative_data.obs[key].unique())
+        else:
+            raise ValueError("The level is not valid.")
 
         for entity in entities:
             entity_group = quant_matrix.quantitative_data[
@@ -304,6 +306,8 @@ class MaxLFQ:
         elif self.level in quant_matrix.quantitative_data.obs.columns:
             group_ids = numba.typed.List(quant_matrix.quantitative_data.obs[self.level])
             key = self.level
+        else:
+            raise ValueError("The level is not valid.")
 
         groupings = numba.typed.List()
 
