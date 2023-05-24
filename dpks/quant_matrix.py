@@ -383,9 +383,10 @@ class QuantMatrix:
             pass
 
         if method == "top_n":
+            level = str(kwargs.get("level", "protein"))
             top_n = int(kwargs.get("top_n", 1))
 
-            quantifications = TopN(top_n=top_n).quantify(self)
+            quantifications = TopN(top_n=top_n, level=level).quantify(self)
 
             design_matrix = self.quantitative_data.var
 
