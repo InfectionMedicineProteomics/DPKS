@@ -71,18 +71,18 @@ class DifferentialTest:
 
             for identifier in identifiers:
                 quant_data = quantitative_data.quantitative_data[
-                     quantitative_data.row_annotations[self.level] == identifier, :
-                 ].copy()
+                    quantitative_data.row_annotations[self.level] == identifier, :
+                ].copy()
 
                 indices.append(quant_data.obs.index.to_numpy()[0])
 
                 group_a_data = quant_data[
-                   :, quantitative_data.get_samples(group=group_a)
-               ].X.copy()
+                    :, quantitative_data.get_samples(group=group_a)
+                ].X.copy()
 
                 group_b_data = quant_data[
-                   :, quantitative_data.get_samples(group=group_b)
-               ].X.copy()
+                    :, quantitative_data.get_samples(group=group_b)
+                ].X.copy()
 
                 group_a_nan = len(group_a_data[~np.isnan(group_a_data)])
                 group_b_nan = len(group_b_data[~np.isnan(group_b_data)])
@@ -91,7 +91,7 @@ class DifferentialTest:
                 group_b_rep_counts.append(group_b_nan)
 
                 if (group_a_nan < self.min_samples_per_group) or (
-                        group_b_nan < self.min_samples_per_group
+                    group_b_nan < self.min_samples_per_group
                 ):
 
                     if group_a_nan < self.min_samples_per_group:

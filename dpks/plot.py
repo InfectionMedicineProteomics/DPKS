@@ -125,7 +125,7 @@ class SHAPPlot(Plot):
             color="lightgray",
             linewidth=0,
             ax=self.ax,
-            scale="count"
+            scale="count",
         )
         sns.scatterplot(
             x=plot_frame["sv"],
@@ -205,21 +205,25 @@ class RFEPCA(Plot):
             X = pca.transform(X)
             explained_variance = pca.explained_variance_ratio_
 
-            sns.kdeplot(x=X[:, 0], y=X[:, 1],
-                        levels=5,
-                        hue=y,
-                        palette=cmap,
-                        ax=ax,
-                        fill=True,
-                        alpha=0.2
+            sns.kdeplot(
+                x=X[:, 0],
+                y=X[:, 1],
+                levels=5,
+                hue=y,
+                palette=cmap,
+                ax=ax,
+                fill=True,
+                alpha=0.2,
             )
 
-            sns.kdeplot(x=X[:, 0], y=X[:, 1],
-                        levels=5,
-                        hue=y,
-                        palette=cmap,
-                        linewidths=2,
-                        ax=ax,
+            sns.kdeplot(
+                x=X[:, 0],
+                y=X[:, 1],
+                levels=5,
+                hue=y,
+                palette=cmap,
+                linewidths=2,
+                ax=ax,
             )
 
             sns.scatterplot(x=X[:, 0], y=X[:, 1], hue=y, palette=cmap, ax=ax)
