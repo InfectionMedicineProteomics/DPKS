@@ -204,7 +204,26 @@ class RFEPCA(Plot):
             pca.fit(X)
             X = pca.transform(X)
             explained_variance = pca.explained_variance_ratio_
+
+            sns.kdeplot(x=X[:, 0], y=X[:, 1],
+                        levels=5,
+                        hue=y,
+                        palette=cmap,
+                        ax=ax,
+                        fill=True,
+                        alpha=0.2
+            )
+
+            sns.kdeplot(x=X[:, 0], y=X[:, 1],
+                        levels=5,
+                        hue=y,
+                        palette=cmap,
+                        linewidths=2,
+                        ax=ax,
+            )
+
             sns.scatterplot(x=X[:, 0], y=X[:, 1], hue=y, palette=cmap, ax=ax)
+
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_xlabel(f"PC1 ({100*explained_variance[0]:.1f}%)")

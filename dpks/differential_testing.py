@@ -71,18 +71,18 @@ class DifferentialTest:
 
             for identifier in identifiers:
                 quant_data = quantitative_data.quantitative_data[
-                    quantitative_data.row_annotations[self.level] == identifier, :
-                ].copy()
+                     quantitative_data.row_annotations[self.level] == identifier, :
+                 ].copy()
 
                 indices.append(quant_data.obs.index.to_numpy()[0])
 
                 group_a_data = quant_data[
-                    :, quantitative_data.get_samples(group=group_a)
-                ].X.copy()
+                   :, quantitative_data.get_samples(group=group_a)
+               ].X.copy()
 
                 group_b_data = quant_data[
-                    :, quantitative_data.get_samples(group=group_b)
-                ].X.copy()
+                   :, quantitative_data.get_samples(group=group_b)
+               ].X.copy()
 
                 group_a_nan = len(group_a_data[~np.isnan(group_a_data)])
                 group_b_nan = len(group_b_data[~np.isnan(group_b_data)])
@@ -91,14 +91,41 @@ class DifferentialTest:
                 group_b_rep_counts.append(group_b_nan)
 
                 if (group_a_nan < self.min_samples_per_group) or (
-                    group_b_nan < self.min_samples_per_group
+                        group_b_nan < self.min_samples_per_group
                 ):
-                    group_a_means.append(np.nan)
-                    group_b_means.append(np.nan)
+
+                    if group_a_nan < self.min_samples_per_group:
+
+                        group_a_means.append(np.nan)
+                        group_a_stdevs.append(np.nan)
+
+                    else:
+
+                        group_a_means.append(np.mean(group_a_data))
+                        group_a_stdevs.append(np.std(group_a_data))
+
+                    if group_b_nan < self.min_samples_per_group:
+
+                        group_b_means.append(np.nan)
+                        group_b_stdevs.append(np.nan)
+
+                    else:
+
+                        group_b_means.append(np.mean(group_b_data))
+                        group_b_stdevs.append(np.std(group_b_data))
+
                     log_fold_changes.append(np.nan)
                     p_values.append(np.nan)
 
                 else:
+
+                    group_a_mean = np.mean(group_a_data)
+                    group_b_mean = np.mean(group_b_data)
+                    group_a_stdev = np.std(group_a_data)
+                    group_b_stdev = np.std(group_b_data)
+
+                    log_fold_change = group_a_mean - group_b_mean
+
                     group_a_data = group_a_data[~np.isnan(group_a_data)]
                     group_b_data = group_b_data[~np.isnan(group_b_data)]
 
@@ -119,12 +146,6 @@ class DifferentialTest:
 
                     elif self.method == "anova":
                         test_results = stats.f_oneway(group_a_data, group_b_data)
-
-                    group_a_mean = np.mean(group_a_data)
-                    group_b_mean = np.mean(group_b_data)
-                    group_a_stdev = np.std(group_a_data)
-                    group_b_stdev = np.std(group_b_data)
-                    log_fold_change = group_a_mean - group_b_mean
 
                     group_a_means.append(group_a_mean)
                     group_b_means.append(group_b_mean)
