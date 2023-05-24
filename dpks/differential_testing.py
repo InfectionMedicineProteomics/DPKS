@@ -93,12 +93,39 @@ class DifferentialTest:
                 if (group_a_nan < self.min_samples_per_group) or (
                     group_b_nan < self.min_samples_per_group
                 ):
-                    group_a_means.append(np.nan)
-                    group_b_means.append(np.nan)
+
+                    if group_a_nan < self.min_samples_per_group:
+
+                        group_a_means.append(np.nan)
+                        group_a_stdevs.append(np.nan)
+
+                    else:
+
+                        group_a_means.append(np.mean(group_a_data))
+                        group_a_stdevs.append(np.std(group_a_data))
+
+                    if group_b_nan < self.min_samples_per_group:
+
+                        group_b_means.append(np.nan)
+                        group_b_stdevs.append(np.nan)
+
+                    else:
+
+                        group_b_means.append(np.mean(group_b_data))
+                        group_b_stdevs.append(np.std(group_b_data))
+
                     log_fold_changes.append(np.nan)
                     p_values.append(np.nan)
 
                 else:
+
+                    group_a_mean = np.mean(group_a_data)
+                    group_b_mean = np.mean(group_b_data)
+                    group_a_stdev = np.std(group_a_data)
+                    group_b_stdev = np.std(group_b_data)
+
+                    log_fold_change = group_a_mean - group_b_mean
+
                     group_a_data = group_a_data[~np.isnan(group_a_data)]
                     group_b_data = group_b_data[~np.isnan(group_b_data)]
 
@@ -119,12 +146,6 @@ class DifferentialTest:
 
                     elif self.method == "anova":
                         test_results = stats.f_oneway(group_a_data, group_b_data)
-
-                    group_a_mean = np.mean(group_a_data)
-                    group_b_mean = np.mean(group_b_data)
-                    group_a_stdev = np.std(group_a_data)
-                    group_b_stdev = np.std(group_b_data)
-                    log_fold_change = group_a_mean - group_b_mean
 
                     group_a_means.append(group_a_mean)
                     group_b_means.append(group_b_mean)

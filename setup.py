@@ -66,5 +66,4 @@ setup(
     url="https://github.com/arnscott/dpks",
     version="0.1.1",
     zip_safe=False,
-
 )
