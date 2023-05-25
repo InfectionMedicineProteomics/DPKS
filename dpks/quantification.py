@@ -23,12 +23,15 @@ else:
 class TopN:
     top_n: int
 
-    def __init__(self, top_n: int = 1, level: str = "protein"):
+    def __init__(
+        self, top_n: int = 1, level: str = "protein", summarization_method: str = "sum"
+    ):
         self.top_n = top_n
         self.num_proteins = 0
         self.num_samples = 0
 
         self.level = level
+        self.summarization_method = summarization_method
 
     def quantify(self, quant_matrix: QuantMatrix) -> pd.DataFrame:
         quantifications = dict()
@@ -75,7 +78,21 @@ class TopN:
 
         sorted_precursors = np.take_along_axis(group_data, sort_indices, axis=0)
 
-        quantification: np.ndarray = np.sum(sorted_precursors[: self.top_n], axis=0)
+        if self.summarization_method == "sum":
+
+            quantification: np.ndarray = np.sum(sorted_precursors[: self.top_n], axis=0)
+
+        elif self.summarization_method == "mean":
+
+            quantification: np.ndarray = np.mean(
+                sorted_precursors[: self.top_n], axis=0
+            )
+
+        elif self.summarization_method == "median":
+
+            quantification: np.ndarray = np.median(
+                sorted_precursors[: self.top_n], axis=0
+            )
 
         return quantification
 
