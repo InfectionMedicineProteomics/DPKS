@@ -23,7 +23,9 @@ else:
 class TopN:
     top_n: int
 
-    def __init__(self, top_n: int = 1, level: str = "protein", summarization_method: str = "sum"):
+    def __init__(
+        self, top_n: int = 1, level: str = "protein", summarization_method: str = "sum"
+    ):
         self.top_n = top_n
         self.num_proteins = 0
         self.num_samples = 0
@@ -82,11 +84,15 @@ class TopN:
 
         elif self.summarization_method == "mean":
 
-            quantification: np.ndarray = np.mean(sorted_precursors[: self.top_n], axis=0)
+            quantification: np.ndarray = np.mean(
+                sorted_precursors[: self.top_n], axis=0
+            )
 
         elif self.summarization_method == "median":
 
-            quantification: np.ndarray = np.median(sorted_precursors[: self.top_n], axis=0)
+            quantification: np.ndarray = np.median(
+                sorted_precursors[: self.top_n], axis=0
+            )
 
         return quantification
 

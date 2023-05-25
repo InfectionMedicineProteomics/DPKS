@@ -388,9 +388,7 @@ class QuantMatrix:
             summarization_method = str(kwargs.get("summarization_method", "sum"))
 
             quantifications = TopN(
-                top_n=top_n,
-                level=level,
-                summarization_method=summarization_method
+                top_n=top_n, level=level, summarization_method=summarization_method
             ).quantify(self)
 
             design_matrix = self.quantitative_data.var
