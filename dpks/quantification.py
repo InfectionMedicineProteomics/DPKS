@@ -35,45 +35,45 @@ class TopN:
 
         if self.level == "protein":
             key = "Protein"
-            entities = quant_matrix.proteins
+            group_ids = quant_matrix.proteins
 
         elif self.level == "precursor":
             key = "PrecursorId"
-            entities = quant_matrix.precursors
+            group_ids = quant_matrix.precursors
 
         elif self.level == "peptide":
             key = "PeptideSequence"
-            entities = quant_matrix.peptides
+            group_ids = quant_matrix.peptides
 
         elif self.level in quant_matrix.quantitative_data.obs.columns:
             key = self.level
-            entities = list(quant_matrix.quantitative_data.obs[key].unique())
+            group_ids = list(quant_matrix.quantitative_data.obs[key].unique())
         else:
             raise ValueError("The level is not valid.")
 
-        for entity in entities:
-            entity_group = quant_matrix.quantitative_data[
-                quant_matrix.quantitative_data.obs[key] == entity
+        for group_id in group_ids:
+            group_data = quant_matrix.quantitative_data[
+                quant_matrix.quantitative_data.obs[key] == group_id
             ]
 
-            quantification = self.quantify_entity(entity_group.X)
+            quantification = self.quantify_group(group_data.X)
 
-            quantifications[entity] = quantification
+            quantifications[group_id] = quantification
 
-        entities = pd.DataFrame(quantifications)
+        results = pd.DataFrame(quantifications)
 
-        entities = entities.T.copy()
+        results = results.T.copy()
 
-        entities.columns = list(quant_matrix.quantitative_data.var["sample"])
+        results.columns = list(quant_matrix.quantitative_data.var["sample"])
 
-        return entities.reset_index().rename(columns={"index": key})
+        return results.reset_index().rename(columns={"index": key})
 
-    def quantify_entity(self, grouped_entity: np.ndarray) -> np.ndarray:
-        grouped_entity = np.nan_to_num(grouped_entity, nan=0.0)
+    def quantify_group(self, group_data: np.ndarray) -> np.ndarray:
+        group_data = np.nan_to_num(group_data, nan=0.0)
 
-        sort_indices = np.argsort(grouped_entity, axis=0)[::-1]
+        sort_indices = np.argsort(group_data, axis=0)[::-1]
 
-        sorted_precursors = np.take_along_axis(grouped_entity, sort_indices, axis=0)
+        sorted_precursors = np.take_along_axis(group_data, sort_indices, axis=0)
 
         quantification: np.ndarray = np.sum(sorted_precursors[: self.top_n], axis=0)
 
