@@ -22,46 +22,62 @@ else:
 
 class TopN:
     top_n: int
-    protein_nodes: List[str]
 
-    def __init__(self, top_n: int = 1):
+    def __init__(self, top_n: int = 1, level: str = "protein"):
         self.top_n = top_n
         self.num_proteins = 0
         self.num_samples = 0
-        self.protein_nodes = []
 
-    def quantify(self, quantitative_data: QuantMatrix) -> pd.DataFrame:
-        protein_quantifications = dict()
+        self.level = level
 
-        for protein in quantitative_data.proteins:
-            protein_group = quantitative_data.quantitative_data[
-                quantitative_data.quantitative_data.obs["Protein"] == protein
+    def quantify(self, quant_matrix: QuantMatrix) -> pd.DataFrame:
+        quantifications = dict()
+
+        if self.level == "protein":
+            key = "Protein"
+            group_ids = quant_matrix.proteins
+
+        elif self.level == "precursor":
+            key = "PrecursorId"
+            group_ids = quant_matrix.precursors
+
+        elif self.level == "peptide":
+            key = "PeptideSequence"
+            group_ids = quant_matrix.peptides
+
+        elif self.level in quant_matrix.quantitative_data.obs.columns:
+            key = self.level
+            group_ids = list(quant_matrix.quantitative_data.obs[key].unique())
+        else:
+            raise ValueError("The level is not valid.")
+
+        for group_id in group_ids:
+            group_data = quant_matrix.quantitative_data[
+                quant_matrix.quantitative_data.obs[key] == group_id
             ]
 
-            protein_quantification = self.quantify_protein(protein_group.X)
+            quantification = self.quantify_group(group_data.X)
 
-            protein_quantifications[protein] = protein_quantification
+            quantifications[group_id] = quantification
 
-        proteins = pd.DataFrame(protein_quantifications)
+        results = pd.DataFrame(quantifications)
 
-        proteins = proteins.T.copy()
+        results = results.T.copy()
 
-        proteins.columns = list(quantitative_data.quantitative_data.var["sample"])
+        results.columns = list(quant_matrix.quantitative_data.var["sample"])
 
-        return proteins.reset_index().rename(columns={"index": "Protein"})
+        return results.reset_index().rename(columns={"index": key})
 
-    def quantify_protein(self, grouped_protein: np.ndarray) -> np.ndarray:
-        grouped_protein = np.nan_to_num(grouped_protein, nan=0.0)
+    def quantify_group(self, group_data: np.ndarray) -> np.ndarray:
+        group_data = np.nan_to_num(group_data, nan=0.0)
 
-        sort_indices = np.argsort(grouped_protein, axis=0)[::-1]
+        sort_indices = np.argsort(group_data, axis=0)[::-1]
 
-        sorted_precursors = np.take_along_axis(grouped_protein, sort_indices, axis=0)
+        sorted_precursors = np.take_along_axis(group_data, sort_indices, axis=0)
 
-        protein_quantification: np.ndarray = np.sum(
-            sorted_precursors[: self.top_n], axis=0
-        )
+        quantification: np.ndarray = np.sum(sorted_precursors[: self.top_n], axis=0)
 
-        return protein_quantification
+        return quantification
 
 
 @njit(nogil=True)
@@ -88,18 +104,15 @@ def get_ratios(quantitative_data, sample_combinations):
 @njit(nogil=True)
 def solve_profile(X, ratios, sample_combinations):
     if np.all(np.isnan(X)):
-
         results = np.zeros((X.shape[1]))
 
     else:
-
         num_samples = X.shape[1]
 
         A = np.zeros((num_samples + 1, num_samples + 1))
         b = np.zeros((num_samples + 1,))
 
         for sample_combination in sample_combinations:
-
             i = sample_combination[0]
             j = sample_combination[1]
 
@@ -148,13 +161,10 @@ def build_connection_graph(grouping):
     sample_group_id = 0
 
     for sample_idx in range(grouping.shape[1]):
-
         if sample_idx not in connected_indices:
-
             sample_group = []
 
             for compared_sample_idx in range(grouping.shape[1]):
-
                 comparison = grouping[:, sample_idx] - grouping[:, compared_sample_idx]
 
                 if not np.isnan(comparison).all():
@@ -163,13 +173,11 @@ def build_connection_graph(grouping):
                     connected_indices.append(compared_sample_idx)
 
             if len(sample_group) > 0:
-
                 connected_sample_groups[sample_group_id] = np.array(sample_group)
 
                 sample_group_id += 1
 
             else:
-
                 connected_sample_groups[sample_group_id] = np.array([sample_idx])
 
                 sample_group_id += 1
@@ -195,7 +203,6 @@ def mask_group(grouping):
     nan_groups = []
 
     for subgroup_idx in range(grouping.shape[0]):
-
         if not np.isnan(grouping[subgroup_idx, :]).all():
             nan_groups.append(subgroup_idx)
 
@@ -209,21 +216,16 @@ def quantify_group(grouping, connected_graph):
     profile = np.zeros((grouping.shape[1]))
 
     for sample_group_id, graph in connected_graph.items():
-
         if graph.shape[0] == 1:
-
             subset = grouping[:, graph]
 
             if np.isnan(subset).all():
-
                 profile[graph] = np.nan
 
             else:
-
                 profile[graph] = np.nanmedian(subset)
 
         if graph.shape[0] > 1:
-
             subset = grouping[:, graph]
 
             sample_combinations = build_combinations(subset)
@@ -247,17 +249,14 @@ def quantify_groups(groupings, group_ids, minimum_subgroups):
     result_ids = ["" for _ in range(num_groups)]
 
     for group_idx in prange(num_groups):
-
         grouping = mask_group(groupings[group_idx])
 
         if grouping.shape[0] >= minimum_subgroups:
-
             connected_graph = build_connection_graph(grouping)
 
             profile = quantify_group(grouping, connected_graph)
 
         else:
-
             profile = np.zeros((grouping.shape[1]))
             profile[:] = np.nan
 
@@ -282,39 +281,40 @@ class MaxLFQ:
     def __init__(
         self, level: str = "protein", threads: int = 1, minimum_subgroups: int = 1
     ):
-
         self.level = level
         self.threads = threads
         self.minimum_subgroups = minimum_subgroups
 
         numba.set_num_threads(threads)
 
-    def quantify(self, quantitative_data: QuantMatrix) -> pd.DataFrame:
-
+    def quantify(self, quant_matrix: QuantMatrix) -> pd.DataFrame:
         group_ids = numba.typed.List()
         key: str = ""
 
         if self.level == "protein":
-
-            group_ids = numba.typed.List(quantitative_data.proteins)
+            group_ids = numba.typed.List(quant_matrix.proteins)
             key = "Protein"
 
         elif self.level == "precursor":
-
-            group_ids = numba.typed.List(quantitative_data.precursors)
+            group_ids = numba.typed.List(quant_matrix.precursors)
             key = "PrecursorId"
 
         elif self.level == "peptide":
-
-            group_ids = numba.typed.List(quantitative_data.peptides)
+            group_ids = numba.typed.List(quant_matrix.peptides)
             key = "PeptideSequence"
+
+        elif self.level in quant_matrix.quantitative_data.obs.columns:
+            group_ids = numba.typed.List(quant_matrix.quantitative_data.obs[self.level])
+            key = self.level
+        else:
+            raise ValueError("The level is not valid.")
 
         groupings = numba.typed.List()
 
         for group_id in group_ids:
             groupings.append(
-                quantitative_data.quantitative_data[
-                    quantitative_data.quantitative_data.obs[key] == group_id
+                quant_matrix.quantitative_data[
+                    quant_matrix.quantitative_data.obs[key] == group_id
                 ].X.copy()
             )
 
@@ -323,32 +323,29 @@ class MaxLFQ:
         )
 
         if self.level == "protein":
-
             results = self._format_result_df(
-                quantified_groups, quantitative_data.sample_annotations["sample"].values
+                quantified_groups, quant_matrix.sample_annotations["sample"].values
             )
 
         elif self.level == "precursor":
-
             results = self._format_result_df(
-                quantified_groups, quantitative_data.sample_annotations["sample"].values
+                quantified_groups, quant_matrix.sample_annotations["sample"].values
             )
 
             results = results.set_index(key).join(
-                quantitative_data.quantitative_data.obs.set_index(key)
+                quant_matrix.quantitative_data.obs.set_index(key)
             )
 
         elif self.level == "peptide":
-
             results = self._format_result_df(
-                quantified_groups, quantitative_data.sample_annotations["sample"].values
+                quantified_groups, quant_matrix.sample_annotations["sample"].values
             )
 
             results = (
                 results.set_index(key)
                 .merge(
-                    quantitative_data.quantitative_data.obs[
-                        ~quantitative_data.quantitative_data.obs.duplicated(
+                    quant_matrix.quantitative_data.obs[
+                        ~quant_matrix.quantitative_data.obs.duplicated(
                             ["PeptideSequence", "Protein"],
                         )
                     ].set_index(key),
@@ -358,6 +355,10 @@ class MaxLFQ:
                 )
                 .reset_index()
             )
+        else:
+            results = self._format_result_df(
+                quantified_groups, quant_matrix.sample_annotations["sample"].values
+            )
 
         return results
 
@@ -366,55 +367,31 @@ class MaxLFQ:
         quantified_groups: List[Tuple[str, Union[np.ndarray, np.ndarray], bool]],
         samples: np.ndarray,
     ) -> pd.DataFrame:
-
         rows = []
 
         if self.level == "protein":
-
-            for result in quantified_groups:
-
-                result_id = result[0]
-                result_data = result[1]
-
-                row = {
-                    "Protein": result_id,
-                }
-
-                for idx, sample in enumerate(samples):
-                    row[sample] = result_data[idx]
-
-                rows.append(row)
+            label = "Protein"
 
         elif self.level == "precursor":
-
-            for result in quantified_groups:
-
-                result_id = result[0]
-                result_data = result[1]
-
-                row = {
-                    "PrecursorId": result_id,
-                }
-
-                for idx, sample in enumerate(samples):
-                    row[sample] = result_data[idx]
-
-                rows.append(row)
+            label = "PrecursorId"
 
         elif self.level == "peptide":
+            label = "PeptideSequence"
 
-            for result in quantified_groups:
+        else:
+            label = self.level
 
-                result_id = result[0]
-                result_data = result[1]
+        for result in quantified_groups:
+            result_id = result[0]
+            result_data = result[1]
 
-                row = {
-                    "PeptideSequence": result_id,
-                }
+            row = {
+                label: result_id,
+            }
 
-                for idx, sample in enumerate(samples):
-                    row[sample] = result_data[idx]
+            for idx, sample in enumerate(samples):
+                row[sample] = result_data[idx]
 
-                rows.append(row)
+            rows.append(row)
 
         return pd.DataFrame(rows)

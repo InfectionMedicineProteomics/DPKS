@@ -39,16 +39,20 @@ class DifferentialTest:
 
         elif level == "peptide":
             self.level = "PeptideSequence"
+        else:
+            self.level = level
 
-    def test(self, quantitative_data: QuantMatrix) -> QuantMatrix:
+    def test(self, quant_matrix: QuantMatrix) -> QuantMatrix:
         if self.level == "PrecursorId":
-            identifiers = quantitative_data.precursors
+            identifiers = quant_matrix.precursors
 
         elif self.level == "Protein":
-            identifiers = quantitative_data.proteins
+            identifiers = quant_matrix.proteins
 
         elif self.level == "PeptideSequence":
-            identifiers = quantitative_data.peptides
+            identifiers = quant_matrix.peptides
+        else:
+            identifiers = quant_matrix.quantitative_data.obs[self.level]
 
         if isinstance(self.comparisons, tuple):
             self.comparisons = [self.comparisons]
@@ -65,23 +69,23 @@ class DifferentialTest:
             group_b_rep_counts = []
             indices = []
 
-            quantitative_data.quantitative_data.X[
-                quantitative_data.quantitative_data.X == 0.0
+            quant_matrix.quantitative_data.X[
+                quant_matrix.quantitative_data.X == 0.0
             ] = np.nan
 
             for identifier in identifiers:
-                quant_data = quantitative_data.quantitative_data[
-                    quantitative_data.row_annotations[self.level] == identifier, :
+                quant_data = quant_matrix.quantitative_data[
+                    quant_matrix.row_annotations[self.level] == identifier, :
                 ].copy()
 
                 indices.append(quant_data.obs.index.to_numpy()[0])
 
                 group_a_data = quant_data[
-                    :, quantitative_data.get_samples(group=group_a)
+                    :, quant_matrix.get_samples(group=group_a)
                 ].X.copy()
 
                 group_b_data = quant_data[
-                    :, quantitative_data.get_samples(group=group_b)
+                    :, quant_matrix.get_samples(group=group_b)
                 ].X.copy()
 
                 group_a_nan = len(group_a_data[~np.isnan(group_a_data)])
@@ -93,24 +97,19 @@ class DifferentialTest:
                 if (group_a_nan < self.min_samples_per_group) or (
                     group_b_nan < self.min_samples_per_group
                 ):
-
                     if group_a_nan < self.min_samples_per_group:
-
                         group_a_means.append(np.nan)
                         group_a_stdevs.append(np.nan)
 
                     else:
-
                         group_a_means.append(np.mean(group_a_data))
                         group_a_stdevs.append(np.std(group_a_data))
 
                     if group_b_nan < self.min_samples_per_group:
-
                         group_b_means.append(np.nan)
                         group_b_stdevs.append(np.nan)
 
                     else:
-
                         group_b_means.append(np.mean(group_b_data))
                         group_b_stdevs.append(np.std(group_b_data))
 
@@ -118,7 +117,6 @@ class DifferentialTest:
                     p_values.append(np.nan)
 
                 else:
-
                     group_a_mean = np.mean(group_a_data)
                     group_b_mean = np.mean(group_b_data)
                     group_a_stdev = np.std(group_a_data)
@@ -161,30 +159,30 @@ class DifferentialTest:
                 np.sqrt((p / max_log_p_value) ** 2 + (fc / max_log_fold_change) ** 2)
                 for p, fc in zip(log_p_values, log_fold_changes)
             ]
-            quantitative_data.row_annotations[f"DEScore"] = de_scores
-            quantitative_data.row_annotations[f"Group{group_a}Mean"] = group_a_means
-            quantitative_data.row_annotations[f"Group{group_b}Mean"] = group_b_means
-            quantitative_data.row_annotations[f"Group{group_a}Stdev"] = group_a_stdevs
-            quantitative_data.row_annotations[f"Group{group_b}Stdev"] = group_b_stdevs
-            quantitative_data.row_annotations[
+            quant_matrix.row_annotations[f"DEScore"] = de_scores
+            quant_matrix.row_annotations[f"Group{group_a}Mean"] = group_a_means
+            quant_matrix.row_annotations[f"Group{group_b}Mean"] = group_b_means
+            quant_matrix.row_annotations[f"Group{group_a}Stdev"] = group_a_stdevs
+            quant_matrix.row_annotations[f"Group{group_b}Stdev"] = group_b_stdevs
+            quant_matrix.row_annotations[
                 f"Log2FoldChange{group_a}-{group_b}"
             ] = log_fold_changes
-            quantitative_data.row_annotations[f"PValues{group_a}-{group_b}"] = p_values
-            quantitative_data.row_annotations[
+            quant_matrix.row_annotations[f"PValues{group_a}-{group_b}"] = p_values
+            quant_matrix.row_annotations[
                 f"Group{group_a}RepCounts"
             ] = group_a_rep_counts
-            quantitative_data.row_annotations[
+            quant_matrix.row_annotations[
                 f"Group{group_b}RepCounts"
             ] = group_b_rep_counts
 
-            quantitative_data.quantitative_data.obs.sort_values(
+            quant_matrix.quantitative_data.obs.sort_values(
                 f"PValues{group_a}-{group_b}", inplace=True
             )
 
             correction_results = multipletests(
-                quantitative_data.quantitative_data.obs[
+                quant_matrix.quantitative_data.obs[
                     ~np.isnan(
-                        quantitative_data.quantitative_data.obs[
+                        quant_matrix.quantitative_data.obs[
                             f"PValues{group_a}-{group_b}"
                         ]
                     )
@@ -194,22 +192,22 @@ class DifferentialTest:
             )
 
             corrected_results = np.empty(
-                (len(quantitative_data.quantitative_data.obs),), dtype=np.float64
+                (len(quant_matrix.quantitative_data.obs),), dtype=np.float64
             )
             corrected_results[:] = np.nan
 
             corrected_results[: len(correction_results[1])] = correction_results[1]
 
-            quantitative_data.quantitative_data.obs[
+            quant_matrix.quantitative_data.obs[
                 f"CorrectedPValue{group_a}-{group_b}"
             ] = corrected_results
 
-            quantitative_data.quantitative_data.obs.index = (
-                quantitative_data.quantitative_data.obs.index.map(int)
+            quant_matrix.quantitative_data.obs.index = (
+                quant_matrix.quantitative_data.obs.index.map(int)
             )
-            quantitative_data.quantitative_data.obs.sort_index(inplace=True)
-            quantitative_data.quantitative_data.obs.index = (
-                quantitative_data.quantitative_data.obs.index.map(str)
+            quant_matrix.quantitative_data.obs.sort_index(inplace=True)
+            quant_matrix.quantitative_data.obs.index = (
+                quant_matrix.quantitative_data.obs.index.map(str)
             )
 
-        return quantitative_data
+        return quant_matrix
