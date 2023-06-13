@@ -63,6 +63,9 @@ class FeatureRankerRFE:
             importance_getter=self.importance_getter,
         )
 
+        if self.verbose:
+            print(f"Fitting initial selector.")
+
         selector.fit(X, y)
 
         for feature_num in range(self.min_features_to_select, X.shape[1] + 1):

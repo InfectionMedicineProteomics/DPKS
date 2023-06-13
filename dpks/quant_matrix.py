@@ -19,7 +19,7 @@ from sklearn.feature_selection import RFECV, RFE
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 from dpks.annotate_proteins import get_protein_labels
-from dpks.classification import Classifier
+from dpks.classification import Classifier, encode_labels, format_data
 from dpks.differential_testing import DifferentialTest
 from dpks.feature_ranking import FeatureRankerRFE
 from dpks.imputer import (
@@ -459,52 +459,78 @@ class QuantMatrix:
 
         return self
 
-    def classify(
+    def rank(
         self,
         classifier,
         shap_algorithm: str = "auto",
         scale: bool = True,
-        min_samples_per_group: int = 2,
         feature_importance_method: str = "rfecv",
-        calculate_feature_importance: bool = False,
-        run_param_search: bool = False,
         **kwargs: Union[dict, int, str, bool],
-    ) -> QuantMatrix:
-        identifiers = self.proteins
+    ):
 
-        quant_copy = self.quantitative_data.copy()
-        quant_copy.X[quant_copy.X == 0.0] = np.nan
-        drop_indexes = []
-        groups = self.quantitative_data.var["group"].unique()
-
-        for group in groups:
-            for identifier in identifiers:
-                quant_data = quant_copy[
-                    self.row_annotations["Protein"] == identifier, :
-                ].copy()
-
-                index = int(quant_data.obs.index.to_numpy()[0])
-
-                group_data = quant_data[:, self.get_samples(group=group)].X.copy()
-                group_nonan = len(group_data[~np.isnan(group_data)])
-
-                if group_nonan < min_samples_per_group:
-                    if index not in drop_indexes:
-                        drop_indexes.append(index)
-
-        le = LabelEncoder()
-        Y = le.fit_transform(self.quantitative_data.var["group"].values)
-        X = self.quantitative_data.X.copy().transpose()
-        X = np.delete(X, drop_indexes, 1)
-        X = np.nan_to_num(X, copy=True, nan=0.0)
+        X = format_data(self)
+        y = encode_labels(self.quantitative_data.var["group"].values)
 
         if scale:
             self.scaler = StandardScaler()
             X = self.scaler.fit_transform(X)
 
-        self.clf = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+        verbose = bool(kwargs.get("verbose", False))
+
+        if feature_importance_method == "rfecv":
+
+            rfe_step = int(kwargs.get("rfe_step", 1))
+            rfe_min_features_to_select = int(
+                kwargs.get("rfe_min_features_to_select", 1)
+            )
+
+            k_folds = int(kwargs.get("k_folds", 2))
+
+            threads = int(kwargs.get("threads", 1))
+
+            selector = FeatureRankerRFE(
+                min_features_to_select=rfe_min_features_to_select,
+                step=rfe_step,
+                importance_getter=shap_algorithm,
+                scoring="accuracy",
+                k_folds=k_folds,
+                threads=threads,
+                verbose=verbose,
+            )
+
+            selector.rank_features(X, y, classifier)
+
+            feature_rank_values = selector.ranking_.tolist()
+
+            self.quantitative_data.obs["FeatureRank"] = feature_rank_values
+
+            self.selector = selector
+
+        return self
+
+    def classify(
+        self,
+        classifier,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
+        run_param_search: bool = False,
+        **kwargs: Union[dict, int, str, bool],
+    ) -> QuantMatrix:
+
+        X = format_data(self)
+        y = encode_labels(self.quantitative_data.var["group"].values)
+
+        if scale:
+            self.scaler = StandardScaler()
+            X = self.scaler.fit_transform(X)
 
         verbose = bool(kwargs.get("verbose", False))
+
+        self.clf = Classifier(
+            classifier=classifier,
+            shap_algorithm=shap_algorithm
+        )
+
         if run_param_search:
             param_search_method = kwargs.get("param_search_method", "genetic")
             param_grid = dict(kwargs.get("param_grid", {}))
@@ -523,7 +549,7 @@ class QuantMatrix:
                     n_generations=kwargs.get("n_generations", 20),
                     verbose=verbose,
                 )
-                parameter_populations = gas.run_genetic_algorithm(X, Y)
+                parameter_populations = gas.run_genetic_algorithm(X, y)
                 self.parameter_populations = parameter_populations
                 classifier = gas.best_estimator_
 
@@ -531,46 +557,25 @@ class QuantMatrix:
                 n_iter = int(kwargs.get("n_iter", 30))
                 scoring = str(kwargs.get("scoring", "accuracy"))
                 classifier = self.clf.get_best_estimator(
-                    X, Y, param_grid, folds, random_state, n_iter, threads, scoring
+                    X, y,
+                    param_grid=param_grid,
+                    folds=folds,
+                    random_state=random_state,
+                    n_iter=n_iter,
+                    n_jobs=threads,
+                    scoring=scoring
                 )
 
-        self.clf.fit(X, Y)
+            self.clf = Classifier(
+                classifier=classifier,
+                shap_algorithm=shap_algorithm
+            )
+
+        self.clf.fit(X, y)
 
         shap_values = self.clf.feature_importances_.tolist()
 
-        for index in drop_indexes:
-            shap_values.insert(index, np.nan)
         self.quantitative_data.obs["SHAP"] = shap_values
-
-        if calculate_feature_importance:
-            if feature_importance_method == "rfecv":
-                rfe_step = int(kwargs.get("rfe_step", 1))
-                rfe_min_features_to_select = int(
-                    kwargs.get("rfe_min_features_to_select", 1)
-                )
-
-                k_folds = int(kwargs.get("k_folds", 2))
-
-                threads = int(kwargs.get("threads", 1))
-
-                selector = FeatureRankerRFE(
-                    min_features_to_select=rfe_min_features_to_select,
-                    step=rfe_step,
-                    importance_getter="auto",
-                    scoring="accuracy",
-                    k_folds=k_folds,
-                    threads=threads,
-                    verbose=verbose,
-                )
-
-                selector.rank_features(X, Y, classifier)
-
-                feature_rank_values = selector.ranking_.tolist()
-                for index in drop_indexes:
-                    feature_rank_values.insert(index, np.nan)
-                self.quantitative_data.obs["FeatureRank"] = feature_rank_values
-
-                self.selector = selector
 
         return self
 

@@ -8,6 +8,7 @@ import shap
 from sklearn.feature_selection import RFECV, RFE
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
@@ -106,3 +107,16 @@ class Classifier(BaseEstimator, ClassifierMixin):
     @property
     def feature_importances_(self):
         return self.mean_importance
+
+
+def encode_labels(labels: np.ndarray) -> np.ndarray:
+
+    encoder = LabelEncoder()
+
+    return encoder.fit_transform(labels)
+
+def format_data(quant_matrix: QuantMatrix) -> np.ndarray:
+
+    X = quant_matrix.quantitative_data.X.copy().transpose()
+
+    return np.nan_to_num(X, copy=True, nan=0.0)

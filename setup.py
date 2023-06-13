@@ -24,7 +24,8 @@ requirements = [
     "biopython",
     "pytest",
     "pytest-runner",
-    "xgboost"
+    "xgboost",
+    "shap"
 ]
 
 setup_requirements = [
