@@ -430,7 +430,7 @@ class QuantMatrix:
 
         return merged
 
-    def compare_groups(
+    def compare(
         self,
         method: str,
         comparisons: list,
@@ -440,7 +440,7 @@ class QuantMatrix:
     ) -> QuantMatrix:
         """compare groups by differential testing
 
-        >>> isinstance(quant_matrix.compare_groups(method="linregress", group_a=4, group_b=6), QuantMatrix)
+        >>> isinstance(quant_matrix.compare(method="linregress", group_a=4, group_b=6), QuantMatrix)
         True
 
         """
