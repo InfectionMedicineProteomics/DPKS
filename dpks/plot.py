@@ -239,6 +239,5 @@ class RFEPCA(Plot):
             ax.set_yticks([])
             ax.set_xlabel(f"PC1 ({100*explained_variance[0]:.1f}%)")
             ax.set_ylabel(f"PC2 ({100*explained_variance[1]:.1f}%)")
-            sns.despine()
 
         return self.fig, self.axs
