@@ -33,7 +33,7 @@ def parse_diann(
 
         columns = [
             "Protein.Ids",
-            "Genes",
+            #"Genes",
             "Precursor.Id",
             "Modified.Sequence",
             "Precursor.Charge",
@@ -55,7 +55,7 @@ def parse_diann(
 
         columns = [
             "Protein.Ids",
-            "Genes",
+            #"Genes",
             "Precursor.Id",
             "Modified.Sequence",
             "Precursor.Charge",
@@ -86,13 +86,13 @@ def parse_diann(
         long_results = quantification_file[["File.Name"] + used_columns].copy()
 
     # Removes file extension (mzml, d, etc) and then rebuilds sample name
-    long_results[file_column] = long_results[file_column].str.rsplit(".", 1).str[0]
+    long_results[file_column] = long_results[file_column].str.rsplit(".").str[0]
 
     retention_times = (
         long_results[
             [
                 "Protein.Ids",
-                "Genes",
+                #"Genes",
                 "Precursor.Id",
                 "Modified.Sequence",
                 "Precursor.Charge",
@@ -102,7 +102,7 @@ def parse_diann(
         .groupby(
             [
                 "Protein.Ids",
-                "Genes",
+                #"Genes",
                 "Precursor.Id",
                 "Modified.Sequence",
                 "Precursor.Charge",
@@ -117,7 +117,7 @@ def parse_diann(
             index=[
                 "Precursor.Id",
                 "Protein.Ids",
-                "Genes",
+                #"Genes",
                 "Modified.Sequence",
                 "Precursor.Charge",
             ]
@@ -134,7 +134,7 @@ def parse_diann(
         wide_results.set_index(
             [
                 "Protein.Ids",
-                "Genes",
+                #"Genes",
                 "Precursor.Id",
                 "Modified.Sequence",
                 "Precursor.Charge",
@@ -152,7 +152,7 @@ def parse_diann(
             columns={
                 "Precursor.Id": "PrecursorId",
                 "Protein.Ids": "Protein",
-                "Genes": "ProteinLabel",
+                #"Genes": "ProteinLabel",
                 "Modified.Sequence": "PeptideSequence",
                 "Precursor.Charge": "Charge",
                 "Lib.PG.Q.Value": "ProteinQValue",
@@ -168,7 +168,7 @@ def parse_diann(
             columns={
                 "Precursor.Id": "PrecursorId",
                 "Protein.Ids": "Protein",
-                "Genes": "ProteinLabel",
+                #"Genes": "ProteinLabel",
                 "Modified.Sequence": "PeptideSequence",
                 "Precursor.Charge": "Charge",
                 "Global.PG.Q.Value": "ProteinQValue",
