@@ -74,6 +74,7 @@ class DifferentialTest:
             ] = np.nan
 
             for identifier in identifiers:
+
                 quant_data = quant_matrix.quantitative_data[
                     quant_matrix.row_annotations[self.level] == identifier, :
                 ].copy()
@@ -117,15 +118,16 @@ class DifferentialTest:
                     p_values.append(np.nan)
 
                 else:
+
+                    group_a_data = group_a_data[~np.isnan(group_a_data)]
+                    group_b_data = group_b_data[~np.isnan(group_b_data)]
+
                     group_a_mean = np.mean(group_a_data)
                     group_b_mean = np.mean(group_b_data)
                     group_a_stdev = np.std(group_a_data)
                     group_b_stdev = np.std(group_b_data)
 
                     log_fold_change = group_a_mean - group_b_mean
-
-                    group_a_data = group_a_data[~np.isnan(group_a_data)]
-                    group_b_data = group_b_data[~np.isnan(group_b_data)]
 
                     group_a_labels = np.array([1.0 for _ in range(len(group_a_data))])
                     group_b_labels = np.array([2.0 for _ in range(len(group_b_data))])
