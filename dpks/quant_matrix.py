@@ -562,6 +562,9 @@ class QuantMatrix:
 
         self.quantitative_data.obs["SHAP"] = shap_values
 
+        self.shap = classifier.shap_values
+        self.transformed_data = X
+
         return self
 
     def train(
@@ -605,7 +608,7 @@ class QuantMatrix:
         threads: int = 1,
         random_state: int = 42,
         folds: int = 3,
-        verbose: bool = False,
+        verbose: Union[bool, int] = False,
         **kwargs: Union[dict, int, str, bool],
     ) -> ParamSearchResult:
 
@@ -618,9 +621,7 @@ class QuantMatrix:
             scaler = StandardScaler()
             X = scaler.fit_transform(X)
 
-        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
-
-        result = ParamSearchResult(classifier=classifier, result=None)
+        result = None
 
         if param_search_method == "genetic":
 
@@ -696,7 +697,7 @@ class QuantMatrix:
 
         if plot_type == "shap_summary":
             try:
-                getattr(self.clf, "shap_values")
+                getattr(self, "shap")
             except AttributeError:
                 print("SHAP values have not been generated")
             cmap = kwargs.get(
@@ -715,8 +716,8 @@ class QuantMatrix:
             fig, ax = SHAPPlot(
                 fig=fig,
                 ax=ax,
-                shap_values=self.clf.shap_values,
-                X=self.clf.X,
+                shap_values=self.shap,
+                X=self.transformed_data,
                 qm=self,
                 cmap=cmap,
                 n_display=kwargs.get("n_display", 5),

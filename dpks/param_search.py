@@ -34,7 +34,7 @@ class RandomizedSearch:
         n_iter: int = 30,
         n_jobs: int = 4,
         scoring: str = "accuracy",
-        verbose: bool = False,
+        verbose: int = 1,
     ):
 
         self.classifier = classifier
@@ -44,7 +44,7 @@ class RandomizedSearch:
         self.n_iter = n_iter
         self.n_jobs = n_jobs
         self.scoring = scoring
-        self.verbose = 4 if verbose else 0
+        self.verbose = verbose
 
     def fit(self, X, y) -> ParamSearchResult:
 
