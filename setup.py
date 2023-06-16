@@ -22,6 +22,8 @@ requirements = [
     "sklearn",
     "statsmodels",
     "biopython",
+    "xgboost",
+    "shap"
 ]
 
 setup_requirements = [

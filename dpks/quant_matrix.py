@@ -599,7 +599,7 @@ class QuantMatrix:
         plot_type: str,
         save: bool = False,
         fig: matplotlib.figure.Figure = None,
-        ax: Union(list, matplotlib.axes.Axes) = None,
+        ax: Union[list, matplotlib.axes.Axes] = None,
         **kwargs: Union[
             np.ndarray,
             int,
@@ -625,6 +625,8 @@ class QuantMatrix:
                 ],
             )
 
+            order_by = kwargs.get("order_by", "shap")
+
             fig, ax = SHAPPlot(
                 fig=fig,
                 ax=ax,
@@ -637,6 +639,7 @@ class QuantMatrix:
                 alpha=kwargs.get("alpha", 0.75),
                 n_bins=kwargs.get("n_bins", 100),
                 feature_column=kwargs.get("feature_column", "Protein"),
+                order_by=order_by
             ).plot()
 
         if plot_type == "rfe_pca":
