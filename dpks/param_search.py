@@ -8,7 +8,6 @@ from sklearn.preprocessing import StandardScaler
 
 
 class ParamSearch:
-
     def __init__(self) -> None:
 
         pass
@@ -19,14 +18,13 @@ class ParamSearch:
 
 
 class ParamSearchResult:
-
     def __init__(self, classifier, result: Any) -> None:
 
         self.classifier = classifier
         self.result = result
 
-class RandomizedSearch:
 
+class RandomizedSearch:
     def __init__(
         self,
         classifier,
@@ -36,7 +34,7 @@ class RandomizedSearch:
         n_iter: int = 30,
         n_jobs: int = 4,
         scoring: str = "accuracy",
-        verbose: bool = False
+        verbose: bool = False,
     ):
 
         self.classifier = classifier
@@ -50,7 +48,9 @@ class RandomizedSearch:
 
     def fit(self, X, y) -> ParamSearchResult:
 
-        skf = StratifiedKFold(n_splits=self.folds, shuffle=True, random_state=self.random_state)
+        skf = StratifiedKFold(
+            n_splits=self.folds, shuffle=True, random_state=self.random_state
+        )
 
         random_search = RandomizedSearchCV(
             self.classifier,
@@ -60,16 +60,14 @@ class RandomizedSearch:
             cv=skf.split(X, y),
             verbose=self.verbose,
             scoring=self.scoring,
-            return_train_score=True
+            return_train_score=True,
         )
 
         random_search.fit(X, y)
 
         return ParamSearchResult(
-            classifier=random_search.best_estimator_,
-            result=random_search
+            classifier=random_search.best_estimator_, result=random_search
         )
-
 
 
 class GeneticAlgorithmSearch(ParamSearch):

@@ -321,7 +321,9 @@ class MaxLFQ:
             key = "PeptideSequence"
 
         elif self.level in quant_matrix.quantitative_data.obs.columns:
-            group_ids = numba.typed.List(quant_matrix.quantitative_data.obs[self.level].unique())
+            group_ids = numba.typed.List(
+                quant_matrix.quantitative_data.obs[self.level].unique()
+            )
             key = self.level
         else:
             raise ValueError("The level is not valid.")

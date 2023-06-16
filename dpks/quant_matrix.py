@@ -59,13 +59,13 @@ class QuantMatrix:
     selector: FeatureRankerRFE
 
     def __init__(
-            self,
-            quantification_file: Union[str, pd.DataFrame],
-            design_matrix_file: Union[str, pd.DataFrame],
-            annotation_fasta_file: str = None,
-            build_quant_graph: bool = False,
-            quant_type: str = "gps",
-            diann_qvalue: float = 0.01,
+        self,
+        quantification_file: Union[str, pd.DataFrame],
+        design_matrix_file: Union[str, pd.DataFrame],
+        annotation_fasta_file: str = None,
+        build_quant_graph: bool = False,
+        quant_type: str = "gps",
+        diann_qvalue: float = 0.01,
     ) -> None:
         """init"""
 
@@ -158,9 +158,9 @@ class QuantMatrix:
         """
 
         self.row_annotations["PrecursorId"] = (
-                self.row_annotations["PeptideSequence"]
-                + "_"
-                + self.row_annotations["Charge"].astype(str)
+            self.row_annotations["PeptideSequence"]
+            + "_"
+            + self.row_annotations["Charge"].astype(str)
         )
 
         return list(self.row_annotations["PrecursorId"].unique())
@@ -219,12 +219,12 @@ class QuantMatrix:
         )
 
     def filter(
-            self,
-            peptide_q_value: float = 0.01,
-            protein_q_value: float = 0.01,
-            remove_decoys: bool = True,
-            remove_contaminants: bool = True,
-            remove_non_proteotypic: bool = True,
+        self,
+        peptide_q_value: float = 0.01,
+        protein_q_value: float = 0.01,
+        remove_decoys: bool = True,
+        remove_contaminants: bool = True,
+        remove_non_proteotypic: bool = True,
     ) -> QuantMatrix:
         """filter the QuantMatrix
 
@@ -290,8 +290,8 @@ class QuantMatrix:
         return self
 
     def scale(
-            self,
-            method: str,
+        self,
+        method: str,
     ) -> QuantMatrix:
         base_method: ScalingMethod = ScalingMethod()
 
@@ -309,11 +309,11 @@ class QuantMatrix:
         return self
 
     def normalize(
-            self,
-            method: str,
-            log_transform: bool = True,
-            use_rt_sliding_window_filter: bool = False,
-            **kwargs: Union[int, bool, str],
+        self,
+        method: str,
+        log_transform: bool = True,
+        use_rt_sliding_window_filter: bool = False,
+        **kwargs: Union[int, bool, str],
     ) -> QuantMatrix:
         """normalize the QuantMatrix
 
@@ -366,10 +366,10 @@ class QuantMatrix:
         return self
 
     def quantify(
-            self,
-            method: str,
-            resolve_protein_groups: bool = False,
-            **kwargs: Union[int, str],
+        self,
+        method: str,
+        resolve_protein_groups: bool = False,
+        **kwargs: Union[int, str],
     ) -> QuantMatrix:
         """calculate protein quantities
 
@@ -698,17 +698,17 @@ class QuantMatrix:
         return self
 
     def plot(
-            self,
-            plot_type: str,
-            save: bool = False,
-            fig: matplotlib.figure.Figure = None,
-            ax: Union(list, matplotlib.axes.Axes) = None,
-            **kwargs: Union[
-                np.ndarray,
-                int,
-                list,
-                str,
-            ],
+        self,
+        plot_type: str,
+        save: bool = False,
+        fig: matplotlib.figure.Figure = None,
+        ax: Union[list, matplotlib.axes.Axes] = None,
+        **kwargs: Union[
+            np.ndarray,
+            int,
+            list,
+            str,
+        ],
     ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         """generate plots"""
 
@@ -728,6 +728,8 @@ class QuantMatrix:
                 ],
             )
 
+            order_by = kwargs.get("order_by", "shap")
+
             fig, ax = SHAPPlot(
                 fig=fig,
                 ax=ax,
@@ -740,6 +742,7 @@ class QuantMatrix:
                 alpha=kwargs.get("alpha", 0.75),
                 n_bins=kwargs.get("n_bins", 100),
                 feature_column=kwargs.get("feature_column", "Protein"),
+                order_by=order_by
             ).plot()
 
         if plot_type == "rfe_pca":

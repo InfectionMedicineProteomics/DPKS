@@ -17,7 +17,6 @@ else:
 
 
 class TrainResult:
-
     def __init__(self, classifier, scaler, validation_results):
 
         self.classifier = classifier
@@ -95,6 +94,7 @@ def encode_labels(labels: np.ndarray) -> np.ndarray:
     encoder = LabelEncoder()
 
     return encoder.fit_transform(labels)
+
 
 def format_data(quant_matrix: QuantMatrix) -> np.ndarray:
 

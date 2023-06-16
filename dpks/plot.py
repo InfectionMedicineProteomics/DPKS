@@ -1,5 +1,5 @@
 import seaborn as sns  # type: ignore # noqa: F401
-from typing import TYPE_CHECKING, Any, Union, List, Tuple
+from typing import TYPE_CHECKING, Any, Union, List, Tuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -42,6 +42,7 @@ class SHAPPlot(Plot):
         jitter: float = 0.1,
         alpha: float = 0.75,
         feature_column: str = "Protein",
+        order_by: str = "shap",
         n_bins=100,
     ):
         """Creates a SHAP summary plot-like figure.
@@ -55,6 +56,7 @@ class SHAPPlot(Plot):
             plt.Figure: figure object
         """
         self.shap_values = shap_values
+        self.order_by = order_by
         self.X = X
         self.qm = qm
         self.n_display = n_display
@@ -75,7 +77,12 @@ class SHAPPlot(Plot):
     def plot(self) -> Tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         plot_frame = pd.DataFrame(columns=["feature", "x", "y"])
         col_sum = np.mean(np.abs(self.shap_values), axis=0)
-        sort_index = np.argsort(-col_sum)
+
+        if self.order_by == "shap":
+            sort_index = np.argsort(-col_sum)
+        elif self.order_by == "rank":
+            sort_index = np.argsort(self.qm.row_annotations["FeatureRank"])
+
         feature_names = []
         for idx, feature_idx in enumerate(sort_index[0 : self.n_display]):
             feature_name = self.qm.quantitative_data.obs[self.feature_column][
@@ -232,6 +239,5 @@ class RFEPCA(Plot):
             ax.set_yticks([])
             ax.set_xlabel(f"PC1 ({100*explained_variance[0]:.1f}%)")
             ax.set_ylabel(f"PC2 ({100*explained_variance[1]:.1f}%)")
-            sns.despine()
 
         return self.fig, self.axs
