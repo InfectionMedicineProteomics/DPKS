@@ -433,12 +433,12 @@ class QuantMatrix:
         return merged
 
     def compare(
-            self,
-            method: str,
-            comparisons: list,
-            min_samples_per_group: int = 2,
-            level: str = "protein",
-            multiple_testing_correction_method: str = "fdr_tsbh",
+        self,
+        method: str,
+        comparisons: list,
+        min_samples_per_group: int = 2,
+        level: str = "protein",
+        multiple_testing_correction_method: str = "fdr_tsbh",
     ) -> QuantMatrix:
         """compare groups by differential testing
 
@@ -462,13 +462,13 @@ class QuantMatrix:
         return self
 
     def rank(
-            self,
-            classifier,
-            scaler: Any = None,
-            shap_algorithm: str = "auto",
-            scale: bool = True,
-            rank_method: str = "rfecv",
-            **kwargs: Union[dict, int, str, bool],
+        self,
+        classifier,
+        scaler: Any = None,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
+        rank_method: str = "rfecv",
+        **kwargs: Union[dict, int, str, bool],
     ):
 
         X = format_data(self)
@@ -515,11 +515,11 @@ class QuantMatrix:
         return self
 
     def predict(
-            self,
-            classifier,
-            scaler,
-            shap_algorithm: str = "auto",
-            scale: bool = True,
+        self,
+        classifier,
+        scaler,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
     ) -> QuantMatrix:
 
         X = format_data(self)
@@ -528,10 +528,7 @@ class QuantMatrix:
         if scale:
             X = scaler.transform(X)
 
-        classifier = Classifier(
-            classifier=classifier,
-            shap_algorithm=shap_algorithm
-        )
+        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
         classifier.interpret(X)
 
@@ -543,13 +540,12 @@ class QuantMatrix:
 
         return self
 
-
     def interpret(
-            self,
-            classifier,
-            scaler,
-            shap_algorithm: str = "auto",
-            scale: bool = True,
+        self,
+        classifier,
+        scaler,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
     ) -> QuantMatrix:
 
         X = format_data(self)
@@ -558,10 +554,7 @@ class QuantMatrix:
         if scale:
             X = scaler.transform(X)
 
-        classifier = Classifier(
-            classifier=classifier,
-            shap_algorithm=shap_algorithm
-        )
+        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
         classifier.interpret(X)
 
@@ -572,13 +565,13 @@ class QuantMatrix:
         return self
 
     def train(
-            self,
-            classifier,
-            scaler: Any = None,
-            shap_algorithm: str = "auto",
-            scale: bool = True,
-            validate: bool = True,
-            scoring: str = "accuracy"
+        self,
+        classifier,
+        scaler: Any = None,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
+        validate: bool = True,
+        scoring: str = "accuracy",
     ) -> TrainResult:
 
         X = format_data(self)
@@ -591,10 +584,7 @@ class QuantMatrix:
                 scaler = StandardScaler()
                 X = scaler.fit_transform(X)
 
-        classifier = Classifier(
-            classifier=classifier,
-            shap_algorithm=shap_algorithm
-        )
+        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
         validation_result = np.array([])
 
@@ -603,23 +593,21 @@ class QuantMatrix:
 
         classifier.fit(X, y)
 
-        return TrainResult(
-            classifier,
-            scaler,
-            validation_result
-        )
+        return TrainResult(classifier, scaler, validation_result)
 
-    def optimize(self,
-                 classifier,
-                 param_search_method: str,
-                 param_grid: dict,
-                 shap_algorithm: str = "auto",
-                 scale: bool = True,
-                 threads: int = 1,
-                 random_state: int = 42,
-                 folds: int = 3,
-                 verbose: bool = False,
-                 **kwargs: Union[dict, int, str, bool]) -> ParamSearchResult:
+    def optimize(
+        self,
+        classifier,
+        param_search_method: str,
+        param_grid: dict,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
+        threads: int = 1,
+        random_state: int = 42,
+        folds: int = 3,
+        verbose: bool = False,
+        **kwargs: Union[dict, int, str, bool],
+    ) -> ParamSearchResult:
 
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
@@ -630,15 +618,9 @@ class QuantMatrix:
             scaler = StandardScaler()
             X = scaler.fit_transform(X)
 
-        classifier = Classifier(
-            classifier=classifier,
-            shap_algorithm=shap_algorithm
-        )
+        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
-        result = ParamSearchResult(
-            classifier=classifier,
-            result=None
-        )
+        result = ParamSearchResult(classifier=classifier, result=None)
 
         if param_search_method == "genetic":
 
@@ -669,7 +651,7 @@ class QuantMatrix:
                 n_iter=kwargs.get("n_iter", 30),
                 n_jobs=threads,
                 scoring=kwargs.get("scoring", "accuracy"),
-                verbose=verbose
+                verbose=verbose,
             )
 
             result = randomized_search.fit(X, y)
@@ -742,7 +724,7 @@ class QuantMatrix:
                 alpha=kwargs.get("alpha", 0.75),
                 n_bins=kwargs.get("n_bins", 100),
                 feature_column=kwargs.get("feature_column", "Protein"),
-                order_by=order_by
+                order_by=order_by,
             ).plot()
 
         if plot_type == "rfe_pca":
