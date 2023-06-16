@@ -1,10 +1,78 @@
+from typing import Any
+
 import numpy as np
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, StratifiedKFold, RandomizedSearchCV
 import random
 from sklearn.base import clone
+from sklearn.preprocessing import StandardScaler
 
 
-class GeneticAlgorithmSearch:
+class ParamSearch:
+
+    def __init__(self) -> None:
+
+        pass
+
+    def fit(self, classifier, X, y, **kwargs):
+
+        pass
+
+
+class ParamSearchResult:
+
+    def __init__(self, classifier, result: Any) -> None:
+
+        self.classifier = classifier
+        self.result = result
+
+class RandomizedSearch:
+
+    def __init__(
+        self,
+        classifier,
+        param_grid: dict,
+        folds: int = 3,
+        random_state: int = None,
+        n_iter: int = 30,
+        n_jobs: int = 4,
+        scoring: str = "accuracy",
+        verbose: bool = False
+    ):
+
+        self.classifier = classifier
+        self.param_grid = param_grid
+        self.folds = folds
+        self.random_state = random_state
+        self.n_iter = n_iter
+        self.n_jobs = n_jobs
+        self.scoring = scoring
+        self.verbose = 4 if verbose else 0
+
+    def fit(self, X, y) -> ParamSearchResult:
+
+        skf = StratifiedKFold(n_splits=self.folds, shuffle=True, random_state=self.random_state)
+
+        random_search = RandomizedSearchCV(
+            self.classifier,
+            param_distributions=self.param_grid,
+            n_iter=self.n_iter,
+            n_jobs=self.n_jobs,
+            cv=skf.split(X, y),
+            verbose=self.verbose,
+            scoring=self.scoring,
+            return_train_score=True
+        )
+
+        random_search.fit(X, y)
+
+        return ParamSearchResult(
+            classifier=random_search.best_estimator_,
+            result=random_search
+        )
+
+
+
+class GeneticAlgorithmSearch(ParamSearch):
     def __init__(
         self,
         classifier,
@@ -67,7 +135,7 @@ class GeneticAlgorithmSearch:
             new_pop.append((random_initializer, individual))
         return new_pop
 
-    def run_genetic_algorithm(self, X, y) -> dict:
+    def fit(self, X, y) -> dict:
         pop = self.initiate_pop(self.param_grid)
         for generation in range(self.n_generations):
             evaluated_pop = self.generation_pass(pop, X, y)

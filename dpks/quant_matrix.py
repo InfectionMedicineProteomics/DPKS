@@ -8,10 +8,12 @@ instanciate a quant matrix:
 """
 from __future__ import annotations
 
-from typing import Union, List
+from typing import Union, List, Any
 
 import anndata as ad
-from dpks.param_search import GeneticAlgorithmSearch  # type: ignore
+from sklearn.model_selection import cross_val_score
+
+from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
@@ -19,7 +21,7 @@ from sklearn.feature_selection import RFECV, RFE
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 from dpks.annotate_proteins import get_protein_labels
-from dpks.classification import Classifier, encode_labels, format_data
+from dpks.classification import Classifier, encode_labels, format_data, TrainResult
 from dpks.differential_testing import DifferentialTest
 from dpks.feature_ranking import FeatureRankerRFE
 from dpks.imputer import (
@@ -57,13 +59,13 @@ class QuantMatrix:
     selector: FeatureRankerRFE
 
     def __init__(
-        self,
-        quantification_file: Union[str, pd.DataFrame],
-        design_matrix_file: Union[str, pd.DataFrame],
-        annotation_fasta_file: str = None,
-        build_quant_graph: bool = False,
-        quant_type: str = "gps",
-        diann_qvalue: float = 0.01,
+            self,
+            quantification_file: Union[str, pd.DataFrame],
+            design_matrix_file: Union[str, pd.DataFrame],
+            annotation_fasta_file: str = None,
+            build_quant_graph: bool = False,
+            quant_type: str = "gps",
+            diann_qvalue: float = 0.01,
     ) -> None:
         """init"""
 
@@ -156,9 +158,9 @@ class QuantMatrix:
         """
 
         self.row_annotations["PrecursorId"] = (
-            self.row_annotations["PeptideSequence"]
-            + "_"
-            + self.row_annotations["Charge"].astype(str)
+                self.row_annotations["PeptideSequence"]
+                + "_"
+                + self.row_annotations["Charge"].astype(str)
         )
 
         return list(self.row_annotations["PrecursorId"].unique())
@@ -217,12 +219,12 @@ class QuantMatrix:
         )
 
     def filter(
-        self,
-        peptide_q_value: float = 0.01,
-        protein_q_value: float = 0.01,
-        remove_decoys: bool = True,
-        remove_contaminants: bool = True,
-        remove_non_proteotypic: bool = True,
+            self,
+            peptide_q_value: float = 0.01,
+            protein_q_value: float = 0.01,
+            remove_decoys: bool = True,
+            remove_contaminants: bool = True,
+            remove_non_proteotypic: bool = True,
     ) -> QuantMatrix:
         """filter the QuantMatrix
 
@@ -288,8 +290,8 @@ class QuantMatrix:
         return self
 
     def scale(
-        self,
-        method: str,
+            self,
+            method: str,
     ) -> QuantMatrix:
         base_method: ScalingMethod = ScalingMethod()
 
@@ -307,11 +309,11 @@ class QuantMatrix:
         return self
 
     def normalize(
-        self,
-        method: str,
-        log_transform: bool = True,
-        use_rt_sliding_window_filter: bool = False,
-        **kwargs: Union[int, bool, str],
+            self,
+            method: str,
+            log_transform: bool = True,
+            use_rt_sliding_window_filter: bool = False,
+            **kwargs: Union[int, bool, str],
     ) -> QuantMatrix:
         """normalize the QuantMatrix
 
@@ -364,10 +366,10 @@ class QuantMatrix:
         return self
 
     def quantify(
-        self,
-        method: str,
-        resolve_protein_groups: bool = False,
-        **kwargs: Union[int, str],
+            self,
+            method: str,
+            resolve_protein_groups: bool = False,
+            **kwargs: Union[int, str],
     ) -> QuantMatrix:
         """calculate protein quantities
 
@@ -431,12 +433,12 @@ class QuantMatrix:
         return merged
 
     def compare(
-        self,
-        method: str,
-        comparisons: list,
-        min_samples_per_group: int = 2,
-        level: str = "protein",
-        multiple_testing_correction_method: str = "fdr_tsbh",
+            self,
+            method: str,
+            comparisons: list,
+            min_samples_per_group: int = 2,
+            level: str = "protein",
+            multiple_testing_correction_method: str = "fdr_tsbh",
     ) -> QuantMatrix:
         """compare groups by differential testing
 
@@ -460,24 +462,28 @@ class QuantMatrix:
         return self
 
     def rank(
-        self,
-        classifier,
-        shap_algorithm: str = "auto",
-        scale: bool = True,
-        feature_importance_method: str = "rfecv",
-        **kwargs: Union[dict, int, str, bool],
+            self,
+            classifier,
+            scaler: Any = None,
+            shap_algorithm: str = "auto",
+            scale: bool = True,
+            rank_method: str = "rfecv",
+            **kwargs: Union[dict, int, str, bool],
     ):
 
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
 
         if scale:
-            self.scaler = StandardScaler()
-            X = self.scaler.fit_transform(X)
+            if scaler:
+                X = scaler.fit_transform(X)
+            else:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
 
         verbose = bool(kwargs.get("verbose", False))
 
-        if feature_importance_method == "rfecv":
+        if rank_method == "rfecv":
 
             rfe_step = int(kwargs.get("rfe_step", 1))
             rfe_min_features_to_select = int(
@@ -508,76 +514,168 @@ class QuantMatrix:
 
         return self
 
-    def classify(
-        self,
-        classifier,
-        shap_algorithm: str = "auto",
-        scale: bool = True,
-        run_param_search: bool = False,
-        **kwargs: Union[dict, int, str, bool],
+    def predict(
+            self,
+            classifier,
+            scaler,
+            shap_algorithm: str = "auto",
+            scale: bool = True,
     ) -> QuantMatrix:
 
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
 
         if scale:
-            self.scaler = StandardScaler()
-            X = self.scaler.fit_transform(X)
+            X = scaler.transform(X)
 
-        verbose = bool(kwargs.get("verbose", False))
-
-        self.clf = Classifier(
+        classifier = Classifier(
             classifier=classifier,
             shap_algorithm=shap_algorithm
         )
 
-        if run_param_search:
-            param_search_method = kwargs.get("param_search_method", "genetic")
-            param_grid = dict(kwargs.get("param_grid", {}))
-            threads = int(kwargs.get("threads", 1))
-            random_state = kwargs.get("random_state", None)
-            folds = int(kwargs.get("folds", 3))
+        classifier.interpret(X)
 
-            if param_search_method == "genetic":
-                gas = GeneticAlgorithmSearch(
-                    self.clf.classifier,
-                    param_grid=param_grid,
-                    threads=threads,
-                    folds=folds,
-                    n_survive=kwargs.get("n_survive", 5),
-                    pop_size=kwargs.get("pop_size", 10),
-                    n_generations=kwargs.get("n_generations", 20),
-                    verbose=verbose,
-                )
-                parameter_populations = gas.run_genetic_algorithm(X, y)
-                self.parameter_populations = parameter_populations
-                classifier = gas.best_estimator_
+        shap_values = classifier.feature_importances_.tolist()
 
-            elif param_search_method == "grid":
-                n_iter = int(kwargs.get("n_iter", 30))
-                scoring = str(kwargs.get("scoring", "accuracy"))
-                classifier = self.clf.get_best_estimator(
-                    X, y,
-                    param_grid=param_grid,
-                    folds=folds,
-                    random_state=random_state,
-                    n_iter=n_iter,
-                    n_jobs=threads,
-                    scoring=scoring
-                )
+        self.quantitative_data.obs["SHAP"] = shap_values
 
-            self.clf = Classifier(
-                classifier=classifier,
-                shap_algorithm=shap_algorithm
-            )
+        self.sample_annotations["Prediction"] = classifier.predict(X)
 
-        self.clf.fit(X, y)
+        return self
 
-        shap_values = self.clf.feature_importances_.tolist()
+
+    def interpret(
+            self,
+            classifier,
+            scaler,
+            shap_algorithm: str = "auto",
+            scale: bool = True,
+    ) -> QuantMatrix:
+
+        X = format_data(self)
+        y = encode_labels(self.quantitative_data.var["group"].values)
+
+        if scale:
+            X = scaler.transform(X)
+
+        classifier = Classifier(
+            classifier=classifier,
+            shap_algorithm=shap_algorithm
+        )
+
+        classifier.interpret(X)
+
+        shap_values = classifier.feature_importances_.tolist()
 
         self.quantitative_data.obs["SHAP"] = shap_values
 
         return self
+
+    def train(
+            self,
+            classifier,
+            scaler: Any = None,
+            shap_algorithm: str = "auto",
+            scale: bool = True,
+            validate: bool = True,
+            scoring: str = "accuracy"
+    ) -> TrainResult:
+
+        X = format_data(self)
+        y = encode_labels(self.quantitative_data.var["group"].values)
+
+        if scale:
+            if scaler:
+                X = scaler.fit_transform(X)
+            else:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
+
+        classifier = Classifier(
+            classifier=classifier,
+            shap_algorithm=shap_algorithm
+        )
+
+        validation_result = np.array([])
+
+        if validate:
+            validation_result = cross_val_score(classifier, X, y, scoring=scoring)
+
+        classifier.fit(X, y)
+
+        return TrainResult(
+            classifier,
+            scaler,
+            validation_result
+        )
+
+    def optimize(self,
+                 classifier,
+                 param_search_method: str,
+                 param_grid: dict,
+                 shap_algorithm: str = "auto",
+                 scale: bool = True,
+                 threads: int = 1,
+                 random_state: int = 42,
+                 folds: int = 3,
+                 verbose: bool = False,
+                 **kwargs: Union[dict, int, str, bool]) -> ParamSearchResult:
+
+        X = format_data(self)
+        y = encode_labels(self.quantitative_data.var["group"].values)
+
+        scaler = None
+
+        if scale:
+            scaler = StandardScaler()
+            X = scaler.fit_transform(X)
+
+        classifier = Classifier(
+            classifier=classifier,
+            shap_algorithm=shap_algorithm
+        )
+
+        result = ParamSearchResult(
+            classifier=classifier,
+            result=None
+        )
+
+        if param_search_method == "genetic":
+
+            gas = GeneticAlgorithmSearch(
+                classifier,
+                param_grid=param_grid,
+                threads=threads,
+                folds=folds,
+                n_survive=kwargs.get("n_survive", 5),
+                pop_size=kwargs.get("pop_size", 10),
+                n_generations=kwargs.get("n_generations", 20),
+                verbose=verbose,
+            )
+            parameter_populations = gas.fit(X, y)
+
+            result = ParamSearchResult(
+                classifier=gas.best_estimator_,
+                result=parameter_populations,
+            )
+
+        elif param_search_method == "grid":
+
+            randomized_search = RandomizedSearch(
+                classifier,
+                param_grid=param_grid,
+                folds=folds,
+                random_state=random_state,
+                n_iter=kwargs.get("n_iter", 30),
+                n_jobs=threads,
+                scoring=kwargs.get("scoring", "accuracy"),
+                verbose=verbose
+            )
+
+            result = randomized_search.fit(X, y)
+            result.scaler = scaler
+
+        return result
 
     def impute(self, method: str, **kwargs: int) -> QuantMatrix:
         """impute missing values"""
@@ -600,17 +698,17 @@ class QuantMatrix:
         return self
 
     def plot(
-        self,
-        plot_type: str,
-        save: bool = False,
-        fig: matplotlib.figure.Figure = None,
-        ax: Union(list, matplotlib.axes.Axes) = None,
-        **kwargs: Union[
-            np.ndarray,
-            int,
-            list,
-            str,
-        ],
+            self,
+            plot_type: str,
+            save: bool = False,
+            fig: matplotlib.figure.Figure = None,
+            ax: Union(list, matplotlib.axes.Axes) = None,
+            **kwargs: Union[
+                np.ndarray,
+                int,
+                list,
+                str,
+            ],
     ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         """generate plots"""
 
