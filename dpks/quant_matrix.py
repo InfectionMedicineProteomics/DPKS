@@ -17,8 +17,7 @@ from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSea
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
-from sklearn.feature_selection import RFECV, RFE
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
 from dpks.annotate_proteins import get_protein_labels
 from dpks.classification import Classifier, encode_labels, format_data, TrainResult

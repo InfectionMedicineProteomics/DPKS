@@ -24,6 +24,9 @@ def paths(tmpdir_factory):
     )
     paths["de_matrix_path"] = base_dir / Path("tests/input_files/de_matrix.tsv")
 
+    paths["sepsis_matrix_path"] = base_dir / Path("tests/input_files/data_sepsis.tsv")
+    paths["sepsis_design_path"] = base_dir / Path("tests/input_files/design_sepsis.tsv")
+
     yield paths
 
 
