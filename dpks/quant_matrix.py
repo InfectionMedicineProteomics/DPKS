@@ -470,7 +470,6 @@ class QuantMatrix:
         rank_method: str = "rfecv",
         **kwargs: Union[dict, int, str, bool],
     ):
-
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
 
@@ -484,7 +483,6 @@ class QuantMatrix:
         verbose = bool(kwargs.get("verbose", False))
 
         if rank_method == "rfecv":
-
             rfe_step = int(kwargs.get("rfe_step", 1))
             rfe_min_features_to_select = int(
                 kwargs.get("rfe_min_features_to_select", 1)
@@ -521,7 +519,6 @@ class QuantMatrix:
         shap_algorithm: str = "auto",
         scale: bool = True,
     ) -> QuantMatrix:
-
         X = format_data(self)
 
         if scale:
@@ -544,7 +541,6 @@ class QuantMatrix:
         shap_algorithm: str = "auto",
         scale: bool = True,
     ) -> QuantMatrix:
-
         X = format_data(self)
 
         if scale:
@@ -576,7 +572,6 @@ class QuantMatrix:
         validate: bool = True,
         scoring: str = "accuracy",
     ) -> TrainResult:
-
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
 
@@ -611,7 +606,6 @@ class QuantMatrix:
         verbose: Union[bool, int] = False,
         **kwargs: Union[dict, int, str, bool],
     ) -> ParamSearchResult:
-
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
 
@@ -625,7 +619,6 @@ class QuantMatrix:
         result = None
 
         if param_search_method == "genetic":
-
             gas = GeneticAlgorithmSearch(
                 classifier,
                 param_grid=param_grid,
@@ -641,11 +634,9 @@ class QuantMatrix:
             result = ParamSearchResult(
                 classifier=gas.best_estimator_,
                 result=parameter_populations,
-
             )
 
         elif param_search_method == "random":
-
             randomized_search = RandomizedSearch(
                 classifier,
                 param_grid=param_grid,

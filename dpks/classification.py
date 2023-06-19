@@ -18,7 +18,6 @@ else:
 
 class TrainResult:
     def __init__(self, classifier, scaler, validation_results):
-
         self.classifier = classifier
         self.scaler = scaler
         self.validation_results = validation_results
@@ -94,14 +93,12 @@ class Classifier(BaseEstimator, ClassifierMixin):
 
 
 def encode_labels(labels: np.ndarray) -> np.ndarray:
-
     encoder = LabelEncoder()
 
     return encoder.fit_transform(labels)
 
 
 def format_data(quant_matrix: QuantMatrix) -> np.ndarray:
-
     X = quant_matrix.quantitative_data.X.copy().transpose()
 
     return np.nan_to_num(X, copy=True, nan=0.0)

@@ -8,17 +8,14 @@ from sklearn.base import clone
 
 class ParamSearch:
     def __init__(self) -> None:
-
         pass
 
     def fit(self, classifier, X, y, **kwargs):
-
         pass
 
 
 class ParamSearchResult:
     def __init__(self, classifier, result: Any) -> None:
-
         self.classifier = classifier
         self.result = result
 
@@ -35,7 +32,6 @@ class RandomizedSearch:
         scoring: str = "accuracy",
         verbose: int = 1,
     ):
-
         self.classifier = classifier
         self.param_grid = param_grid
         self.folds = folds
@@ -46,7 +42,6 @@ class RandomizedSearch:
         self.verbose = verbose
 
     def fit(self, X, y) -> ParamSearchResult:
-
         skf = StratifiedKFold(
             n_splits=self.folds, shuffle=True, random_state=self.random_state
         )

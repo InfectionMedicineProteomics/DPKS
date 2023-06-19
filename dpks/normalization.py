@@ -12,31 +12,25 @@ else:
 
 class NormalizationMethod:
     def __init__(self) -> None:
-
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-
         pass
 
 
 class Log2Normalization(NormalizationMethod):
     def __init__(self) -> None:
-
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-
         return np.array(np.log2(X), dtype=np.float64)
 
 
 class TicNormalization(NormalizationMethod):
     def __init__(self) -> None:
-
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-
         sample_sums = np.nansum(X, axis=0)
 
         median_signal = np.nanmedian(sample_sums)
@@ -48,11 +42,9 @@ class TicNormalization(NormalizationMethod):
 
 class MedianNormalization(NormalizationMethod):
     def __init__(self) -> None:
-
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-
         sample_medians = np.nanmedian(X, axis=0)
 
         mean_sample_median = np.mean(sample_medians)
@@ -108,11 +100,9 @@ class MeanNormalization(NormalizationMethod):
     #    1  SSSGTPDLPVLLTDLK     17.772207     17.119828     17.098912
 
     def __init__(self) -> None:
-
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-
         sample_means = np.nanmean(X, axis=0)
 
         mean_sample_means = np.mean(sample_means)
@@ -123,7 +113,6 @@ class MeanNormalization(NormalizationMethod):
 
 
 class RTSlidingWindowNormalization:
-
     base_method: NormalizationMethod
     minimum_data_points: int
     stride: float
@@ -138,7 +127,6 @@ class RTSlidingWindowNormalization:
         use_overlapping_windows: bool = False,
         rt_unit: str = "minute",
     ):
-
         self.base_method = base_method
         self.stride = stride
         self.minimum_data_points = minimum_data_points
@@ -146,9 +134,7 @@ class RTSlidingWindowNormalization:
         self.rt_unit = rt_unit
 
     def build_rt_windows(self, rts: np.ndarray) -> List[np.ndarray]:
-
         if self.rt_unit == "seconds":
-
             rts = rts / 60.0
 
         rt_min = np.min(rts)
@@ -161,35 +147,29 @@ class RTSlidingWindowNormalization:
         bin_indices = []
 
         for rt_idx in range(len(rt_bins)):
-
             indices = np.argwhere(rt_indices == rt_idx)
 
             if indices.reshape(-1).shape[0] < self.minimum_data_points:
-
                 expanded_indices = []
 
                 expanded_indices.append(indices)
 
                 for expand_index in range(1, len(rt_bins)):
-
                     lower_bound_idx = rt_idx - expand_index
 
                     upper_bound_idx = rt_idx + expand_index
 
                     if lower_bound_idx < 0:
-
                         expanded_indices.append(
                             np.argwhere(rt_indices == upper_bound_idx)
                         )
 
                     elif expand_index >= len(rt_bins):
-
                         expanded_indices.append(
                             np.argwhere(rt_indices == lower_bound_idx)
                         )
 
                     else:
-
                         expanded_indices.append(
                             np.argwhere(rt_indices == lower_bound_idx)
                         )
@@ -207,19 +187,15 @@ class RTSlidingWindowNormalization:
                 bin_indices.append(np.concatenate(expanded_indices).reshape(-1))
 
             else:
-
                 bin_indices.append(indices.reshape(-1))
 
         return bin_indices
 
     def overlap_rt_windows(self, rt_windows: List[np.ndarray]) -> List[np.ndarray]:
-
         new_rt_windows = []
 
         for rt_idx, rt_window in enumerate(rt_windows):
-
             if rt_idx == 0:
-
                 new_rt_window = np.concatenate(
                     [
                         rt_window,
@@ -228,7 +204,6 @@ class RTSlidingWindowNormalization:
                 )
 
             elif rt_idx == len(rt_windows) - 1:
-
                 new_rt_window = np.concatenate(
                     [
                         rt_window,
@@ -237,7 +212,6 @@ class RTSlidingWindowNormalization:
                 )
 
             else:
-
                 new_rt_window = np.concatenate(
                     [
                         rt_windows[rt_idx - 1],
@@ -251,7 +225,6 @@ class RTSlidingWindowNormalization:
         return new_rt_windows
 
     def fit_transform(self, quantitative_data: QuantMatrix) -> np.ndarray:
-
         normalized_slices = []
 
         rt_windows = self.build_rt_windows(
@@ -259,11 +232,9 @@ class RTSlidingWindowNormalization:
         )
 
         if self.use_overlapping_windows:
-
             rt_windows = self.overlap_rt_windows(rt_windows=rt_windows)
 
         for rt_window in rt_windows:
-
             normalized_slice = pd.DataFrame(
                 self.base_method.fit_transform(
                     quantitative_data.quantitative_data[rt_window, :].X.copy()
