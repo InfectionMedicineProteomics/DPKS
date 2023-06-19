@@ -494,11 +494,12 @@ class QuantMatrix:
             selector = FeatureRankerRFE(
                 min_features_to_select=rfe_min_features_to_select,
                 step=rfe_step,
-                importance_getter=shap_algorithm,
+                importance_getter="auto",
                 scoring="accuracy",
                 k_folds=k_folds,
                 threads=threads,
                 verbose=verbose,
+                shap_algorithm=shap_algorithm,
             )
 
             selector.rank_features(X, y, classifier)
@@ -549,9 +550,9 @@ class QuantMatrix:
                 scaler = StandardScaler()
                 X = scaler.fit_transform(X)
 
-        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+        classifier = Classifier(classifier=classifier)
 
-        classifier.interpret(X)
+        classifier.interpret(X, shap_algorithm=shap_algorithm)
 
         shap_values = classifier.feature_importances_.tolist()
 
@@ -566,7 +567,6 @@ class QuantMatrix:
         self,
         classifier,
         scaler: Any = None,
-        shap_algorithm: str = "auto",
         scale: bool = True,
         validate: bool = True,
         scoring: str = "accuracy",
@@ -581,7 +581,7 @@ class QuantMatrix:
                 scaler = StandardScaler()
                 X = scaler.fit_transform(X)
 
-        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+        classifier = Classifier(classifier=classifier)
 
         validation_result = np.array([])
 

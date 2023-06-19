@@ -1,7 +1,6 @@
 from dpks.quant_matrix import QuantMatrix
 import pytest
 import xgboost
-from sklearn.svm import SVC
 
 
 @pytest.fixture

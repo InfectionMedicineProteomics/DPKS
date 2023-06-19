@@ -1,12 +1,9 @@
 from typing import TYPE_CHECKING, Any
 import xgboost
-
 from sklearn.model_selection import cross_val_score
 import numpy as np
 import shap
-
 from sklearn.base import BaseEstimator, ClassifierMixin
-
 from sklearn.preprocessing import LabelEncoder
 
 if TYPE_CHECKING:
@@ -36,7 +33,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
         classifier,
-        shap_algorithm: str = "auto",
     ):
         if isinstance(classifier, str):
             if classifier == "xgboost":
@@ -54,7 +50,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
                 raise ValueError(
                     "The classifier does not have a fit and/or predict method"
                 )
-        self.shap_algorithm = shap_algorithm
+        self.shap_algorithm = None
 
     def fit(self, X, y):
         self.X = X
@@ -68,8 +64,12 @@ class Classifier(BaseEstimator, ClassifierMixin):
     def cross_validation(self, X, y, k_folds: int = 5):
         self.scores = cross_val_score(self.classifier, X, y, cv=k_folds)
 
-    def interpret(self, X):
+    def interpret(self, X, shap_algorithm="auto"):
         self.X = X
+
+        if not self.shap_algorithm:
+            self.shap_algorithm = shap_algorithm
+
         if self.shap_algorithm == "permutation":
             explainer = shap.Explainer(
                 self.classifier.predict, X, algorithm=self.shap_algorithm

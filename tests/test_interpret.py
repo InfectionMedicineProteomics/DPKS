@@ -3,6 +3,7 @@ import pytest
 import xgboost
 from sklearn.svm import SVC
 from sklearn import tree
+from sklearn.neighbors import KNeighborsClassifier
 
 
 @pytest.fixture
@@ -25,7 +26,7 @@ def test_xgb(quantified_data):
 
 def test_decision_tree(quantified_data):
     clf = tree.DecisionTreeClassifier()
-    trained_classifier = quantified_data.train(clf, shap_algorithm="tree")
+    trained_classifier = quantified_data.train(clf)
     quantified_data.interpret(
         trained_classifier.esimator_,
         trained_classifier.scaler,
@@ -33,11 +34,21 @@ def test_decision_tree(quantified_data):
     )
 
 
-def test_svm(quantified_data):
-    clf = SVC()
-    trained_classifier = quantified_data.train(clf, shap_algorithm="permutation")
+def test_knn(quantified_data):
+    clf = KNeighborsClassifier()
+    trained_classifier = quantified_data.train(clf)
     quantified_data.interpret(
         trained_classifier.esimator_,
         trained_classifier.scaler,
-        shap_algorithm="permutation",
+        shap_algorithm="auto",
+    )
+
+
+def test_svm(quantified_data):
+    clf = SVC()
+    trained_classifier = quantified_data.train(clf)
+    quantified_data.interpret(
+        trained_classifier.esimator_,
+        trained_classifier.scaler,
+        shap_algorithm="auto",
     )
