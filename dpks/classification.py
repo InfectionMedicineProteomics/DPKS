@@ -30,10 +30,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
     shap_algorithm: str
     mean_importance: list
 
-    def __init__(
-        self,
-        classifier,
-    ):
+    def __init__(self, classifier, shap_algorithm: str = "auto"):
         if isinstance(classifier, str):
             if classifier == "xgboost":
                 self.classifier = xgboost.XGBClassifier(
@@ -50,7 +47,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
                 raise ValueError(
                     "The classifier does not have a fit and/or predict method"
                 )
-        self.shap_algorithm = None
+        self.shap_algorithm = shap_algorithm
 
     def fit(self, X, y):
         self.X = X
@@ -64,11 +61,8 @@ class Classifier(BaseEstimator, ClassifierMixin):
     def cross_validation(self, X, y, k_folds: int = 5):
         self.scores = cross_val_score(self.classifier, X, y, cv=k_folds)
 
-    def interpret(self, X, shap_algorithm="auto"):
+    def interpret(self, X):
         self.X = X
-
-        if not self.shap_algorithm:
-            self.shap_algorithm = shap_algorithm
 
         if self.shap_algorithm == "permutation":
             explainer = shap.Explainer(
@@ -92,7 +86,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
             self.shap_values = np.swapaxes(np.array(self.shap_values), 1, 2)
 
         self.mean_importance = np.mean(abs(self.shap_values), axis=0)
-        print(self.mean_importance.shape)
 
     @property
     def feature_importances_(self):

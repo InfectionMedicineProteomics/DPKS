@@ -516,7 +516,6 @@ class QuantMatrix:
         self,
         classifier,
         scaler: Any = None,
-        shap_algorithm: str = "auto",
         scale: bool = True,
     ) -> QuantMatrix:
         X = format_data(self)
@@ -528,7 +527,7 @@ class QuantMatrix:
                 scaler = StandardScaler()
                 X = scaler.fit_transform(X)
 
-        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+        classifier = Classifier(classifier=classifier)
 
         self.sample_annotations["Prediction"] = classifier.predict(X)
 
@@ -550,9 +549,9 @@ class QuantMatrix:
                 scaler = StandardScaler()
                 X = scaler.fit_transform(X)
 
-        classifier = Classifier(classifier=classifier)
+        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
-        classifier.interpret(X, shap_algorithm=shap_algorithm)
+        classifier.interpret(X)
 
         shap_values = classifier.feature_importances_.tolist()
 

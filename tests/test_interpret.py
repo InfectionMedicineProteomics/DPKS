@@ -40,7 +40,7 @@ def test_knn(quantified_data):
     quantified_data.interpret(
         trained_classifier.esimator_,
         trained_classifier.scaler,
-        shap_algorithm="auto",
+        shap_algorithm="permutation",
     )
 
 
@@ -50,5 +50,5 @@ def test_svm(quantified_data):
     quantified_data.interpret(
         trained_classifier.esimator_,
         trained_classifier.scaler,
-        shap_algorithm="auto",
+        shap_algorithm="linear",
     )
