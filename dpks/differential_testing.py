@@ -74,7 +74,6 @@ class DifferentialTest:
             ] = np.nan
 
             for identifier in identifiers:
-
                 quant_data = quant_matrix.quantitative_data[
                     quant_matrix.row_annotations[self.level] == identifier, :
                 ].copy()
@@ -118,7 +117,6 @@ class DifferentialTest:
                     p_values.append(np.nan)
 
                 else:
-
                     group_a_data = group_a_data[~np.isnan(group_a_data)]
                     group_b_data = group_b_data[~np.isnan(group_b_data)]
 

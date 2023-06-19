@@ -81,7 +81,7 @@ class SHAPPlot(Plot):
         if self.order_by == "shap":
             sort_index = np.argsort(-col_sum)
         elif self.order_by == "rank":
-            sort_index = np.argsort(self.qm.row_annotations['FeatureRank'])
+            sort_index = np.argsort(self.qm.row_annotations["FeatureRank"])
 
         feature_names = []
         for idx, feature_idx in enumerate(sort_index[0 : self.n_display]):

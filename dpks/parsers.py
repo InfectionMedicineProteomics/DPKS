@@ -8,11 +8,9 @@ def parse_diann(
     diann_file: Union[str, pd.DataFrame], diann_qvalue: float = 0.01
 ) -> pd.DataFrame:
     if isinstance(diann_file, str):
-
         quantification_file = pd.read_csv(diann_file, sep="\t")
 
     else:
-
         quantification_file = diann_file
 
     quantification_file = quantification_file[
@@ -26,14 +24,12 @@ def parse_diann(
     if ("Lib.PG.Q.Value" in quantification_file) or (
         "Lib.Q.Value" in quantification_file
     ):
-
         if "Lib.PG.Q.Value" not in quantification_file:
-
             quantification_file["Lib.PG.Q.Value"] = 0.0
 
         columns = [
             "Protein.Ids",
-            #"Genes",
+            # "Genes",
             "Precursor.Id",
             "Modified.Sequence",
             "Precursor.Charge",
@@ -46,16 +42,13 @@ def parse_diann(
         scoring_columns = ["Lib.PG.Q.Value", "Lib.Q.Value"]
 
         for col in columns:
-
             if col in quantification_file:
-
                 used_columns.append(col)
 
     else:
-
         columns = [
             "Protein.Ids",
-            #"Genes",
+            # "Genes",
             "Precursor.Id",
             "Modified.Sequence",
             "Precursor.Charge",
@@ -68,19 +61,15 @@ def parse_diann(
         scoring_columns = ["Global.PG.Q.Value", "Global.Q.Value"]
 
         for col in columns:
-
             if col in quantification_file:
-
                 used_columns.append(col)
 
     file_column = "Run"
 
     if "Run" in quantification_file:
-
         long_results = quantification_file[["Run"] + used_columns].copy()
 
     elif "File.Name" in quantification_file:
-
         file_column = "File.Name"
 
         long_results = quantification_file[["File.Name"] + used_columns].copy()
@@ -92,7 +81,7 @@ def parse_diann(
         long_results[
             [
                 "Protein.Ids",
-                #"Genes",
+                # "Genes",
                 "Precursor.Id",
                 "Modified.Sequence",
                 "Precursor.Charge",
@@ -102,7 +91,7 @@ def parse_diann(
         .groupby(
             [
                 "Protein.Ids",
-                #"Genes",
+                # "Genes",
                 "Precursor.Id",
                 "Modified.Sequence",
                 "Precursor.Charge",
@@ -117,7 +106,7 @@ def parse_diann(
             index=[
                 "Precursor.Id",
                 "Protein.Ids",
-                #"Genes",
+                # "Genes",
                 "Modified.Sequence",
                 "Precursor.Charge",
             ]
@@ -134,7 +123,7 @@ def parse_diann(
         wide_results.set_index(
             [
                 "Protein.Ids",
-                #"Genes",
+                # "Genes",
                 "Precursor.Id",
                 "Modified.Sequence",
                 "Precursor.Charge",
@@ -147,12 +136,11 @@ def parse_diann(
     if ("Lib.PG.Q.Value" in quantification_file) or (
         "Lib.Q.Value" in quantification_file
     ):
-
         wide_results.rename(
             columns={
                 "Precursor.Id": "PrecursorId",
                 "Protein.Ids": "Protein",
-                #"Genes": "ProteinLabel",
+                # "Genes": "ProteinLabel",
                 "Modified.Sequence": "PeptideSequence",
                 "Precursor.Charge": "Charge",
                 "Lib.PG.Q.Value": "ProteinQValue",
@@ -163,12 +151,11 @@ def parse_diann(
         )
 
     else:
-
         wide_results.rename(
             columns={
                 "Precursor.Id": "PrecursorId",
                 "Protein.Ids": "Protein",
-                #"Genes": "ProteinLabel",
+                # "Genes": "ProteinLabel",
                 "Modified.Sequence": "PeptideSequence",
                 "Precursor.Charge": "Charge",
                 "Global.PG.Q.Value": "ProteinQValue",

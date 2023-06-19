@@ -33,7 +33,6 @@ class FeatureRankerRFE:
         self.importance_getter = importance_getter
 
     def _evaluate_model(self, classifier, X, y):
-
         cv = RepeatedStratifiedKFold(n_splits=self.k_folds, random_state=42)
 
         scores = cross_val_score(
@@ -53,7 +52,6 @@ class FeatureRankerRFE:
         y,
         classifier,
     ) -> None:
-
         selector = RFE(
             estimator=Classifier(
                 classifier=classifier, shap_algorithm=self.importance_getter
@@ -63,10 +61,12 @@ class FeatureRankerRFE:
             importance_getter=self.importance_getter,
         )
 
+        if self.verbose:
+            print(f"Fitting initial selector.")
+
         selector.fit(X, y)
 
         for feature_num in range(self.min_features_to_select, X.shape[1] + 1):
-
             X_subset = X[:, (selector.ranking_ <= feature_num)]
 
             if self.verbose:
@@ -77,7 +77,6 @@ class FeatureRankerRFE:
             scores = list()
 
             for i, (train_idx, test_idx) in enumerate(skf.split(X_subset, y)):
-
                 X_train = X_subset[train_idx, :]
                 y_train = y[train_idx]
 
@@ -85,7 +84,6 @@ class FeatureRankerRFE:
                 y_test = y[test_idx]
 
                 if X_train.ndim < 2:
-
                     X_train = X_train.reshape(-1, 1)
                     X_test = X_test.reshape(-1, 1)
 
@@ -110,5 +108,4 @@ class FeatureRankerRFE:
 
     @property
     def ranking_(self):
-
         return self.selector.ranking_

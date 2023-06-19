@@ -79,17 +79,14 @@ class TopN:
         sorted_precursors = np.take_along_axis(group_data, sort_indices, axis=0)
 
         if self.summarization_method == "sum":
-
             quantification: np.ndarray = np.sum(sorted_precursors[: self.top_n], axis=0)
 
         elif self.summarization_method == "mean":
-
             quantification: np.ndarray = np.mean(
                 sorted_precursors[: self.top_n], axis=0
             )
 
         elif self.summarization_method == "median":
-
             quantification: np.ndarray = np.median(
                 sorted_precursors[: self.top_n], axis=0
             )
@@ -321,7 +318,9 @@ class MaxLFQ:
             key = "PeptideSequence"
 
         elif self.level in quant_matrix.quantitative_data.obs.columns:
-            group_ids = numba.typed.List(quant_matrix.quantitative_data.obs[self.level].unique())
+            group_ids = numba.typed.List(
+                quant_matrix.quantitative_data.obs[self.level].unique()
+            )
             key = self.level
         else:
             raise ValueError("The level is not valid.")

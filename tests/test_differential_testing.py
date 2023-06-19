@@ -23,7 +23,7 @@ def test_differential_testing(paths):
             #                stride=1
         )
         .quantify(method="top_n", top_n=1)
-        .compare_groups(
+        .compare(
             method="linregress",
             group_a=4,
             group_b=6,

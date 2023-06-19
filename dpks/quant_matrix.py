@@ -8,10 +8,12 @@ instanciate a quant matrix:
 """
 from __future__ import annotations
 
-from typing import Union, List
+from typing import Union, List, Any
 
 import anndata as ad
-from dpks.param_search import GeneticAlgorithmSearch  # type: ignore
+from sklearn.model_selection import cross_val_score
+
+from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
@@ -19,7 +21,7 @@ from sklearn.feature_selection import RFECV, RFE
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 from dpks.annotate_proteins import get_protein_labels
-from dpks.classification import Classifier
+from dpks.classification import Classifier, encode_labels, format_data, TrainResult
 from dpks.differential_testing import DifferentialTest
 from dpks.feature_ranking import FeatureRankerRFE
 from dpks.imputer import (
@@ -430,7 +432,7 @@ class QuantMatrix:
 
         return merged
 
-    def compare_groups(
+    def compare(
         self,
         method: str,
         comparisons: list,
@@ -440,7 +442,7 @@ class QuantMatrix:
     ) -> QuantMatrix:
         """compare groups by differential testing
 
-        >>> isinstance(quant_matrix.compare_groups(method="linregress", group_a=4, group_b=6), QuantMatrix)
+        >>> isinstance(quant_matrix.compare(method="linregress", group_a=4, group_b=6), QuantMatrix)
         True
 
         """
@@ -459,120 +461,196 @@ class QuantMatrix:
 
         return self
 
-    def classify(
+    def rank(
         self,
         classifier,
+        scaler: Any = None,
         shap_algorithm: str = "auto",
         scale: bool = True,
-        min_samples_per_group: int = 2,
-        feature_importance_method: str = "rfecv",
-        calculate_feature_importance: bool = False,
-        run_param_search: bool = False,
+        rank_method: str = "rfecv",
         **kwargs: Union[dict, int, str, bool],
-    ) -> QuantMatrix:
-        identifiers = self.proteins
-
-        quant_copy = self.quantitative_data.copy()
-        quant_copy.X[quant_copy.X == 0.0] = np.nan
-        drop_indexes = []
-        groups = self.quantitative_data.var["group"].unique()
-
-        for group in groups:
-            for identifier in identifiers:
-                quant_data = quant_copy[
-                    self.row_annotations["Protein"] == identifier, :
-                ].copy()
-
-                index = int(quant_data.obs.index.to_numpy()[0])
-
-                group_data = quant_data[:, self.get_samples(group=group)].X.copy()
-                group_nonan = len(group_data[~np.isnan(group_data)])
-
-                if group_nonan < min_samples_per_group:
-                    if index not in drop_indexes:
-                        drop_indexes.append(index)
-
-        le = LabelEncoder()
-        Y = le.fit_transform(self.quantitative_data.var["group"].values)
-        X = self.quantitative_data.X.copy().transpose()
-        X = np.delete(X, drop_indexes, 1)
-        X = np.nan_to_num(X, copy=True, nan=0.0)
+    ):
+        X = format_data(self)
+        y = encode_labels(self.quantitative_data.var["group"].values)
 
         if scale:
-            self.scaler = StandardScaler()
-            X = self.scaler.fit_transform(X)
-
-        self.clf = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+            if scaler:
+                X = scaler.transform(X)
+            else:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
 
         verbose = bool(kwargs.get("verbose", False))
-        if run_param_search:
-            param_search_method = kwargs.get("param_search_method", "genetic")
-            param_grid = dict(kwargs.get("param_grid", {}))
+
+        if rank_method == "rfecv":
+            rfe_step = int(kwargs.get("rfe_step", 1))
+            rfe_min_features_to_select = int(
+                kwargs.get("rfe_min_features_to_select", 1)
+            )
+
+            k_folds = int(kwargs.get("k_folds", 2))
+
             threads = int(kwargs.get("threads", 1))
-            random_state = kwargs.get("random_state", None)
-            folds = int(kwargs.get("folds", 3))
 
-            if param_search_method == "genetic":
-                gas = GeneticAlgorithmSearch(
-                    self.clf.classifier,
-                    param_grid=param_grid,
-                    threads=threads,
-                    folds=folds,
-                    n_survive=kwargs.get("n_survive", 5),
-                    pop_size=kwargs.get("pop_size", 10),
-                    n_generations=kwargs.get("n_generations", 20),
-                    verbose=verbose,
-                )
-                parameter_populations = gas.run_genetic_algorithm(X, Y)
-                self.parameter_populations = parameter_populations
-                classifier = gas.best_estimator_
+            selector = FeatureRankerRFE(
+                min_features_to_select=rfe_min_features_to_select,
+                step=rfe_step,
+                importance_getter=shap_algorithm,
+                scoring="accuracy",
+                k_folds=k_folds,
+                threads=threads,
+                verbose=verbose,
+            )
 
-            elif param_search_method == "grid":
-                n_iter = int(kwargs.get("n_iter", 30))
-                scoring = str(kwargs.get("scoring", "accuracy"))
-                classifier = self.clf.get_best_estimator(
-                    X, Y, param_grid, folds, random_state, n_iter, threads, scoring
-                )
+            selector.rank_features(X, y, classifier)
 
-        self.clf.fit(X, Y)
+            feature_rank_values = selector.ranking_.tolist()
 
-        shap_values = self.clf.feature_importances_.tolist()
+            self.quantitative_data.obs["FeatureRank"] = feature_rank_values
 
-        for index in drop_indexes:
-            shap_values.insert(index, np.nan)
-        self.quantitative_data.obs["SHAP"] = shap_values
-
-        if calculate_feature_importance:
-            if feature_importance_method == "rfecv":
-                rfe_step = int(kwargs.get("rfe_step", 1))
-                rfe_min_features_to_select = int(
-                    kwargs.get("rfe_min_features_to_select", 1)
-                )
-
-                k_folds = int(kwargs.get("k_folds", 2))
-
-                threads = int(kwargs.get("threads", 1))
-
-                selector = FeatureRankerRFE(
-                    min_features_to_select=rfe_min_features_to_select,
-                    step=rfe_step,
-                    importance_getter="auto",
-                    scoring="accuracy",
-                    k_folds=k_folds,
-                    threads=threads,
-                    verbose=verbose,
-                )
-
-                selector.rank_features(X, Y, classifier)
-
-                feature_rank_values = selector.ranking_.tolist()
-                for index in drop_indexes:
-                    feature_rank_values.insert(index, np.nan)
-                self.quantitative_data.obs["FeatureRank"] = feature_rank_values
-
-                self.selector = selector
+            self.selector = selector
 
         return self
+
+    def predict(
+        self,
+        classifier,
+        scaler: Any = None,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
+    ) -> QuantMatrix:
+        X = format_data(self)
+
+        if scale:
+            if scaler:
+                X = scaler.transform(X)
+            else:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
+
+        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+
+        self.sample_annotations["Prediction"] = classifier.predict(X)
+
+        return self
+
+    def interpret(
+        self,
+        classifier,
+        scaler: Any = None,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
+    ) -> QuantMatrix:
+        X = format_data(self)
+
+        if scale:
+            if scaler:
+                X = scaler.transform(X)
+            else:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
+
+        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+
+        classifier.interpret(X)
+
+        shap_values = classifier.feature_importances_.tolist()
+
+        self.quantitative_data.obs["SHAP"] = shap_values
+
+        self.shap = classifier.shap_values
+        self.transformed_data = X
+
+        return self
+
+    def train(
+        self,
+        classifier,
+        scaler: Any = None,
+        shap_algorithm: str = "auto",
+        scale: bool = True,
+        validate: bool = True,
+        scoring: str = "accuracy",
+    ) -> TrainResult:
+        X = format_data(self)
+        y = encode_labels(self.quantitative_data.var["group"].values)
+
+        if scale:
+            if scaler:
+                X = scaler.transform(X)
+            else:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
+
+        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+
+        validation_result = np.array([])
+
+        if validate:
+            validation_result = cross_val_score(classifier, X, y, scoring=scoring)
+
+        classifier.fit(X, y)
+
+        return TrainResult(classifier, scaler, validation_result)
+
+    def optimize(
+        self,
+        classifier,
+        param_search_method: str,
+        param_grid: dict,
+        scaler: Any = None,
+        scale: bool = True,
+        threads: int = 1,
+        random_state: int = 42,
+        folds: int = 3,
+        verbose: Union[bool, int] = False,
+        **kwargs: Union[dict, int, str, bool],
+    ) -> ParamSearchResult:
+        X = format_data(self)
+        y = encode_labels(self.quantitative_data.var["group"].values)
+
+        if scale:
+            if scaler:
+                X = scaler.transform(X)
+            else:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
+
+        result = None
+
+        if param_search_method == "genetic":
+            gas = GeneticAlgorithmSearch(
+                classifier,
+                param_grid=param_grid,
+                threads=threads,
+                folds=folds,
+                n_survive=kwargs.get("n_survive", 5),
+                pop_size=kwargs.get("pop_size", 10),
+                n_generations=kwargs.get("n_generations", 20),
+                verbose=verbose,
+            )
+            parameter_populations = gas.fit(X, y)
+
+            result = ParamSearchResult(
+                classifier=gas.best_estimator_,
+                result=parameter_populations,
+            )
+
+        elif param_search_method == "random":
+            randomized_search = RandomizedSearch(
+                classifier,
+                param_grid=param_grid,
+                folds=folds,
+                random_state=random_state,
+                n_iter=kwargs.get("n_iter", 30),
+                n_jobs=threads,
+                scoring=kwargs.get("scoring", "accuracy"),
+                verbose=verbose,
+            )
+
+            result = randomized_search.fit(X, y)
+
+        return result
 
     def impute(self, method: str, **kwargs: int) -> QuantMatrix:
         """impute missing values"""
@@ -611,7 +689,7 @@ class QuantMatrix:
 
         if plot_type == "shap_summary":
             try:
-                getattr(self.clf, "shap_values")
+                getattr(self, "shap")
             except AttributeError:
                 print("SHAP values have not been generated")
             cmap = kwargs.get(
@@ -630,8 +708,8 @@ class QuantMatrix:
             fig, ax = SHAPPlot(
                 fig=fig,
                 ax=ax,
-                shap_values=self.clf.shap_values,
-                X=self.clf.X,
+                shap_values=self.shap,
+                X=self.transformed_data,
                 qm=self,
                 cmap=cmap,
                 n_display=kwargs.get("n_display", 5),
@@ -639,7 +717,7 @@ class QuantMatrix:
                 alpha=kwargs.get("alpha", 0.75),
                 n_bins=kwargs.get("n_bins", 100),
                 feature_column=kwargs.get("feature_column", "Protein"),
-                order_by=order_by
+                order_by=order_by,
             ).plot()
 
         if plot_type == "rfe_pca":

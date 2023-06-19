@@ -8,11 +8,23 @@ import shap
 from sklearn.feature_selection import RFECV, RFE
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
 else:
     QuantMatrix = Any
+
+
+class TrainResult:
+    def __init__(self, classifier, scaler, validation_results):
+        self.classifier = classifier
+        self.scaler = scaler
+        self.validation_results = validation_results
+
+    @property
+    def esimator_(self):
+        return self.classifier.classifier
 
 
 class Classifier(BaseEstimator, ClassifierMixin):
@@ -32,7 +44,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
                 self.classifier = xgboost.XGBClassifier(
                     max_depth=30,
                     eval_metric="logloss",
-                    use_label_encoder=False,
                     verbosity=0,
                 )
         else:
@@ -45,33 +56,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
                     "The classifier does not have a fit and/or predict method"
                 )
         self.shap_algorithm = shap_algorithm
-
-    def get_best_estimator(
-        self,
-        X,
-        y,
-        param_grid: dict,
-        folds: int = 3,
-        random_state: int = None,
-        n_iter: int = 30,
-        n_jobs: int = 4,
-        scoring: str = "accuracy",
-    ):
-        skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=random_state)
-        random_search = RandomizedSearchCV(
-            self.classifier,
-            param_distributions=param_grid,
-            n_iter=n_iter,
-            n_jobs=n_jobs,
-            cv=skf.split(X, y),
-            verbose=0,
-            scoring=scoring,
-            return_train_score=True,
-        )
-        random_search.fit(X, y)
-        self.best_params = random_search.best_params_
-        self.classifier = random_search.best_estimator_
-        return self.classifier
 
     def fit(self, X, y):
         self.X = X
@@ -106,3 +90,15 @@ class Classifier(BaseEstimator, ClassifierMixin):
     @property
     def feature_importances_(self):
         return self.mean_importance
+
+
+def encode_labels(labels: np.ndarray) -> np.ndarray:
+    encoder = LabelEncoder()
+
+    return encoder.fit_transform(labels)
+
+
+def format_data(quant_matrix: QuantMatrix) -> np.ndarray:
+    X = quant_matrix.quantitative_data.X.copy().transpose()
+
+    return np.nan_to_num(X, copy=True, nan=0.0)

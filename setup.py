@@ -19,9 +19,11 @@ requirements = [
     "pandas",
     "seaborn",
     "anndata",
-    "sklearn",
+    "scikit-learn",
     "statsmodels",
     "biopython",
+    "pytest",
+    "pytest-runner",
     "xgboost",
     "shap"
 ]
