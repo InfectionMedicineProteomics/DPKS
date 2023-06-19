@@ -4,7 +4,6 @@ import numpy as np
 from sklearn.model_selection import cross_val_score, StratifiedKFold, RandomizedSearchCV
 import random
 from sklearn.base import clone
-from sklearn.preprocessing import StandardScaler
 
 
 class ParamSearch:

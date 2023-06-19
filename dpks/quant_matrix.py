@@ -476,7 +476,7 @@ class QuantMatrix:
 
         if scale:
             if scaler:
-                X = scaler.fit_transform(X)
+                X = scaler.transform(X)
             else:
                 scaler = StandardScaler()
                 X = scaler.fit_transform(X)
@@ -517,24 +517,21 @@ class QuantMatrix:
     def predict(
         self,
         classifier,
-        scaler,
+        scaler: Any = None,
         shap_algorithm: str = "auto",
         scale: bool = True,
     ) -> QuantMatrix:
 
         X = format_data(self)
-        y = encode_labels(self.quantitative_data.var["group"].values)
 
         if scale:
-            X = scaler.transform(X)
+            if scaler:
+                X = scaler.transform(X)
+            else:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
 
         classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
-
-        classifier.interpret(X)
-
-        shap_values = classifier.feature_importances_.tolist()
-
-        self.quantitative_data.obs["SHAP"] = shap_values
 
         self.sample_annotations["Prediction"] = classifier.predict(X)
 
@@ -543,16 +540,19 @@ class QuantMatrix:
     def interpret(
         self,
         classifier,
-        scaler,
+        scaler: Any = None,
         shap_algorithm: str = "auto",
         scale: bool = True,
     ) -> QuantMatrix:
 
         X = format_data(self)
-        y = encode_labels(self.quantitative_data.var["group"].values)
 
         if scale:
-            X = scaler.transform(X)
+            if scaler:
+                X = scaler.transform(X)
+            else:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
 
         classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
@@ -582,7 +582,7 @@ class QuantMatrix:
 
         if scale:
             if scaler:
-                X = scaler.fit_transform(X)
+                X = scaler.transform(X)
             else:
                 scaler = StandardScaler()
                 X = scaler.fit_transform(X)
@@ -603,7 +603,7 @@ class QuantMatrix:
         classifier,
         param_search_method: str,
         param_grid: dict,
-        shap_algorithm: str = "auto",
+        scaler: Any = None,
         scale: bool = True,
         threads: int = 1,
         random_state: int = 42,
@@ -615,11 +615,12 @@ class QuantMatrix:
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
 
-        scaler = None
-
         if scale:
-            scaler = StandardScaler()
-            X = scaler.fit_transform(X)
+            if scaler:
+                X = scaler.transform(X)
+            else:
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
 
         result = None
 
@@ -640,9 +641,10 @@ class QuantMatrix:
             result = ParamSearchResult(
                 classifier=gas.best_estimator_,
                 result=parameter_populations,
+
             )
 
-        elif param_search_method == "grid":
+        elif param_search_method == "random":
 
             randomized_search = RandomizedSearch(
                 classifier,
@@ -656,7 +658,6 @@ class QuantMatrix:
             )
 
             result = randomized_search.fit(X, y)
-            result.scaler = scaler
 
         return result
 

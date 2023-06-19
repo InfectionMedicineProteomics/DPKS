@@ -23,6 +23,10 @@ class TrainResult:
         self.scaler = scaler
         self.validation_results = validation_results
 
+    @property
+    def esimator_(self):
+        return self.classifier.classifier
+
 
 class Classifier(BaseEstimator, ClassifierMixin):
     X: np.array
