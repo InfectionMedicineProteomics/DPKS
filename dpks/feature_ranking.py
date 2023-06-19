@@ -54,7 +54,6 @@ class FeatureRankerRFE:
         y,
         classifier,
     ) -> None:
-
         estimator = Classifier(classifier=classifier)
         estimator.shap_algorithm = self.shap_algorithm
 
