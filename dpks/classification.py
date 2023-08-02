@@ -1,13 +1,9 @@
 from typing import TYPE_CHECKING, Any
 import xgboost
-from sklearn.model_selection import RandomizedSearchCV, RepeatedStratifiedKFold
-from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import cross_val_score
 import numpy as np
 import shap
-from sklearn.feature_selection import RFECV, RFE
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 
 if TYPE_CHECKING:
@@ -34,11 +30,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
     shap_algorithm: str
     mean_importance: list
 
-    def __init__(
-        self,
-        classifier,
-        shap_algorithm: str = "auto",
-    ):
+    def __init__(self, classifier, shap_algorithm: str = "auto"):
         if isinstance(classifier, str):
             if classifier == "xgboost":
                 self.classifier = xgboost.XGBClassifier(
@@ -61,7 +53,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
         self.X = X
         self.y = y
         self.classifier.fit(X, y)
-        self.interpret(X)
         return self
 
     def predict(self, X):
@@ -71,6 +62,8 @@ class Classifier(BaseEstimator, ClassifierMixin):
         self.scores = cross_val_score(self.classifier, X, y, cv=k_folds)
 
     def interpret(self, X):
+        self.X = X
+
         if self.shap_algorithm == "permutation":
             explainer = shap.Explainer(
                 self.classifier.predict, X, algorithm=self.shap_algorithm
@@ -79,16 +72,24 @@ class Classifier(BaseEstimator, ClassifierMixin):
         elif (
             self.shap_algorithm == "tree"
             or self.shap_algorithm == "auto"
-            or self.shap_algorithm == "linear"
             or self.shap_algorithm == "partition"
         ):
             explainer = shap.Explainer(self.classifier, algorithm=self.shap_algorithm)
             self.shap_values = explainer.shap_values(X)
+        elif self.shap_algorithm == "linear":
+            explainer = shap.KernelExplainer(
+                self.classifier.predict, data=X, algorithm=self.shap_algorithm
+            )
+            self.shap_values = explainer.shap_values(X)
+
+        if isinstance(self.shap_values, list):
+            self.shap_values = np.swapaxes(np.array(self.shap_values), 1, 2)
 
         self.mean_importance = np.mean(abs(self.shap_values), axis=0)
 
     @property
     def feature_importances_(self):
+        self.interpret(self.X)
         return self.mean_importance
 
 

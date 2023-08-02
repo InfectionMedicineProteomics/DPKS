@@ -17,8 +17,7 @@ from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSea
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
-from sklearn.feature_selection import RFECV, RFE
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
 from dpks.annotate_proteins import get_protein_labels
 from dpks.classification import Classifier, encode_labels, format_data, TrainResult
@@ -495,11 +494,12 @@ class QuantMatrix:
             selector = FeatureRankerRFE(
                 min_features_to_select=rfe_min_features_to_select,
                 step=rfe_step,
-                importance_getter=shap_algorithm,
+                importance_getter="auto",
                 scoring="accuracy",
                 k_folds=k_folds,
                 threads=threads,
                 verbose=verbose,
+                shap_algorithm=shap_algorithm,
             )
 
             selector.rank_features(X, y, classifier)
@@ -516,7 +516,6 @@ class QuantMatrix:
         self,
         classifier,
         scaler: Any = None,
-        shap_algorithm: str = "auto",
         scale: bool = True,
     ) -> QuantMatrix:
         X = format_data(self)
@@ -528,7 +527,7 @@ class QuantMatrix:
                 scaler = StandardScaler()
                 X = scaler.fit_transform(X)
 
-        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+        classifier = Classifier(classifier=classifier)
 
         self.sample_annotations["Prediction"] = classifier.predict(X)
 
@@ -567,7 +566,6 @@ class QuantMatrix:
         self,
         classifier,
         scaler: Any = None,
-        shap_algorithm: str = "auto",
         scale: bool = True,
         validate: bool = True,
         scoring: str = "accuracy",
@@ -582,7 +580,7 @@ class QuantMatrix:
                 scaler = StandardScaler()
                 X = scaler.fit_transform(X)
 
-        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+        classifier = Classifier(classifier=classifier)
 
         validation_result = np.array([])
 

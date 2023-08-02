@@ -20,6 +20,7 @@ class FeatureRankerRFE:
         k_folds: int = 3,
         threads: int = 1,
         verbose: bool = False,
+        shap_algorithm: str = "auto",
     ) -> None:
         self.selector = None
         self.results = dict()
@@ -31,6 +32,7 @@ class FeatureRankerRFE:
         self.min_features_to_select = min_features_to_select
         self.step = step
         self.importance_getter = importance_getter
+        self.shap_algorithm = shap_algorithm
 
     def _evaluate_model(self, classifier, X, y):
         cv = RepeatedStratifiedKFold(n_splits=self.k_folds, random_state=42)
@@ -52,10 +54,11 @@ class FeatureRankerRFE:
         y,
         classifier,
     ) -> None:
+        estimator = Classifier(classifier=classifier)
+        estimator.shap_algorithm = self.shap_algorithm
+
         selector = RFE(
-            estimator=Classifier(
-                classifier=classifier, shap_algorithm=self.importance_getter
-            ),
+            estimator=estimator,
             step=self.step,
             n_features_to_select=1,
             importance_getter=self.importance_getter,
@@ -87,9 +90,7 @@ class FeatureRankerRFE:
                     X_train = X_train.reshape(-1, 1)
                     X_test = X_test.reshape(-1, 1)
 
-                clf = Classifier(
-                    classifier=classifier, shap_algorithm=self.importance_getter
-                )
+                clf = Classifier(classifier=classifier)
 
                 clf.fit(X_train, y_train)
 
