@@ -21,6 +21,8 @@ class FeatureRankerRFE:
         threads: int = 1,
         verbose: bool = False,
         shap_algorithm: str = "auto",
+        random_state: int = 42,
+        shuffle: bool = False
     ) -> None:
         self.selector = None
         self.results = dict()
@@ -33,6 +35,8 @@ class FeatureRankerRFE:
         self.step = step
         self.importance_getter = importance_getter
         self.shap_algorithm = shap_algorithm
+        self.random_state = random_state
+        self.shuffle = shuffle
 
     def _evaluate_model(self, classifier, X, y):
         cv = RepeatedStratifiedKFold(n_splits=self.k_folds, random_state=42)
@@ -75,7 +79,7 @@ class FeatureRankerRFE:
             if self.verbose:
                 print(f"Evaluating features below rank: {feature_num}")
 
-            skf = StratifiedKFold(n_splits=self.k_folds)
+            skf = StratifiedKFold(n_splits=self.k_folds, shuffle=self.shuffle, random_state=self.random_state)
 
             scores = list()
 

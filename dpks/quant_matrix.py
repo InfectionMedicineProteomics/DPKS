@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Union, List, Any
 
 import anndata as ad
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 
 from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
@@ -500,6 +500,8 @@ class QuantMatrix:
                 threads=threads,
                 verbose=verbose,
                 shap_algorithm=shap_algorithm,
+                random_state=kwargs.get("random_state", None),
+                shuffle=kwargs.get("shuffle", False)
             )
 
             selector.rank_features(X, y, classifier)
@@ -569,6 +571,9 @@ class QuantMatrix:
         scale: bool = True,
         validate: bool = True,
         scoring: str = "accuracy",
+        num_folds: int = 3,
+        random_state: int = 42,
+        shuffle: bool = False
     ) -> TrainResult:
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
@@ -585,7 +590,8 @@ class QuantMatrix:
         validation_result = np.array([])
 
         if validate:
-            validation_result = cross_val_score(classifier, X, y, scoring=scoring)
+            cv = StratifiedKFold(num_folds, shuffle=shuffle, random_state=random_state)
+            validation_result = cross_val_score(classifier, X, y, scoring=scoring, cv=cv)
 
         classifier.fit(X, y)
 
@@ -626,6 +632,8 @@ class QuantMatrix:
                 pop_size=kwargs.get("pop_size", 10),
                 n_generations=kwargs.get("n_generations", 20),
                 verbose=verbose,
+                random_state=kwargs.get("random_state", None),
+                shuffle=kwargs.get("shuffle", False)
             )
             parameter_populations = gas.fit(X, y)
 

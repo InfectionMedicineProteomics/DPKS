@@ -64,11 +64,14 @@ class Classifier(BaseEstimator, ClassifierMixin):
     def interpret(self, X):
         self.X = X
 
+
         if self.shap_algorithm == "permutation":
             explainer = shap.Explainer(
                 self.classifier.predict, X, algorithm=self.shap_algorithm
             )
-            self.shap_values = explainer(X, max_evals=2 * X.shape[1] + 1)
+
+            self.shap_values = explainer(X, max_evals=2 * X.shape[1] + 1).values
+
         elif (
             self.shap_algorithm == "tree"
             or self.shap_algorithm == "auto"
