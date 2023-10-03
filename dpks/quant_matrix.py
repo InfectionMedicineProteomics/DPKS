@@ -491,11 +491,13 @@ class QuantMatrix:
 
             threads = int(kwargs.get("threads", 1))
 
+            scoring = kwargs.get("scoring", "accuracy")
+
             selector = FeatureRankerRFE(
                 min_features_to_select=rfe_min_features_to_select,
                 step=rfe_step,
                 importance_getter="auto",
-                scoring="accuracy",
+                scoring=scoring,
                 k_folds=k_folds,
                 threads=threads,
                 verbose=verbose,
