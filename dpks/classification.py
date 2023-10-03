@@ -5,6 +5,7 @@ import numpy as np
 import shap
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import LabelEncoder
+from sklearn.utils import class_weight
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
@@ -29,8 +30,9 @@ class Classifier(BaseEstimator, ClassifierMixin):
     shap_values: list
     shap_algorithm: str
     mean_importance: list
+    use_sample_weight: bool
 
-    def __init__(self, classifier, shap_algorithm: str = "auto"):
+    def __init__(self, classifier, shap_algorithm: str = "auto", use_sample_weight: bool = True):
         if isinstance(classifier, str):
             if classifier == "xgboost":
                 self.classifier = xgboost.XGBClassifier(
@@ -48,11 +50,21 @@ class Classifier(BaseEstimator, ClassifierMixin):
                     "The classifier does not have a fit and/or predict method"
                 )
         self.shap_algorithm = shap_algorithm
+        self.use_sample_weight = use_sample_weight
 
     def fit(self, X, y):
         self.X = X
         self.y = y
-        self.classifier.fit(X, y)
+        if self.use_sample_weight:
+            sample_weights = class_weight.compute_sample_weight(
+                class_weight="balanced",
+                y=y
+            )
+            self.classifier.fit(X, y, sample_weight=sample_weights)
+
+        else:
+
+            self.classifier.fit(X, y)
         return self
 
     def predict(self, X):
@@ -82,6 +94,13 @@ class Classifier(BaseEstimator, ClassifierMixin):
         elif self.shap_algorithm == "linear":
             explainer = shap.KernelExplainer(
                 self.classifier.predict, data=X, algorithm=self.shap_algorithm
+            )
+            self.shap_values = explainer.shap_values(X)
+
+        elif self.shap_algorithm == "predict_proba":
+
+            explainer = shap.KernelExplainer(
+                self.classifier.predict_proba, data=shap.sample(X, 20), algorithm=self.shap_algorithm
             )
             self.shap_values = explainer.shap_values(X)
 
