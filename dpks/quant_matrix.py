@@ -17,7 +17,7 @@ from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSea
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 
 from dpks.annotate_proteins import get_protein_labels
 from dpks.classification import Classifier, encode_labels, format_data, TrainResult
@@ -238,6 +238,8 @@ class QuantMatrix:
         (15355, 26)
 
         """
+
+        filtered_data = self.quantitative_data
 
         if "PeptideQValue" in self.quantitative_data.obs:
             filtered_data = self.quantitative_data[
@@ -771,3 +773,20 @@ class QuantMatrix:
         """
 
         self.to_df().to_csv(file_path, sep="\t", index=False)
+
+    def to_ml(self, feature_column: str = "Protein", label_column: str = "group", comparison: tuple = (1, 2)) -> pd.DataFrame:
+
+        qm_df = self.to_df()
+
+        transposed_features = qm_df.set_index(feature_column)[self.sample_annotations['sample'].to_list()].T
+
+        sample_annotations = self.sample_annotations.copy()
+
+        encoder = LabelEncoder()
+
+        sample_annotations['label'] = encoder.fit_transform(sample_annotations[label_column])
+
+        return transposed_features.join(
+            sample_annotations
+        )
+
