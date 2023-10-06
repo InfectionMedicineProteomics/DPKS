@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
+import pandas as pd
 from sklearn.feature_selection import RFE
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import (
@@ -26,7 +27,8 @@ class FeatureRankerRFE:
         random_state: int = 42,
         shuffle: bool = True,
         replace: bool = True,
-        downsample_rate: float = 0.8
+        downsample_rate: float = 0.8,
+        feature_names: Optional[List[str]] = None
     ) -> None:
         self.selectors = dict()
         self.results = dict()
@@ -43,6 +45,7 @@ class FeatureRankerRFE:
         self.shuffle = shuffle
         self.replace = replace
         self.downsample_rate = downsample_rate
+        self.feature_names = feature_names
 
     def fit(
         self,
@@ -57,9 +60,56 @@ class FeatureRankerRFE:
             ) for i in range(self.k_folds)
         )
 
-    @property
-    def ranking_(self):
-        return self.selector.ranking_
+    def get_scores(self):
+
+        selector_scores = []
+        feature_number = []
+
+        for idx, (_, scores) in enumerate(self.results):
+
+            for score in scores:
+                selector_scores.append(scores[score])
+                feature_number.append(score)
+
+        scores = pd.DataFrame(
+            {
+                "feature_number": feature_number,
+                "score": selector_scores
+            }
+        )
+
+        return scores
+
+    def get_ranks(self):
+
+        selector_rankings = dict()
+
+        for idx, (selector, _) in enumerate(self.results):
+
+            selector_rankings[idx] = selector.ranking_
+
+        feature_ranks = pd.DataFrame(
+            {
+                "feature_name": self.feature_names,
+            }
+        )
+
+        for idx, ranking in selector_rankings.items():
+
+            feature_ranks[f'ranking_{idx}'] = ranking
+
+        feature_ranks = feature_ranks.copy()
+
+        feature_ranks['feature_rank_mean'] = feature_ranks[
+            [col for col in feature_ranks.columns if "ranking_" in col]].mean(axis=1)
+        feature_ranks['feature_rank_std'] = feature_ranks[
+            [col for col in feature_ranks.columns if "ranking_" in col]].std(axis=1)
+        feature_ranks['feature_rank_median'] = feature_ranks[
+            [col for col in feature_ranks.columns if "ranking_" in col]].median(axis=1)
+
+        feature_ranks['adjusted_rank'] = feature_ranks['feature_rank_median'] * np.log(feature_ranks['feature_rank_std'])
+
+        return feature_ranks
 
 
 def _rank_features(clf, X, y, scoring, replace, downsample_rate, rfe_step, rfe_min_features, rfe_importance_getter):
