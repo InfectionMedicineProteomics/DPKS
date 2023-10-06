@@ -13,7 +13,7 @@ from sklearn.utils import resample
 
 from joblib import Parallel, delayed
 
-class FeatureRankerRFE:
+class BoostrapRFE:
     def __init__(
         self,
         min_features_to_select: int = 10,

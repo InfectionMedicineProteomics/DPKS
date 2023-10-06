@@ -22,7 +22,7 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from dpks.annotate_proteins import get_protein_labels
 from dpks.classification import Classifier, encode_labels, format_data, TrainResult
 from dpks.differential_testing import DifferentialTest
-from dpks.feature_ranking import FeatureRankerRFE
+from dpks.feature_selection import FeatureRankerRFE
 from dpks.imputer import (
     ImputerMethod,
     UniformRangeImputer,
