@@ -117,14 +117,16 @@ class BoostrapRFE:
 
         selector_scores = []
         feature_number = []
+        indices = []
 
         for idx, (_, scores) in enumerate(self.results):
             for score in scores:
                 selector_scores.append(scores[score])
                 feature_number.append(score)
+                indices.append(idx)
 
         scores = pd.DataFrame(
-            {"feature_number": feature_number, "score": selector_scores}
+            {"idx": indices, "feature_number": feature_number, "score": selector_scores}
         )
 
         return scores
@@ -139,7 +141,10 @@ class BoostrapRFE:
 
         selector_rankings = dict()
 
+        scores = self.get_scores()
+
         for idx, (selector, _) in enumerate(self.results):
+
             selector_rankings[idx] = selector.ranking_
 
         feature_ranks = pd.DataFrame(
@@ -149,7 +154,17 @@ class BoostrapRFE:
         )
 
         for idx, ranking in selector_rankings.items():
+            idx_scores = scores[scores['idx'] == idx][['feature_number', 'score']]
+
             feature_ranks[f"ranking_{idx}"] = ranking
+
+            idx_scores = idx_scores.rename(
+                columns={
+                    'score': f"score_{idx}"
+                }
+            )
+
+            feature_ranks = feature_ranks.join(idx_scores.set_index("feature_number"), on=f"ranking_{idx}")
 
         feature_ranks = feature_ranks.copy()
 
