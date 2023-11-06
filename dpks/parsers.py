@@ -13,11 +13,9 @@ def parse_diann(
     else:
         quantification_file = diann_file
 
-
     sample_q_value_column = "Q.Value"
 
     if "Lib.Q.Value" in quantification_file:
-
         sample_q_value_column = "Lib.Q.Value"
 
     quantification_file = quantification_file[

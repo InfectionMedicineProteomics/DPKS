@@ -169,53 +169,43 @@ class BoostrapRFE:
 
         return feature_ranks
 
-    def evaluate(self,  X, y, classifier):
-
+    def evaluate(self, X, y, classifier):
         """
-               Evaluate the performance with feature subsets.
+        Evaluate the performance with feature subsets.
 
-               Parameters:
-               - X: Input data.
-               - y: Target values.
-               - classifier: Classifier for feature selection.
+        Parameters:
+        - X: Input data.
+        - y: Target values.
+        - classifier: Classifier for feature selection.
 
-               Returns:
-               pd.DataFrame: DataFrame containing evaluation results.
-               """
+        Returns:
+        pd.DataFrame: DataFrame containing evaluation results.
+        """
 
         rank_values = []
         rank_scores = []
 
         feature_ranks = self.get_ranks()
 
-        for rank_value in feature_ranks.sort_values("adjusted_rank", ascending=False)['adjusted_rank'].values:
-
+        for rank_value in feature_ranks.sort_values("adjusted_rank", ascending=False)[
+            "adjusted_rank"
+        ].values:
             if isinstance(X, pd.DataFrame):
-
-                selected_proteins = feature_ranks[feature_ranks['adjusted_rank'] <= rank_value]['feature_name'].values
+                selected_proteins = feature_ranks[
+                    feature_ranks["adjusted_rank"] <= rank_value
+                ]["feature_name"].values
 
                 X_subset = X[selected_proteins]
 
             ## Need numpy array subsetting here also
 
-            scores = cross_val_score(
-                classifier,
-                X_subset,
-                y,
-                scoring='accuracy',
-                cv=3
-            )
+            scores = cross_val_score(classifier, X_subset, y, scoring="accuracy", cv=3)
 
             for score in scores:
                 rank_scores.append(score)
                 rank_values.append(rank_value)
 
-        return pd.DataFrame(
-            {
-                "rank": rank_values,
-                "score": rank_scores
-            }
-        )
+        return pd.DataFrame({"rank": rank_values, "score": rank_scores})
 
 
 def _rank_features(

@@ -76,7 +76,7 @@ class GeneticAlgorithmSearch(ParamSearch):
         folds: int = 3,
         verbose: bool = False,
         random_state: int = 42,
-        shuffle: bool = False
+        shuffle: bool = False,
     ) -> None:
         self.classifier = classifier
         self.param_grid = param_grid
@@ -92,7 +92,9 @@ class GeneticAlgorithmSearch(ParamSearch):
         self.shuffle = shuffle
 
     def get_accuracy(self, classifier, X, y):
-        skf = StratifiedKFold(n_splits=self.folds, shuffle=self.shuffle, random_state=self.random_state)
+        skf = StratifiedKFold(
+            n_splits=self.folds, shuffle=self.shuffle, random_state=self.random_state
+        )
         scores = cross_val_score(classifier, X, y, n_jobs=self.threads, cv=skf)
         return np.mean(scores)
 

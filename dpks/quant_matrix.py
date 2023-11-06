@@ -575,7 +575,7 @@ class QuantMatrix:
         scoring: str = "accuracy",
         num_folds: int = 3,
         random_state: int = 42,
-        shuffle: bool = False
+        shuffle: bool = False,
     ) -> TrainResult:
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
@@ -593,7 +593,9 @@ class QuantMatrix:
 
         if validate:
             cv = StratifiedKFold(num_folds, shuffle=shuffle, random_state=random_state)
-            validation_result = cross_val_score(classifier, X, y, scoring=scoring, cv=cv)
+            validation_result = cross_val_score(
+                classifier, X, y, scoring=scoring, cv=cv
+            )
 
         classifier.fit(X, y)
 
@@ -635,7 +637,7 @@ class QuantMatrix:
                 n_generations=kwargs.get("n_generations", 20),
                 verbose=verbose,
                 random_state=kwargs.get("random_state", None),
-                shuffle=kwargs.get("shuffle", False)
+                shuffle=kwargs.get("shuffle", False),
             )
             parameter_populations = gas.fit(X, y)
 
@@ -772,19 +774,26 @@ class QuantMatrix:
 
         self.to_df().to_csv(file_path, sep="\t", index=False)
 
-    def to_ml(self, feature_column: str = "Protein", label_column: str = "group", comparison: tuple = (1, 2)) -> pd.DataFrame:
-
+    def to_ml(
+        self,
+        feature_column: str = "Protein",
+        label_column: str = "group",
+        comparison: tuple = (1, 2),
+    ) -> pd.DataFrame:
         qm_df = self.to_df()
 
-        transposed_features = qm_df.set_index(feature_column)[self.sample_annotations['sample'].to_list()].T
+        transposed_features = qm_df.set_index(feature_column)[
+            self.sample_annotations["sample"].to_list()
+        ].T
 
         sample_annotations = self.sample_annotations.copy()
 
         encoder = LabelEncoder()
 
-        sample_annotations['label'] = encoder.fit_transform(sample_annotations[label_column])
-
-        return transposed_features.join(
-            sample_annotations[['sample', 'label']].set_index("sample")
+        sample_annotations["label"] = encoder.fit_transform(
+            sample_annotations[label_column]
         )
 
+        return transposed_features.join(
+            sample_annotations[["sample", "label"]].set_index("sample")
+        )
