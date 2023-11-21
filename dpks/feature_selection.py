@@ -178,9 +178,7 @@ class BoostrapRFE:
             [col for col in feature_ranks.columns if "ranking_" in col]
         ].median(axis=1)
 
-        feature_ranks["adjusted_rank"] = feature_ranks["feature_rank_median"] * np.log(
-            feature_ranks["feature_rank_std"]
-        )
+        feature_ranks["adjusted_rank"] = feature_ranks["feature_rank_median"] + feature_ranks["feature_rank_std"]
 
         return feature_ranks
 
