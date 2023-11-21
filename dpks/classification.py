@@ -20,7 +20,7 @@ class TrainResult:
         self.validation_results = validation_results
 
     @property
-    def esimator_(self):
+    def estimator_(self):
         return self.classifier.classifier
 
 
@@ -113,6 +113,10 @@ class Classifier(BaseEstimator, ClassifierMixin):
     def feature_importances_(self):
         self.interpret(self.X)
         return self.mean_importance
+    
+    @property
+    def classes_(self):
+        return np.unique(self.y)
 
 
 def encode_labels(labels: np.ndarray) -> np.ndarray:
