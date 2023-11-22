@@ -780,6 +780,8 @@ class QuantMatrix:
         label_column: str = "group",
         comparison: tuple = (1, 2),
     ) -> pd.DataFrame:
+
+
         qm_df = self.to_df()
 
         transposed_features = qm_df.set_index(feature_column)[

@@ -79,7 +79,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
     y: np.array
     shap_values: list
     shap_algorithm: str
-    mean_importance: list
+    mean_importance: np.ndarray
     use_sample_weight: bool
 
     def __init__(
