@@ -144,7 +144,6 @@ class BoostrapRFE:
         scores = self.get_scores()
 
         for idx, (selector, _) in enumerate(self.results):
-
             selector_rankings[idx] = selector.ranking_
 
         feature_ranks = pd.DataFrame(
@@ -154,17 +153,15 @@ class BoostrapRFE:
         )
 
         for idx, ranking in selector_rankings.items():
-            idx_scores = scores[scores['idx'] == idx][['feature_number', 'score']]
+            idx_scores = scores[scores["idx"] == idx][["feature_number", "score"]]
 
             feature_ranks[f"ranking_{idx}"] = ranking
 
-            idx_scores = idx_scores.rename(
-                columns={
-                    'score': f"score_{idx}"
-                }
-            )
+            idx_scores = idx_scores.rename(columns={"score": f"score_{idx}"})
 
-            feature_ranks = feature_ranks.join(idx_scores.set_index("feature_number"), on=f"ranking_{idx}")
+            feature_ranks = feature_ranks.join(
+                idx_scores.set_index("feature_number"), on=f"ranking_{idx}"
+            )
 
         feature_ranks = feature_ranks.copy()
 
@@ -178,7 +175,9 @@ class BoostrapRFE:
             [col for col in feature_ranks.columns if "ranking_" in col]
         ].median(axis=1)
 
-        feature_ranks["adjusted_rank"] = feature_ranks["feature_rank_median"] + feature_ranks["feature_rank_std"]
+        feature_ranks["adjusted_rank"] = (
+            feature_ranks["feature_rank_median"] + feature_ranks["feature_rank_std"]
+        )
 
         return feature_ranks
 

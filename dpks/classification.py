@@ -189,7 +189,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
             or self.shap_algorithm == "auto"
             or self.shap_algorithm == "partition"
         ):
-            explainer = shap.Explainer(self.classifier, algorithm=self.shap_algorithm)
+            explainer = shap.Explainer(self.classifier, X, algorithm=self.shap_algorithm)
             self.shap_values = explainer.shap_values(X)
         elif self.shap_algorithm == "linear":
             explainer = shap.KernelExplainer(
@@ -208,6 +208,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
         if isinstance(self.shap_values, list):
             self.shap_values = np.swapaxes(np.array(self.shap_values), 1, 2)
 
+        self.explainer = explainer
         self.mean_importance = np.mean(abs(self.shap_values), axis=0)
 
     @property

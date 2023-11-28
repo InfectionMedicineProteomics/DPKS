@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Union, List, Any
 
 import anndata as ad
+from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 
 from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
@@ -543,8 +544,10 @@ class QuantMatrix:
         scaler: Any = None,
         shap_algorithm: str = "auto",
         scale: bool = True,
+        downsample_background=False
     ) -> QuantMatrix:
         X = format_data(self)
+        y = encode_labels(self.quantitative_data.var["group"].values)
 
         if scale:
             if scaler:
@@ -555,14 +558,23 @@ class QuantMatrix:
 
         classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
-        classifier.interpret(X)
+        if downsample_background:
+            rus = RandomUnderSampler(random_state=0)
+            X_resampled, y_resampled = rus.fit_resample(X, y)
+            classifier.interpret(X_resampled)
+            self.transformed_data = X_resampled
+        else:
+            classifier.interpret(X)
+            self.transformed_data = X
 
+
+        self.classifier = classifier
         shap_values = classifier.feature_importances_.tolist()
 
         self.quantitative_data.obs["SHAP"] = shap_values
 
         self.shap = classifier.shap_values
-        self.transformed_data = X
+
 
         return self
 
@@ -780,8 +792,6 @@ class QuantMatrix:
         label_column: str = "group",
         comparison: tuple = (1, 2),
     ) -> pd.DataFrame:
-
-
         qm_df = self.to_df()
 
         transposed_features = qm_df.set_index(feature_column)[
