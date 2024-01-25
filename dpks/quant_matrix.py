@@ -217,6 +217,13 @@ class QuantMatrix:
             self.sample_annotations[self.sample_annotations["group"] == group]["sample"]
         )
 
+    def get_pairs(self, samples: list) -> List[str]:
+        """returns the ordered pairs for samples in wanted group"""
+        
+        sorted_samples = self.sample_annotations[self.sample_annotations["sample"].isin(samples)].set_index("sample").loc[samples]
+
+        return list(sorted_samples["pair"])
+
     def filter(
         self,
         peptide_q_value: float = 0.01,
@@ -503,7 +510,7 @@ class QuantMatrix:
                 verbose=verbose,
                 shap_algorithm=shap_algorithm,
                 random_state=kwargs.get("random_state", None),
-                shuffle=kwargs.get("shuffle", False)
+                shuffle=kwargs.get("shuffle", False),
             )
 
             selector.rank_features(X, y, classifier)
@@ -575,7 +582,7 @@ class QuantMatrix:
         scoring: str = "accuracy",
         num_folds: int = 3,
         random_state: int = 42,
-        shuffle: bool = False
+        shuffle: bool = False,
     ) -> TrainResult:
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
@@ -593,7 +600,9 @@ class QuantMatrix:
 
         if validate:
             cv = StratifiedKFold(num_folds, shuffle=shuffle, random_state=random_state)
-            validation_result = cross_val_score(classifier, X, y, scoring=scoring, cv=cv)
+            validation_result = cross_val_score(
+                classifier, X, y, scoring=scoring, cv=cv
+            )
 
         classifier.fit(X, y)
 
@@ -635,7 +644,7 @@ class QuantMatrix:
                 n_generations=kwargs.get("n_generations", 20),
                 verbose=verbose,
                 random_state=kwargs.get("random_state", None),
-                shuffle=kwargs.get("shuffle", False)
+                shuffle=kwargs.get("shuffle", False),
             )
             parameter_populations = gas.fit(X, y)
 
