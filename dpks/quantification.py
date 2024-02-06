@@ -72,22 +72,29 @@ class TopN:
         return results.reset_index().rename(columns={"index": key})
 
     def quantify_group(self, group_data: np.ndarray) -> np.ndarray:
+
+        #Need to temporarily convery this so that the data can be sorted correctly
         group_data = np.nan_to_num(group_data, nan=0.0)
 
         sort_indices = np.argsort(group_data, axis=0)[::-1]
 
-        sorted_precursors = np.take_along_axis(group_data, sort_indices, axis=0)
+        #Covert back to array since ArrayView cannot be boolean indexed to change 0 back to np.NaN
+        sorted_precursors = np.array(
+            np.take_along_axis(group_data, sort_indices, axis=0)
+        )
+
+        sorted_precursors[sorted_precursors == 0.0] = np.nan
 
         if self.summarization_method == "sum":
-            quantification: np.ndarray = np.sum(sorted_precursors[: self.top_n], axis=0)
+            quantification: np.ndarray = np.nansum(sorted_precursors[: self.top_n], axis=0)
 
         elif self.summarization_method == "mean":
-            quantification: np.ndarray = np.mean(
+            quantification: np.ndarray = np.nanmean(
                 sorted_precursors[: self.top_n], axis=0
             )
 
         elif self.summarization_method == "median":
-            quantification: np.ndarray = np.median(
+            quantification: np.ndarray = np.nanmedian(
                 sorted_precursors[: self.top_n], axis=0
             )
 
@@ -291,13 +298,15 @@ class MaxLFQ:
     level: str
     threads: int
     minimum_subgroups: int
+    top_n: int
 
     def __init__(
-        self, level: str = "protein", threads: int = 1, minimum_subgroups: int = 1
+        self, level: str = "protein", threads: int = 1, minimum_subgroups: int = 1, top_n: int = 0
     ):
         self.level = level
         self.threads = threads
         self.minimum_subgroups = minimum_subgroups
+        self.top_n = top_n
 
         numba.set_num_threads(threads)
 
@@ -328,11 +337,24 @@ class MaxLFQ:
         groupings = numba.typed.List()
 
         for group_id in group_ids:
-            groupings.append(
-                quant_matrix.quantitative_data[
-                    quant_matrix.quantitative_data.obs[key] == group_id
-                ].X.copy()
+
+            group_data = quant_matrix.quantitative_data[
+                quant_matrix.quantitative_data.obs["Protein"] == group_id
+            ].copy()
+
+            group_data.obs['MeanAbundance'] = np.nanmean(group_data.X, axis=1)
+
+            sort_indices = np.argsort(group_data.obs['MeanAbundance'].values)[::-1]
+
+            sorted_precursors = np.array(
+                np.take_along_axis(group_data.X, sort_indices.reshape((-1, 1)), axis=0)
             )
+
+            if self.top_n > 0:
+
+                sorted_precursors = sorted_precursors[: self.top_n]
+
+            groupings.append(sorted_precursors)
 
         quantified_groups = quantify_groups(
             groupings, group_ids, self.minimum_subgroups

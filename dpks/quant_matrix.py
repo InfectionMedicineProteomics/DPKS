@@ -136,6 +136,16 @@ class QuantMatrix:
         return list(self.quantitative_data.obs["Protein"].unique())
 
     @property
+    def protein_labels(self) -> List[str]:
+
+        return self.row_annotations['ProteinLabel'].to_list()
+
+    @property
+    def sample_groups(self) -> List[str]:
+
+        return self.sample_annotations['group'].to_list()
+
+    @property
     def peptides(self) -> List[str]:
         """returns unique list of PeptideSequences
 
@@ -403,11 +413,13 @@ class QuantMatrix:
             level = str(kwargs.get("level", "protein"))
             threads = int(kwargs.get("threads", 1))
             minimum_subgroups = int(kwargs.get("minimum_subgroups", 1))
+            top_n = int(kwargs.get("top_n", 0))
 
             quantifications = MaxLFQ(
                 level=level,
                 threads=threads,
                 minimum_subgroups=minimum_subgroups,
+                top_n=top_n
             ).quantify(self)
 
             design_matrix = self.quantitative_data.var
@@ -563,6 +575,7 @@ class QuantMatrix:
             X_resampled, y_resampled = rus.fit_resample(X, y)
             classifier.interpret(X_resampled)
             self.transformed_data = X_resampled
+            self.y_resampled = y_resampled
         else:
             classifier.interpret(X)
             self.transformed_data = X
