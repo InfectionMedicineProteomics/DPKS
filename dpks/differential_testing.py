@@ -80,13 +80,14 @@ class DifferentialTest:
 
                 indices.append(quant_data.obs.index.to_numpy()[0])
 
-                group_a_data = quant_data[
-                    :, quant_matrix.get_samples(group=group_a)
-                ].X.copy()
+                group_a_samples = quant_matrix.get_samples(group=group_a)
+                if self.method == "ttest_paired":
+                    group_b_samples = quant_matrix.get_pairs(samples=group_a_samples)
+                else:
+                    group_b_samples = quant_matrix.get_samples(group=group_b)
 
-                group_b_data = quant_data[
-                    :, quant_matrix.get_samples(group=group_b)
-                ].X.copy()
+                group_a_data = quant_data[:, group_a_samples].X.copy()
+                group_b_data = quant_data[:, group_b_samples].X.copy()
 
                 group_a_nan = len(group_a_data[~np.isnan(group_a_data)])
                 group_b_nan = len(group_b_data[~np.isnan(group_b_data)])
@@ -145,6 +146,9 @@ class DifferentialTest:
                     elif self.method == "anova":
                         test_results = stats.f_oneway(group_a_data, group_b_data)
 
+                    elif self.method == "ttest_paired":
+                        test_results = stats.ttest_rel(group_a_data, group_b_data)
+
                     group_a_means.append(group_a_mean)
                     group_b_means.append(group_b_mean)
                     group_a_stdevs.append(group_a_stdev)
@@ -159,7 +163,7 @@ class DifferentialTest:
                 np.sqrt((p / max_log_p_value) ** 2 + (fc / max_log_fold_change) ** 2)
                 for p, fc in zip(log_p_values, log_fold_changes)
             ]
-            quant_matrix.row_annotations[f"DEScore"] = de_scores
+            quant_matrix.row_annotations[f"DEScore{group_a}-{group_b}"] = de_scores
             quant_matrix.row_annotations[f"Group{group_a}Mean"] = group_a_means
             quant_matrix.row_annotations[f"Group{group_b}Mean"] = group_b_means
             quant_matrix.row_annotations[f"Group{group_a}Stdev"] = group_a_stdevs
