@@ -480,61 +480,61 @@ class QuantMatrix:
 
         return self
 
-    def rank(
-        self,
-        classifier,
-        scaler: Any = None,
-        shap_algorithm: str = "auto",
-        scale: bool = True,
-        rank_method: str = "rfecv",
-        **kwargs: Union[dict, int, str, bool],
-    ):
-        X = format_data(self)
-        y = encode_labels(self.quantitative_data.var["group"].values)
-
-        if scale:
-            if scaler:
-                X = scaler.transform(X)
-            else:
-                scaler = StandardScaler()
-                X = scaler.fit_transform(X)
-
-        verbose = bool(kwargs.get("verbose", False))
-
-        if rank_method == "rfecv":
-            rfe_step = int(kwargs.get("rfe_step", 1))
-            rfe_min_features_to_select = int(
-                kwargs.get("rfe_min_features_to_select", 1)
-            )
-
-            k_folds = int(kwargs.get("k_folds", 2))
-
-            threads = int(kwargs.get("threads", 1))
-
-            scoring = kwargs.get("scoring", "accuracy")
-
-            selector = FeatureRankerRFE(
-                min_features_to_select=rfe_min_features_to_select,
-                step=rfe_step,
-                importance_getter="auto",
-                scoring=scoring,
-                k_folds=k_folds,
-                threads=threads,
-                verbose=verbose,
-                shap_algorithm=shap_algorithm,
-                random_state=kwargs.get("random_state", None),
-                shuffle=kwargs.get("shuffle", False),
-            )
-
-            selector.rank_features(X, y, classifier)
-
-            feature_rank_values = selector.ranking_.tolist()
-
-            self.quantitative_data.obs["FeatureRank"] = feature_rank_values
-
-            self.selector = selector
-
-        return self
+    # def rank(
+    #     self,
+    #     classifier,
+    #     scaler: Any = None,
+    #     shap_algorithm: str = "auto",
+    #     scale: bool = True,
+    #     rank_method: str = "rfecv",
+    #     **kwargs: Union[dict, int, str, bool],
+    # ):
+    #     X = format_data(self)
+    #     y = encode_labels(self.quantitative_data.var["group"].values)
+    #
+    #     if scale:
+    #         if scaler:
+    #             X = scaler.transform(X)
+    #         else:
+    #             scaler = StandardScaler()
+    #             X = scaler.fit_transform(X)
+    #
+    #     verbose = bool(kwargs.get("verbose", False))
+    #
+    #     if rank_method == "rfecv":
+    #         rfe_step = int(kwargs.get("rfe_step", 1))
+    #         rfe_min_features_to_select = int(
+    #             kwargs.get("rfe_min_features_to_select", 1)
+    #         )
+    #
+    #         k_folds = int(kwargs.get("k_folds", 2))
+    #
+    #         threads = int(kwargs.get("threads", 1))
+    #
+    #         scoring = kwargs.get("scoring", "accuracy")
+    #
+    #         selector = FeatureRankerRFE(
+    #             min_features_to_select=rfe_min_features_to_select,
+    #             step=rfe_step,
+    #             importance_getter="auto",
+    #             scoring=scoring,
+    #             k_folds=k_folds,
+    #             threads=threads,
+    #             verbose=verbose,
+    #             shap_algorithm=shap_algorithm,
+    #             random_state=kwargs.get("random_state", None),
+    #             shuffle=kwargs.get("shuffle", False),
+    #         )
+    #
+    #         selector.rank_features(X, y, classifier)
+    #
+    #         feature_rank_values = selector.ranking_.tolist()
+    #
+    #         self.quantitative_data.obs["FeatureRank"] = feature_rank_values
+    #
+    #         self.selector = selector
+    #
+    #     return self
 
     def predict(
         self,
