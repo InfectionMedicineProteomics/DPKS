@@ -72,29 +72,36 @@ class TopN:
         return results.reset_index().rename(columns={"index": key})
 
     def quantify_group(self, group_data: np.ndarray) -> np.ndarray:
+
+        #Need to temporarily convery this so that the data can be sorted correctly
         group_data = np.nan_to_num(group_data, nan=0.0)
 
         sort_indices = np.argsort(group_data, axis=0)[::-1]
 
-        sorted_precursors = np.take_along_axis(group_data, sort_indices, axis=0)
+        #Covert back to array since ArrayView cannot be boolean indexed to change 0 back to np.NaN
+        sorted_precursors = np.array(
+            np.take_along_axis(group_data, sort_indices, axis=0)
+        )
+
+        sorted_precursors[sorted_precursors == 0.0] = np.nan
 
         if self.summarization_method == "sum":
-            quantification: np.ndarray = np.sum(sorted_precursors[: self.top_n], axis=0)
+            quantification: np.ndarray = np.nansum(sorted_precursors[: self.top_n], axis=0)
 
         elif self.summarization_method == "mean":
-            quantification: np.ndarray = np.mean(
+            quantification: np.ndarray = np.nanmean(
                 sorted_precursors[: self.top_n], axis=0
             )
 
         elif self.summarization_method == "median":
-            quantification: np.ndarray = np.median(
+            quantification: np.ndarray = np.nanmedian(
                 sorted_precursors[: self.top_n], axis=0
             )
 
         return quantification
 
 
-@njit(nogil=True)
+@njit(nogil=True, nopython=True)
 def get_ratios(quantitative_data, sample_combinations):
     num_samples = quantitative_data.shape[1]
 
@@ -115,7 +122,7 @@ def get_ratios(quantitative_data, sample_combinations):
     return ratios
 
 
-@njit(nogil=True)
+@njit(nogil=True, nopython=True)
 def solve_profile(X, ratios, sample_combinations):
     if np.all(np.isnan(X)):
         results = np.zeros((X.shape[1]))
@@ -166,7 +173,7 @@ def solve_profile(X, ratios, sample_combinations):
     return results
 
 
-@njit(nogil=True)
+@njit(nogil=True, nopython=True)
 def build_connection_graph(grouping):
     connected_sample_groups = numba.typed.Dict()
 
@@ -199,7 +206,7 @@ def build_connection_graph(grouping):
     return connected_sample_groups
 
 
-@njit(nogil=True)
+@njit(nogil=True, nopython=True)
 def build_combinations(subset):
     column_idx = np.arange(0, subset.shape[1])
 
@@ -212,7 +219,7 @@ def build_combinations(subset):
     return np.array(combos)
 
 
-@njit(nogil=True)
+@njit(nogil=True, nopython=True)
 def mask_group(grouping):
     nan_groups = []
 
@@ -225,7 +232,7 @@ def mask_group(grouping):
     return grouping
 
 
-@njit(nogil=True)
+@njit(nogil=True, nopython=True)
 def quantify_group(grouping, connected_graph):
     profile = np.zeros((grouping.shape[1]))
 
@@ -254,7 +261,7 @@ def quantify_group(grouping, connected_graph):
     return profile
 
 
-@njit(parallel=True)
+@njit(parallel=True, nopython=True)
 def quantify_groups(groupings, group_ids, minimum_subgroups):
     num_groups = len(group_ids)
 
@@ -291,13 +298,15 @@ class MaxLFQ:
     level: str
     threads: int
     minimum_subgroups: int
+    top_n: int
 
     def __init__(
-        self, level: str = "protein", threads: int = 1, minimum_subgroups: int = 1
+        self, level: str = "protein", threads: int = 1, minimum_subgroups: int = 1, top_n: int = 0
     ):
         self.level = level
         self.threads = threads
         self.minimum_subgroups = minimum_subgroups
+        self.top_n = top_n
 
         numba.set_num_threads(threads)
 
@@ -328,11 +337,24 @@ class MaxLFQ:
         groupings = numba.typed.List()
 
         for group_id in group_ids:
-            groupings.append(
-                quant_matrix.quantitative_data[
-                    quant_matrix.quantitative_data.obs[key] == group_id
-                ].X.copy()
+
+            group_data = quant_matrix.quantitative_data[
+                quant_matrix.quantitative_data.obs["Protein"] == group_id
+            ].copy()
+
+            group_data.obs['MeanAbundance'] = np.nanmean(group_data.X, axis=1)
+
+            sort_indices = np.argsort(group_data.obs['MeanAbundance'].values)[::-1]
+
+            sorted_precursors = np.array(
+                np.take_along_axis(group_data.X, sort_indices.reshape((-1, 1)), axis=0)
             )
+
+            if self.top_n > 0:
+
+                sorted_precursors = sorted_precursors[: self.top_n]
+
+            groupings.append(sorted_precursors)
 
         quantified_groups = quantify_groups(
             groupings, group_ids, self.minimum_subgroups

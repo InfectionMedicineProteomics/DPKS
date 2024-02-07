@@ -11,18 +11,18 @@ from __future__ import annotations
 from typing import Union, List, Any
 
 import anndata as ad
+from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 
 from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 
 from dpks.annotate_proteins import get_protein_labels
 from dpks.classification import Classifier, encode_labels, format_data, TrainResult
 from dpks.differential_testing import DifferentialTest
-from dpks.feature_ranking import FeatureRankerRFE
 from dpks.imputer import (
     ImputerMethod,
     UniformRangeImputer,
@@ -55,7 +55,6 @@ class QuantMatrix:
     num_rows: int
     num_samples: int
     quantitative_data: ad.AnnData
-    selector: FeatureRankerRFE
 
     def __init__(
         self,
@@ -135,6 +134,16 @@ class QuantMatrix:
         """
 
         return list(self.quantitative_data.obs["Protein"].unique())
+
+    @property
+    def protein_labels(self) -> List[str]:
+
+        return self.row_annotations['ProteinLabel'].to_list()
+
+    @property
+    def sample_groups(self) -> List[str]:
+
+        return self.sample_annotations['group'].to_list()
 
     @property
     def peptides(self) -> List[str]:
@@ -219,7 +228,7 @@ class QuantMatrix:
 
     def get_pairs(self, samples: list) -> List[str]:
         """returns the ordered pairs for samples in wanted group"""
-        
+
         sorted_samples = self.sample_annotations[self.sample_annotations["sample"].isin(samples)].set_index("sample").loc[samples]
 
         return list(sorted_samples["pair"])
@@ -245,6 +254,8 @@ class QuantMatrix:
         (15355, 26)
 
         """
+
+        filtered_data = self.quantitative_data
 
         if "PeptideQValue" in self.quantitative_data.obs:
             filtered_data = self.quantitative_data[
@@ -409,11 +420,13 @@ class QuantMatrix:
             level = str(kwargs.get("level", "protein"))
             threads = int(kwargs.get("threads", 1))
             minimum_subgroups = int(kwargs.get("minimum_subgroups", 1))
+            top_n = int(kwargs.get("top_n", 0))
 
             quantifications = MaxLFQ(
                 level=level,
                 threads=threads,
                 minimum_subgroups=minimum_subgroups,
+                top_n=top_n
             ).quantify(self)
 
             design_matrix = self.quantitative_data.var
@@ -467,61 +480,61 @@ class QuantMatrix:
 
         return self
 
-    def rank(
-        self,
-        classifier,
-        scaler: Any = None,
-        shap_algorithm: str = "auto",
-        scale: bool = True,
-        rank_method: str = "rfecv",
-        **kwargs: Union[dict, int, str, bool],
-    ):
-        X = format_data(self)
-        y = encode_labels(self.quantitative_data.var["group"].values)
-
-        if scale:
-            if scaler:
-                X = scaler.transform(X)
-            else:
-                scaler = StandardScaler()
-                X = scaler.fit_transform(X)
-
-        verbose = bool(kwargs.get("verbose", False))
-
-        if rank_method == "rfecv":
-            rfe_step = int(kwargs.get("rfe_step", 1))
-            rfe_min_features_to_select = int(
-                kwargs.get("rfe_min_features_to_select", 1)
-            )
-
-            k_folds = int(kwargs.get("k_folds", 2))
-
-            threads = int(kwargs.get("threads", 1))
-
-            scoring = kwargs.get("scoring", "accuracy")
-
-            selector = FeatureRankerRFE(
-                min_features_to_select=rfe_min_features_to_select,
-                step=rfe_step,
-                importance_getter="auto",
-                scoring=scoring,
-                k_folds=k_folds,
-                threads=threads,
-                verbose=verbose,
-                shap_algorithm=shap_algorithm,
-                random_state=kwargs.get("random_state", None),
-                shuffle=kwargs.get("shuffle", False),
-            )
-
-            selector.rank_features(X, y, classifier)
-
-            feature_rank_values = selector.ranking_.tolist()
-
-            self.quantitative_data.obs["FeatureRank"] = feature_rank_values
-
-            self.selector = selector
-
-        return self
+    # def rank(
+    #     self,
+    #     classifier,
+    #     scaler: Any = None,
+    #     shap_algorithm: str = "auto",
+    #     scale: bool = True,
+    #     rank_method: str = "rfecv",
+    #     **kwargs: Union[dict, int, str, bool],
+    # ):
+    #     X = format_data(self)
+    #     y = encode_labels(self.quantitative_data.var["group"].values)
+    #
+    #     if scale:
+    #         if scaler:
+    #             X = scaler.transform(X)
+    #         else:
+    #             scaler = StandardScaler()
+    #             X = scaler.fit_transform(X)
+    #
+    #     verbose = bool(kwargs.get("verbose", False))
+    #
+    #     if rank_method == "rfecv":
+    #         rfe_step = int(kwargs.get("rfe_step", 1))
+    #         rfe_min_features_to_select = int(
+    #             kwargs.get("rfe_min_features_to_select", 1)
+    #         )
+    #
+    #         k_folds = int(kwargs.get("k_folds", 2))
+    #
+    #         threads = int(kwargs.get("threads", 1))
+    #
+    #         scoring = kwargs.get("scoring", "accuracy")
+    #
+    #         selector = FeatureRankerRFE(
+    #             min_features_to_select=rfe_min_features_to_select,
+    #             step=rfe_step,
+    #             importance_getter="auto",
+    #             scoring=scoring,
+    #             k_folds=k_folds,
+    #             threads=threads,
+    #             verbose=verbose,
+    #             shap_algorithm=shap_algorithm,
+    #             random_state=kwargs.get("random_state", None),
+    #             shuffle=kwargs.get("shuffle", False),
+    #         )
+    #
+    #         selector.rank_features(X, y, classifier)
+    #
+    #         feature_rank_values = selector.ranking_.tolist()
+    #
+    #         self.quantitative_data.obs["FeatureRank"] = feature_rank_values
+    #
+    #         self.selector = selector
+    #
+    #     return self
 
     def predict(
         self,
@@ -550,8 +563,10 @@ class QuantMatrix:
         scaler: Any = None,
         shap_algorithm: str = "auto",
         scale: bool = True,
+        downsample_background=False
     ) -> QuantMatrix:
         X = format_data(self)
+        y = encode_labels(self.quantitative_data.var["group"].values)
 
         if scale:
             if scaler:
@@ -562,14 +577,24 @@ class QuantMatrix:
 
         classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
 
-        classifier.interpret(X)
+        if downsample_background:
+            rus = RandomUnderSampler(random_state=0)
+            X_resampled, y_resampled = rus.fit_resample(X, y)
+            classifier.interpret(X_resampled)
+            self.transformed_data = X_resampled
+            self.y_resampled = y_resampled
+        else:
+            classifier.interpret(X)
+            self.transformed_data = X
 
+
+        self.classifier = classifier
         shap_values = classifier.feature_importances_.tolist()
 
         self.quantitative_data.obs["SHAP"] = shap_values
 
         self.shap = classifier.shap_values
-        self.transformed_data = X
+
 
         return self
 
@@ -780,3 +805,27 @@ class QuantMatrix:
         """
 
         self.to_df().to_csv(file_path, sep="\t", index=False)
+
+    def to_ml(
+        self,
+        feature_column: str = "Protein",
+        label_column: str = "group",
+        comparison: tuple = (1, 2),
+    ) -> pd.DataFrame:
+        qm_df = self.to_df()
+
+        transposed_features = qm_df.set_index(feature_column)[
+            self.sample_annotations["sample"].to_list()
+        ].T
+
+        sample_annotations = self.sample_annotations.copy()
+
+        encoder = LabelEncoder()
+
+        sample_annotations["label"] = encoder.fit_transform(
+            sample_annotations[label_column]
+        )
+
+        return transposed_features.join(
+            sample_annotations[["sample", "label"]].set_index("sample")
+        )
