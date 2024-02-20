@@ -27,7 +27,9 @@ requirements = [
     "xgboost",
     "shap",
     "imbalanced-learn",
-    "kneed"
+    "kneed",
+    "gseapy",
+    "unipressed"
 ]
 
 setup_requirements = [

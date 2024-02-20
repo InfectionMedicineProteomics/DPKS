@@ -10,11 +10,14 @@ from __future__ import annotations
 
 from typing import Union, List, Any, Tuple, Optional
 
+import time
+
 import anndata as ad
 import xgboost
 from imblearn.under_sampling import RandomUnderSampler
 from pandas import Series, DataFrame
 from sklearn.model_selection import cross_val_score, StratifiedKFold
+from unipressed import IdMappingClient
 
 from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
@@ -535,6 +538,71 @@ class QuantMatrix:
         self.explain_results = explain_results
 
         return self
+
+    def enrich(
+        self,
+        method: str = "overreptest",
+        libraries: Optional[list[str]] = None,
+        organism: str = "human"
+    ):
+
+        if not libraries:
+
+            libraries = ["GO_Biological_Process_2023"]
+
+
+    def annotate(
+        self
+    ):
+
+        request = IdMappingClient.submit(
+            source="UniProtKB_AC-ID", dest="Gene_Name",
+            ids=self.proteins
+        )
+
+        while True:
+            status = request.get_status()
+            if status in {"FINISHED", "ERROR"}:
+                break
+            else:
+                time.sleep(1)
+
+        translation_result = list(request.each_result())
+
+        id_mapping = dict()
+
+        for id_result in translation_result:
+            mapping = id_mapping.get(id_result['from'], [])
+
+            mapping.append(id_result['to'])
+
+            id_mapping[id_result['from']] = mapping
+
+        final_mapping = dict()
+
+        for key, value in id_mapping.items():
+            value = value[0]
+
+            final_mapping[key] = value
+
+        mapping_df = pd.DataFrame(
+            {
+                "Protein": final_mapping.keys(),
+                "Gene": final_mapping.values()
+            }
+        )
+
+        self.row_annotations = self.row_annotations.join(
+            mapping_df.set_index("Protein"),
+            on="Protein",
+            how="left"
+        )
+
+        self.row_annotations['Gene'] = self.row_annotations['Gene'].fillna(
+            self.row_annotations['Protein'])
+
+        return self
+
 
     def predict(
         self,
