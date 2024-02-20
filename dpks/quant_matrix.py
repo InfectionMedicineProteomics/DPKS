@@ -13,6 +13,8 @@ from typing import Union, List, Any, Tuple, Optional
 import time
 
 import anndata as ad
+import gseapy as gp
+
 import xgboost
 from imblearn.under_sampling import RandomUnderSampler
 from pandas import Series, DataFrame
@@ -75,6 +77,7 @@ class QuantMatrix:
     ) -> None:
         """init"""
 
+        self.annotated = False
         self.explain_results = None
         if isinstance(design_matrix_file, str):
             design_matrix_file = pd.read_csv(design_matrix_file, sep="\t")
@@ -543,12 +546,100 @@ class QuantMatrix:
         self,
         method: str = "overreptest",
         libraries: Optional[list[str]] = None,
-        organism: str = "human"
+        organism: str = "human",
+        background: Optional[Union[list[str], str]] = None,
+        filter_pvalue: bool = False,
+        pvalue_cutoff: float = 0.1,
+        pvalue_column: str = "CorrectedPValue2-1",
+        filter_shap: bool = False,
+        shap_cutoff: float = 0.0,
+        shap_column: str = "MeanSHAP2-1",
+        subset_library: bool = False,
     ):
+
+        if not self.annotated:
+
+            self.annotate()
 
         if not libraries:
 
             libraries = ["GO_Biological_Process_2023"]
+
+        gene_df = pd.DataFrame()
+
+        if filter_pvalue:
+
+            gene_df = self.row_annotations[self.row_annotations[pvalue_column] < pvalue_cutoff]
+
+        if filter_shap:
+
+            gene_df = self.row_annotations[self.row_annotations[shap_column] > shap_cutoff]
+
+        genes = gene_df['Gene'].to_list()
+
+        if subset_library:
+
+            temp_libraries = []
+
+            for library in libraries:
+
+                go_bp = gp.get_library(name=library, organism=organism)
+
+                gene_set = set(gene_df['Gene'].to_list())
+
+                bio_process_subset = dict()
+
+                for key, value in go_bp.items():
+
+                    for gene in value:
+
+                        if gene in gene_set:
+
+                            bio_process_subset[key] = value
+
+                temp_libraries.append(bio_process_subset)
+
+            libraries = temp_libraries
+
+        enr = None
+
+        if method == "overreptest":
+
+            if background:
+
+                enr = gp.enrich(
+                    gene_list=genes,
+                    gene_sets=libraries,
+                    background=background,
+                )
+
+            else:
+
+                enr = gp.enrich(
+                    gene_list=genes,
+                    gene_sets=libraries
+                )
+
+        elif method == "enrichr_overreptest":
+
+            if background:
+
+                enr = gp.enrichr(
+                    gene_list=genes,
+                    gene_sets=libraries,
+                    organism=organism,
+                    background=background,
+                )
+
+            else:
+
+                enr = gp.enrichr(
+                    gene_list=genes,
+                    gene_sets=libraries,
+                    organism=organism,
+                )
+
+        return enr
 
 
     def annotate(
@@ -600,6 +691,8 @@ class QuantMatrix:
 
         self.row_annotations['Gene'] = self.row_annotations['Gene'].fillna(
             self.row_annotations['Protein'])
+
+        self.annotated = True
 
         return self
 
