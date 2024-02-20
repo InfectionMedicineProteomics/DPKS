@@ -143,13 +143,11 @@ class QuantMatrix:
 
     @property
     def protein_labels(self) -> List[str]:
-
-        return self.row_annotations['ProteinLabel'].to_list()
+        return self.row_annotations["ProteinLabel"].to_list()
 
     @property
     def sample_groups(self) -> List[str]:
-
-        return self.sample_annotations['group'].to_list()
+        return self.sample_annotations["group"].to_list()
 
     @property
     def peptides(self) -> List[str]:
@@ -235,7 +233,11 @@ class QuantMatrix:
     def get_pairs(self, samples: list) -> List[str]:
         """returns the ordered pairs for samples in wanted group"""
 
-        sorted_samples = self.sample_annotations[self.sample_annotations["sample"].isin(samples)].set_index("sample").loc[samples]
+        sorted_samples = (
+            self.sample_annotations[self.sample_annotations["sample"].isin(samples)]
+            .set_index("sample")
+            .loc[samples]
+        )
 
         return list(sorted_samples["pair"])
 
@@ -432,7 +434,7 @@ class QuantMatrix:
                 level=level,
                 threads=threads,
                 minimum_subgroups=minimum_subgroups,
-                top_n=top_n
+                top_n=top_n,
             ).quantify(self)
 
             design_matrix = self.quantitative_data.var
@@ -492,47 +494,42 @@ class QuantMatrix:
         comparisons: list,
         n_iterations: int = 100,
         downsample_background: bool = True,
-        feature_column: str = "Protein"
+        feature_column: str = "Protein",
     ) -> QuantMatrix:
-
         explain_results = []
 
         for comparison in comparisons:
-
             X, y = self.to_ml(feature_column=feature_column, comparison=comparison)
 
             scaler = StandardScaler()
 
             X[:] = scaler.fit_transform(X[:])
 
-            clf_ = Classifier(
-                clf
-            )
+            clf_ = Classifier(clf)
 
             interpreter = BootstrapInterpreter(
                 feature_names=X.columns,
                 n_iterations=n_iterations,
-                downsample_background=downsample_background
+                downsample_background=downsample_background,
             )
 
             interpreter.fit(X, y, clf_)
 
-            explain_results.append(
-                (comparison, interpreter)
-            )
+            explain_results.append((comparison, interpreter))
 
-            importances_df = interpreter.importances[['feature', 'mean_shap', 'mean_rank']].set_index("feature")
+            importances_df = interpreter.importances[
+                ["feature", "mean_shap", "mean_rank"]
+            ].set_index("feature")
 
             importances_df = importances_df.rename(
                 columns={
                     "mean_shap": f"MeanSHAP{comparison[0]}-{comparison[1]}",
-                    "mean_rank": f"MeanRank{comparison[0]}-{comparison[1]}"
+                    "mean_rank": f"MeanRank{comparison[0]}-{comparison[1]}",
                 }
             )
 
             self.row_annotations = self.row_annotations.join(
-                importances_df,
-                on="Protein"
+                importances_df, on="Protein"
             )
 
         self.explain_results = explain_results
@@ -566,7 +563,7 @@ class QuantMatrix:
         scaler: Any = None,
         shap_algorithm: str = "auto",
         scale: bool = True,
-        downsample_background=False
+        downsample_background=False,
     ) -> QuantMatrix:
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
@@ -590,14 +587,12 @@ class QuantMatrix:
             classifier.interpret(X)
             self.transformed_data = X
 
-
         self.classifier = classifier
         shap_values = classifier.feature_importances_.tolist()
 
         self.quantitative_data.obs["SHAP"] = shap_values
 
         self.shap = classifier.shap_values
-
 
         return self
 
@@ -815,19 +810,19 @@ class QuantMatrix:
         label_column: str = "group",
         comparison: tuple = (1, 2),
     ) -> tuple[Any, Any]:
-
         qm_df = self.to_df()
 
-        samples = self.sample_annotations[self.sample_annotations["group"].isin(comparison)][
-            "sample"].to_list()
+        samples = self.sample_annotations[
+            self.sample_annotations["group"].isin(comparison)
+        ]["sample"].to_list()
 
-        transposed_features = qm_df.set_index(feature_column)[
-            samples
-        ].T
+        transposed_features = qm_df.set_index(feature_column)[samples].T
 
         sample_annotations = self.sample_annotations.copy()
 
-        sample_annotations_subset = sample_annotations[sample_annotations[label_column].isin(comparison)].copy()
+        sample_annotations_subset = sample_annotations[
+            sample_annotations[label_column].isin(comparison)
+        ].copy()
 
         encoder = LabelEncoder()
 
@@ -837,7 +832,7 @@ class QuantMatrix:
 
         combined = transposed_features.join(
             sample_annotations_subset[["sample", "label"]].set_index("sample"),
-            how="left"
+            how="left",
         )
 
-        return combined.loc[:, combined.columns != "label"], combined[['label']]
+        return combined.loc[:, combined.columns != "label"], combined[["label"]]
