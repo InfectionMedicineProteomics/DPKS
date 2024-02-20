@@ -8,10 +8,12 @@ instanciate a quant matrix:
 """
 from __future__ import annotations
 
-from typing import Union, List, Any
+from typing import Union, List, Any, Tuple, Optional
 
 import anndata as ad
+import xgboost
 from imblearn.under_sampling import RandomUnderSampler
+from pandas import Series, DataFrame
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 
 from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
@@ -46,6 +48,8 @@ from dpks.scaling import (
     AbsMaxScaling,
 )
 
+from dpks.interpretation import BootstrapInterpreter
+
 
 class QuantMatrix:
     """holds a quantitative matrix and a design matrix, exposes an API to manipulate the quantitative matrix"""
@@ -55,6 +59,7 @@ class QuantMatrix:
     num_rows: int
     num_samples: int
     quantitative_data: ad.AnnData
+    explain_results: Optional[list[tuple[Any, BootstrapInterpreter]]]
 
     def __init__(
         self,
@@ -67,6 +72,7 @@ class QuantMatrix:
     ) -> None:
         """init"""
 
+        self.explain_results = None
         if isinstance(design_matrix_file, str):
             design_matrix_file = pd.read_csv(design_matrix_file, sep="\t")
 
@@ -480,61 +486,58 @@ class QuantMatrix:
 
         return self
 
-    # def rank(
-    #     self,
-    #     classifier,
-    #     scaler: Any = None,
-    #     shap_algorithm: str = "auto",
-    #     scale: bool = True,
-    #     rank_method: str = "rfecv",
-    #     **kwargs: Union[dict, int, str, bool],
-    # ):
-    #     X = format_data(self)
-    #     y = encode_labels(self.quantitative_data.var["group"].values)
-    #
-    #     if scale:
-    #         if scaler:
-    #             X = scaler.transform(X)
-    #         else:
-    #             scaler = StandardScaler()
-    #             X = scaler.fit_transform(X)
-    #
-    #     verbose = bool(kwargs.get("verbose", False))
-    #
-    #     if rank_method == "rfecv":
-    #         rfe_step = int(kwargs.get("rfe_step", 1))
-    #         rfe_min_features_to_select = int(
-    #             kwargs.get("rfe_min_features_to_select", 1)
-    #         )
-    #
-    #         k_folds = int(kwargs.get("k_folds", 2))
-    #
-    #         threads = int(kwargs.get("threads", 1))
-    #
-    #         scoring = kwargs.get("scoring", "accuracy")
-    #
-    #         selector = FeatureRankerRFE(
-    #             min_features_to_select=rfe_min_features_to_select,
-    #             step=rfe_step,
-    #             importance_getter="auto",
-    #             scoring=scoring,
-    #             k_folds=k_folds,
-    #             threads=threads,
-    #             verbose=verbose,
-    #             shap_algorithm=shap_algorithm,
-    #             random_state=kwargs.get("random_state", None),
-    #             shuffle=kwargs.get("shuffle", False),
-    #         )
-    #
-    #         selector.rank_features(X, y, classifier)
-    #
-    #         feature_rank_values = selector.ranking_.tolist()
-    #
-    #         self.quantitative_data.obs["FeatureRank"] = feature_rank_values
-    #
-    #         self.selector = selector
-    #
-    #     return self
+    def explain(
+        self,
+        clf,
+        comparisons: list,
+        n_iterations: int = 100,
+        downsample_background: bool = True,
+        feature_column: str = "Protein"
+    ) -> QuantMatrix:
+
+        explain_results = []
+
+        for comparison in comparisons:
+
+            X, y = self.to_ml(feature_column=feature_column, comparison=comparison)
+
+            scaler = StandardScaler()
+
+            X[:] = scaler.fit_transform(X[:])
+
+            clf_ = Classifier(
+                clf
+            )
+
+            interpreter = BootstrapInterpreter(
+                feature_names=X.columns,
+                n_iterations=n_iterations,
+                downsample_background=downsample_background
+            )
+
+            interpreter.fit(X, y, clf_)
+
+            explain_results.append(
+                (comparison, interpreter)
+            )
+
+            importances_df = interpreter.importances[['feature', 'mean_shap', 'mean_rank']].set_index("feature")
+
+            importances_df = importances_df.rename(
+                columns={
+                    "mean_shap": f"MeanSHAP{comparison[0]}-{comparison[1]}",
+                    "mean_rank": f"MeanRank{comparison[0]}-{comparison[1]}"
+                }
+            )
+
+            self.row_annotations = self.row_annotations.join(
+                importances_df,
+                on="Protein"
+            )
+
+        self.explain_results = explain_results
+
+        return self
 
     def predict(
         self,
@@ -811,21 +814,30 @@ class QuantMatrix:
         feature_column: str = "Protein",
         label_column: str = "group",
         comparison: tuple = (1, 2),
-    ) -> pd.DataFrame:
+    ) -> tuple[Any, Any]:
+
         qm_df = self.to_df()
 
+        samples = self.sample_annotations[self.sample_annotations["group"].isin(comparison)][
+            "sample"].to_list()
+
         transposed_features = qm_df.set_index(feature_column)[
-            self.sample_annotations["sample"].to_list()
+            samples
         ].T
 
         sample_annotations = self.sample_annotations.copy()
 
+        sample_annotations_subset = sample_annotations[sample_annotations[label_column].isin(comparison)].copy()
+
         encoder = LabelEncoder()
 
-        sample_annotations["label"] = encoder.fit_transform(
-            sample_annotations[label_column]
+        sample_annotations_subset["label"] = encoder.fit_transform(
+            sample_annotations_subset[label_column]
         )
 
-        return transposed_features.join(
-            sample_annotations[["sample", "label"]].set_index("sample")
+        combined = transposed_features.join(
+            sample_annotations_subset[["sample", "label"]].set_index("sample"),
+            how="left"
         )
+
+        return combined.loc[:, combined.columns != "label"], combined[['label']]

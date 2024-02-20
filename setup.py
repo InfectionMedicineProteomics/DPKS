@@ -25,7 +25,9 @@ requirements = [
     "pytest",
     "pytest-runner",
     "xgboost",
-    "shap"
+    "shap",
+    "imbalanced-learn",
+    "kneed"
 ]
 
 setup_requirements = [
