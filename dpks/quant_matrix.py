@@ -556,45 +556,39 @@ class QuantMatrix:
         shap_column: str = "MeanSHAP2-1",
         subset_library: bool = False,
     ):
-
         if not self.annotated:
-
             self.annotate()
 
         if not libraries:
-
             libraries = ["GO_Biological_Process_2023"]
 
         gene_df = pd.DataFrame()
 
         if filter_pvalue:
-
-            gene_df = self.row_annotations[self.row_annotations[pvalue_column] < pvalue_cutoff]
+            gene_df = self.row_annotations[
+                self.row_annotations[pvalue_column] < pvalue_cutoff
+            ]
 
         if filter_shap:
+            gene_df = self.row_annotations[
+                self.row_annotations[shap_column] > shap_cutoff
+            ]
 
-            gene_df = self.row_annotations[self.row_annotations[shap_column] > shap_cutoff]
-
-        genes = gene_df['Gene'].to_list()
+        genes = gene_df["Gene"].to_list()
 
         if subset_library:
-
             temp_libraries = []
 
             for library in libraries:
-
                 go_bp = gp.get_library(name=library, organism=organism)
 
-                gene_set = set(gene_df['Gene'].to_list())
+                gene_set = set(gene_df["Gene"].to_list())
 
                 bio_process_subset = dict()
 
                 for key, value in go_bp.items():
-
                     for gene in value:
-
                         if gene in gene_set:
-
                             bio_process_subset[key] = value
 
                 temp_libraries.append(bio_process_subset)
@@ -604,9 +598,7 @@ class QuantMatrix:
         enr = None
 
         if method == "overreptest":
-
             if background:
-
                 enr = gp.enrich(
                     gene_list=genes,
                     gene_sets=libraries,
@@ -614,16 +606,10 @@ class QuantMatrix:
                 )
 
             else:
-
-                enr = gp.enrich(
-                    gene_list=genes,
-                    gene_sets=libraries
-                )
+                enr = gp.enrich(gene_list=genes, gene_sets=libraries)
 
         elif method == "enrichr_overreptest":
-
             if background:
-
                 enr = gp.enrichr(
                     gene_list=genes,
                     gene_sets=libraries,
@@ -632,7 +618,6 @@ class QuantMatrix:
                 )
 
             else:
-
                 enr = gp.enrichr(
                     gene_list=genes,
                     gene_sets=libraries,
@@ -641,14 +626,9 @@ class QuantMatrix:
 
         return enr
 
-
-    def annotate(
-        self
-    ):
-
+    def annotate(self):
         request = IdMappingClient.submit(
-            source="UniProtKB_AC-ID", dest="Gene_Name",
-            ids=self.proteins
+            source="UniProtKB_AC-ID", dest="Gene_Name", ids=self.proteins
         )
 
         while True:
@@ -663,11 +643,11 @@ class QuantMatrix:
         id_mapping = dict()
 
         for id_result in translation_result:
-            mapping = id_mapping.get(id_result['from'], [])
+            mapping = id_mapping.get(id_result["from"], [])
 
-            mapping.append(id_result['to'])
+            mapping.append(id_result["to"])
 
-            id_mapping[id_result['from']] = mapping
+            id_mapping[id_result["from"]] = mapping
 
         final_mapping = dict()
 
@@ -677,25 +657,20 @@ class QuantMatrix:
             final_mapping[key] = value
 
         mapping_df = pd.DataFrame(
-            {
-                "Protein": final_mapping.keys(),
-                "Gene": final_mapping.values()
-            }
+            {"Protein": final_mapping.keys(), "Gene": final_mapping.values()}
         )
 
         self.row_annotations = self.row_annotations.join(
-            mapping_df.set_index("Protein"),
-            on="Protein",
-            how="left"
+            mapping_df.set_index("Protein"), on="Protein", how="left"
         )
 
-        self.row_annotations['Gene'] = self.row_annotations['Gene'].fillna(
-            self.row_annotations['Protein'])
+        self.row_annotations["Gene"] = self.row_annotations["Gene"].fillna(
+            self.row_annotations["Protein"]
+        )
 
         self.annotated = True
 
         return self
-
 
     def predict(
         self,
