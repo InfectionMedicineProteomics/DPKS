@@ -9,12 +9,13 @@ from dpks.classification import Classifier
 from imblearn.under_sampling import RandomUnderSampler
 from kneed import KneeLocator
 
+
 class BootstrapInterpreter:
     def __init__(
         self,
         n_iterations: int = 10,
         feature_names: Optional[List[str]] = None,
-        downsample_background: bool = False
+        downsample_background: bool = False,
     ):
         self.percent_cutoff = None
         self.feature_counts = None
@@ -86,18 +87,13 @@ class BootstrapInterpreter:
         method: str = "shap",
         metric="percent",
     ) -> List[str]:
-
         final_features = list()
         all_selected_features = dict()
 
         if method == "count":
-
             for i in range(self.n_iterations):
-
                 selected_features = (
-                    self.importances.sort_values(
-                        f"iteration_{i}_shap", ascending=False
-                    )
+                    self.importances.sort_values(f"iteration_{i}_shap", ascending=False)
                     .head(top_n)["feature"]
                     .to_list()
                 )
@@ -110,63 +106,67 @@ class BootstrapInterpreter:
             feature_counts = {
                 k: v / self.n_iterations
                 for k, v in sorted(
-                    all_selected_features.items(), key=lambda item: item[1], reverse=True
+                    all_selected_features.items(),
+                    key=lambda item: item[1],
+                    reverse=True,
                 )
             }
 
             self.feature_counts = pd.DataFrame(
-                {
-                    "feature": feature_counts.keys(),
-                    "count": feature_counts.values()
-                }
+                {"feature": feature_counts.keys(), "count": feature_counts.values()}
             )
 
             if metric == "percent":
-
                 self.percent_cutoff = percent
 
-                final_features = self.feature_counts[self.feature_counts['count'] > percent]['feature'].to_list()
+                final_features = self.feature_counts[
+                    self.feature_counts["count"] > percent
+                ]["feature"].to_list()
 
             elif metric == "knee":
-
-                sorted_feature_counts = self.feature_counts.sort_values("count", ascending=False).reset_index(drop=True)
+                sorted_feature_counts = self.feature_counts.sort_values(
+                    "count", ascending=False
+                ).reset_index(drop=True)
 
                 kn = KneeLocator(
                     sorted_feature_counts.index.values,
-                    sorted_feature_counts['count'].values,
-                    curve='convex',
-                    direction='decreasing'
+                    sorted_feature_counts["count"].values,
+                    curve="convex",
+                    direction="decreasing",
                 )
 
                 self.percent_cutoff = kn.knee_y
 
-                final_features = self.feature_counts[self.feature_counts['count'] > self.percent_cutoff]['feature'].to_list()
+                final_features = self.feature_counts[
+                    self.feature_counts["count"] > self.percent_cutoff
+                ]["feature"].to_list()
 
         elif method == "shap":
-
             # self.importances['shap_scaled'] = self.importances['mean_shap'] / self.importances['mean_shap'].sum()
 
             if metric == "percent":
-
                 self.percent_cutoff = percent
 
-                final_features = self.importances[self.importances['mean_shap'] > self.percent_cutoff]['feature'].to_list()
+                final_features = self.importances[
+                    self.importances["mean_shap"] > self.percent_cutoff
+                ]["feature"].to_list()
 
             elif metric == "knee":
-
-                sorted_feature_counts = self.importances.sort_values("mean_shap", ascending=False).reset_index(drop=True)
+                sorted_feature_counts = self.importances.sort_values(
+                    "mean_shap", ascending=False
+                ).reset_index(drop=True)
 
                 kn = KneeLocator(
                     sorted_feature_counts.index.values,
-                    sorted_feature_counts['mean_shap'].values,
-                    curve='convex',
-                    direction='decreasing'
+                    sorted_feature_counts["mean_shap"].values,
+                    curve="convex",
+                    direction="decreasing",
                 )
 
                 self.percent_cutoff = kn.knee_y
 
                 final_features = self.importances[
-                    self.importances['mean_shap'] > self.percent_cutoff
-                ]['feature'].to_list()
+                    self.importances["mean_shap"] > self.percent_cutoff
+                ]["feature"].to_list()
 
         return final_features

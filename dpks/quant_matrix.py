@@ -8,11 +8,18 @@ instanciate a quant matrix:
 """
 from __future__ import annotations
 
-from typing import Union, List, Any
+from typing import Union, List, Any, Tuple, Optional
+
+import time
 
 import anndata as ad
+import gseapy as gp
+
+import xgboost
 from imblearn.under_sampling import RandomUnderSampler
+from pandas import Series, DataFrame
 from sklearn.model_selection import cross_val_score, StratifiedKFold
+from unipressed import IdMappingClient
 
 from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
@@ -46,6 +53,8 @@ from dpks.scaling import (
     AbsMaxScaling,
 )
 
+from dpks.interpretation import BootstrapInterpreter
+
 
 class QuantMatrix:
     """holds a quantitative matrix and a design matrix, exposes an API to manipulate the quantitative matrix"""
@@ -55,6 +64,7 @@ class QuantMatrix:
     num_rows: int
     num_samples: int
     quantitative_data: ad.AnnData
+    explain_results: Optional[list[tuple[Any, BootstrapInterpreter]]]
 
     def __init__(
         self,
@@ -67,6 +77,8 @@ class QuantMatrix:
     ) -> None:
         """init"""
 
+        self.annotated = False
+        self.explain_results = None
         if isinstance(design_matrix_file, str):
             design_matrix_file = pd.read_csv(design_matrix_file, sep="\t")
 
@@ -137,13 +149,11 @@ class QuantMatrix:
 
     @property
     def protein_labels(self) -> List[str]:
-
-        return self.row_annotations['ProteinLabel'].to_list()
+        return self.row_annotations["ProteinLabel"].to_list()
 
     @property
     def sample_groups(self) -> List[str]:
-
-        return self.sample_annotations['group'].to_list()
+        return self.sample_annotations["group"].to_list()
 
     @property
     def peptides(self) -> List[str]:
@@ -229,7 +239,11 @@ class QuantMatrix:
     def get_pairs(self, samples: list) -> List[str]:
         """returns the ordered pairs for samples in wanted group"""
 
-        sorted_samples = self.sample_annotations[self.sample_annotations["sample"].isin(samples)].set_index("sample").loc[samples]
+        sorted_samples = (
+            self.sample_annotations[self.sample_annotations["sample"].isin(samples)]
+            .set_index("sample")
+            .loc[samples]
+        )
 
         return list(sorted_samples["pair"])
 
@@ -426,7 +440,7 @@ class QuantMatrix:
                 level=level,
                 threads=threads,
                 minimum_subgroups=minimum_subgroups,
-                top_n=top_n
+                top_n=top_n,
             ).quantify(self)
 
             design_matrix = self.quantitative_data.var
@@ -480,61 +494,183 @@ class QuantMatrix:
 
         return self
 
-    # def rank(
-    #     self,
-    #     classifier,
-    #     scaler: Any = None,
-    #     shap_algorithm: str = "auto",
-    #     scale: bool = True,
-    #     rank_method: str = "rfecv",
-    #     **kwargs: Union[dict, int, str, bool],
-    # ):
-    #     X = format_data(self)
-    #     y = encode_labels(self.quantitative_data.var["group"].values)
-    #
-    #     if scale:
-    #         if scaler:
-    #             X = scaler.transform(X)
-    #         else:
-    #             scaler = StandardScaler()
-    #             X = scaler.fit_transform(X)
-    #
-    #     verbose = bool(kwargs.get("verbose", False))
-    #
-    #     if rank_method == "rfecv":
-    #         rfe_step = int(kwargs.get("rfe_step", 1))
-    #         rfe_min_features_to_select = int(
-    #             kwargs.get("rfe_min_features_to_select", 1)
-    #         )
-    #
-    #         k_folds = int(kwargs.get("k_folds", 2))
-    #
-    #         threads = int(kwargs.get("threads", 1))
-    #
-    #         scoring = kwargs.get("scoring", "accuracy")
-    #
-    #         selector = FeatureRankerRFE(
-    #             min_features_to_select=rfe_min_features_to_select,
-    #             step=rfe_step,
-    #             importance_getter="auto",
-    #             scoring=scoring,
-    #             k_folds=k_folds,
-    #             threads=threads,
-    #             verbose=verbose,
-    #             shap_algorithm=shap_algorithm,
-    #             random_state=kwargs.get("random_state", None),
-    #             shuffle=kwargs.get("shuffle", False),
-    #         )
-    #
-    #         selector.rank_features(X, y, classifier)
-    #
-    #         feature_rank_values = selector.ranking_.tolist()
-    #
-    #         self.quantitative_data.obs["FeatureRank"] = feature_rank_values
-    #
-    #         self.selector = selector
-    #
-    #     return self
+    def explain(
+        self,
+        clf,
+        comparisons: list,
+        n_iterations: int = 100,
+        downsample_background: bool = True,
+        feature_column: str = "Protein",
+    ) -> QuantMatrix:
+        explain_results = []
+
+        for comparison in comparisons:
+            X, y = self.to_ml(feature_column=feature_column, comparison=comparison)
+
+            scaler = StandardScaler()
+
+            X[:] = scaler.fit_transform(X[:])
+
+            clf_ = Classifier(clf)
+
+            interpreter = BootstrapInterpreter(
+                feature_names=X.columns,
+                n_iterations=n_iterations,
+                downsample_background=downsample_background,
+            )
+
+            interpreter.fit(X, y, clf_)
+
+            explain_results.append((comparison, interpreter))
+
+            importances_df = interpreter.importances[
+                ["feature", "mean_shap", "mean_rank"]
+            ].set_index("feature")
+
+            importances_df = importances_df.rename(
+                columns={
+                    "mean_shap": f"MeanSHAP{comparison[0]}-{comparison[1]}",
+                    "mean_rank": f"MeanRank{comparison[0]}-{comparison[1]}",
+                }
+            )
+
+            self.row_annotations = self.row_annotations.join(
+                importances_df, on="Protein"
+            )
+
+        self.explain_results = explain_results
+
+        return self
+
+    def enrich(
+        self,
+        method: str = "overreptest",
+        libraries: Optional[list[str]] = None,
+        organism: str = "human",
+        background: Optional[Union[list[str], str]] = None,
+        filter_pvalue: bool = False,
+        pvalue_cutoff: float = 0.1,
+        pvalue_column: str = "CorrectedPValue2-1",
+        filter_shap: bool = False,
+        shap_cutoff: float = 0.0,
+        shap_column: str = "MeanSHAP2-1",
+        subset_library: bool = False,
+    ):
+        if not self.annotated:
+            self.annotate()
+
+        if not libraries:
+            libraries = ["GO_Biological_Process_2023"]
+
+        gene_df = pd.DataFrame()
+
+        if filter_pvalue:
+            gene_df = self.row_annotations[
+                self.row_annotations[pvalue_column] < pvalue_cutoff
+            ]
+
+        if filter_shap:
+            gene_df = self.row_annotations[
+                self.row_annotations[shap_column] > shap_cutoff
+            ]
+
+        genes = gene_df["Gene"].to_list()
+
+        if subset_library:
+            temp_libraries = []
+
+            for library in libraries:
+                go_bp = gp.get_library(name=library, organism=organism)
+
+                gene_set = set(gene_df["Gene"].to_list())
+
+                bio_process_subset = dict()
+
+                for key, value in go_bp.items():
+                    for gene in value:
+                        if gene in gene_set:
+                            bio_process_subset[key] = value
+
+                temp_libraries.append(bio_process_subset)
+
+            libraries = temp_libraries
+
+        enr = None
+
+        if method == "overreptest":
+            if background:
+                enr = gp.enrich(
+                    gene_list=genes,
+                    gene_sets=libraries,
+                    background=background,
+                )
+
+            else:
+                enr = gp.enrich(gene_list=genes, gene_sets=libraries)
+
+        elif method == "enrichr_overreptest":
+            if background:
+                enr = gp.enrichr(
+                    gene_list=genes,
+                    gene_sets=libraries,
+                    organism=organism,
+                    background=background,
+                )
+
+            else:
+                enr = gp.enrichr(
+                    gene_list=genes,
+                    gene_sets=libraries,
+                    organism=organism,
+                )
+
+        return enr
+
+    def annotate(self):
+        request = IdMappingClient.submit(
+            source="UniProtKB_AC-ID", dest="Gene_Name", ids=self.proteins
+        )
+
+        while True:
+            status = request.get_status()
+            if status in {"FINISHED", "ERROR"}:
+                break
+            else:
+                time.sleep(1)
+
+        translation_result = list(request.each_result())
+
+        id_mapping = dict()
+
+        for id_result in translation_result:
+            mapping = id_mapping.get(id_result["from"], [])
+
+            mapping.append(id_result["to"])
+
+            id_mapping[id_result["from"]] = mapping
+
+        final_mapping = dict()
+
+        for key, value in id_mapping.items():
+            value = value[0]
+
+            final_mapping[key] = value
+
+        mapping_df = pd.DataFrame(
+            {"Protein": final_mapping.keys(), "Gene": final_mapping.values()}
+        )
+
+        self.row_annotations = self.row_annotations.join(
+            mapping_df.set_index("Protein"), on="Protein", how="left"
+        )
+
+        self.row_annotations["Gene"] = self.row_annotations["Gene"].fillna(
+            self.row_annotations["Protein"]
+        )
+
+        self.annotated = True
+
+        return self
 
     def predict(
         self,
@@ -563,7 +699,7 @@ class QuantMatrix:
         scaler: Any = None,
         shap_algorithm: str = "auto",
         scale: bool = True,
-        downsample_background=False
+        downsample_background=False,
     ) -> QuantMatrix:
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
@@ -587,14 +723,12 @@ class QuantMatrix:
             classifier.interpret(X)
             self.transformed_data = X
 
-
         self.classifier = classifier
         shap_values = classifier.feature_importances_.tolist()
 
         self.quantitative_data.obs["SHAP"] = shap_values
 
         self.shap = classifier.shap_values
-
 
         return self
 
@@ -811,21 +945,30 @@ class QuantMatrix:
         feature_column: str = "Protein",
         label_column: str = "group",
         comparison: tuple = (1, 2),
-    ) -> pd.DataFrame:
+    ) -> tuple[Any, Any]:
         qm_df = self.to_df()
 
-        transposed_features = qm_df.set_index(feature_column)[
-            self.sample_annotations["sample"].to_list()
-        ].T
+        samples = self.sample_annotations[
+            self.sample_annotations["group"].isin(comparison)
+        ]["sample"].to_list()
+
+        transposed_features = qm_df.set_index(feature_column)[samples].T
 
         sample_annotations = self.sample_annotations.copy()
 
+        sample_annotations_subset = sample_annotations[
+            sample_annotations[label_column].isin(comparison)
+        ].copy()
+
         encoder = LabelEncoder()
 
-        sample_annotations["label"] = encoder.fit_transform(
-            sample_annotations[label_column]
+        sample_annotations_subset["label"] = encoder.fit_transform(
+            sample_annotations_subset[label_column]
         )
 
-        return transposed_features.join(
-            sample_annotations[["sample", "label"]].set_index("sample")
+        combined = transposed_features.join(
+            sample_annotations_subset[["sample", "label"]].set_index("sample"),
+            how="left",
         )
+
+        return combined.loc[:, combined.columns != "label"], combined[["label"]]
