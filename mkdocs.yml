@@ -4,7 +4,9 @@ site_name: DPKS Documentation
 site_description: Documentation for the DPKS python package
 repo_url: https://github.com/InfectionMedicineProteomics/DPKS
 
-theme: readthedocs
+theme:
+    name: readthedocs
+    logo: img/logo.png
 
 nav:
   - Home: index.md

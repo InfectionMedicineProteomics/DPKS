@@ -1,11 +1,14 @@
-~~# DPKS (Data Processing Kitchen Sink)
+
+<img src="img/logo.png", width="100" />
+
+# DPKS (Data Processing Kitchen Sink)
 
 [![image](https://img.shields.io/pypi/v/dpks.svg)](https://pypi.python.org/pypi/dpks) [![image](https://img.shields.io/travis/arnscott/dpks.svg)](https://travis-ci.com/arnscott/dpks) [![Documentation Status](https://readthedocs.org/projects/dpks/badge/?version=latest)](https://dpks.readthedocs.io/en/latest/?badge=latest)
 
 DPKS provides easily accesible data processing and explainable machine learning for omics data.
 
 -   Free software: MIT license
--   Documentation: <https://dpks.readthedocs.io>.
+-   Documentation: <placeholder>.
 
 
 ## Overview
