@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Statistical Comparisons - DPKS Documentation</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Statistical Comparisons";
+        var mkdocs_page_input_path = "usage/statistical_comparisons.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../..">
+          <img src="../../img/logo.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Usage</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loading_data/">Loading data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../normalization/">Normalization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../quantification/">Quantification</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Statistical Comparisons</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#t-test">T-test</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#linear-regression">Linear Regression</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#anova">ANOVA</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#paired-t-test">Paired T-test</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#multiple-comparisons">Multiple Comparisons</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#example">Example</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../explainable_machine_learning/">Explainable Machine Learning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../pathway_analysis/">Pathway Analysis</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Examples</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../examples/">Notebooks</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributing</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/quant_matrix_ref/">QuantMatrix</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">DPKS Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Usage</li>
+      <li class="breadcrumb-item active">Statistical Comparisons</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/InfectionMedicineProteomics/DPKS/edit/master/docs/usage/statistical_comparisons.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="statistical-comparisons">Statistical Comparisons</h1>
+<p>DPKS allows for a number of different statistical tests to be performed between experimental groups in your data.
+Currently, it is possible to compare your samples using:</p>
+<ol>
+<li><code>T-test</code> - 2-sided t-test for the independent samples.</li>
+<li><code>Linear Regression</code> - 2-sided test to calculate a linear least-squares regression for the abundances betweeen experimental groups.</li>
+<li><code>ANOVA</code> - One-way ANOVA to compare the means of 2 groups.</li>
+<li><code>Paired T-test</code> - 2-sided t-test for 2 related samples (need to indicate a Pairs column in the Design Matrix).</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code>scipy</code> implementations of the above methods are currently used, but it is easy to add new comparison methods if
+a desired one is not yet available.</p>
+</div>
+<h2 id="t-test">T-test</h2>
+<pre><code class="language-python">qm = qm.compare(
+    method=&quot;ttest&quot;,
+    comparisons=(2,1),
+    min_samples_per_group=10,
+    level=&quot;protein&quot;,
+    multiple_testing_correction_method=&quot;fdr_tsbh&quot;
+)
+</code></pre>
+<h2 id="linear-regression">Linear Regression</h2>
+<pre><code class="language-python">qm = qm.compare(
+    method=&quot;linregress&quot;,
+    comparisons=(2,1),
+    min_samples_per_group=10,
+    level=&quot;protein&quot;,
+    multiple_testing_correction_method=&quot;fdr_tsbh&quot;
+)
+</code></pre>
+<h2 id="anova">ANOVA</h2>
+<pre><code class="language-python">qm = qm.compare(
+    method=&quot;anova&quot;,
+    comparisons=(2,1),
+    min_samples_per_group=10,
+    level=&quot;protein&quot;,
+    multiple_testing_correction_method=&quot;fdr_tsbh&quot;
+)
+</code></pre>
+<h2 id="paired-t-test">Paired T-test</h2>
+<p>In order to perform paired t-tests with your data, you first need to pass in a "Pair" column with your design matrix:</p>
+<table>
+<thead>
+<tr>
+<th>Sample</th>
+<th>Group</th>
+<th>Pair</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>s1</td>
+<td>1</td>
+<td>s2</td>
+</tr>
+<tr>
+<td>s2</td>
+<td>2</td>
+<td>s1</td>
+</tr>
+<tr>
+<td>s3</td>
+<td>2</td>
+<td>s4</td>
+</tr>
+<tr>
+<td>s4</td>
+<td>1</td>
+<td>s3</td>
+</tr>
+</tbody>
+</table>
+<p>Here, you need to make sure that your Sample is paired with another valid Sample in the list, but each sample pairing
+should be unique.</p>
+<pre><code class="language-python">qm = qm.compare(
+    method=&quot;ttest_paired&quot;,
+    comparisons=(2,1),
+    min_samples_per_group=10,
+    level=&quot;protein&quot;,
+    multiple_testing_correction_method=&quot;fdr_tsbh&quot;
+)
+</code></pre>
+<h2 id="multiple-comparisons">Multiple Comparisons</h2>
+<p>It is possible to perform multiple comparisons if you have multiple groups in your data by passing a list of tuples in
+as the <code>comparison</code> parameter:</p>
+<pre><code class="language-python">qm = qm.compare(
+    method=&quot;ttest_paired&quot;,
+    comparisons=[(2,1), (3, 1), (4, 1)],
+    min_samples_per_group=10,
+    level=&quot;protein&quot;,
+    multiple_testing_correction_method=&quot;fdr_tsbh&quot;
+)
+</code></pre>
+<p>The above will separately compare groups 2, 3, and 4 to group 1 and write results columns for each of the 3 different
+comparisons.</p>
+<h2 id="example">Example</h2>
+<p>There is a jupyter notebook with some examples of how to use this functionality and some possible plots.</p>
+<p><a href="https://github.com/InfectionMedicineProteomics/DPKS/blob/main/notebooks/differential_expression.ipynb">Differential Expression</a>: Demonstrates how to compute differences between two experimental conditions.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../quantification/" class="btn btn-neutral float-left" title="Quantification"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../explainable_machine_learning/" class="btn btn-neutral float-right" title="Explainable Machine Learning">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/InfectionMedicineProteomics/DPKS" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../quantification/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../explainable_machine_learning/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

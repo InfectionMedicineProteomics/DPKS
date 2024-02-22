@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Explainable Machine Learning - DPKS Documentation</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Explainable Machine Learning";
+        var mkdocs_page_input_path = "usage/explainable_machine_learning.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../..">
+          <img src="../../img/logo.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Usage</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loading_data/">Loading data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../normalization/">Normalization</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../quantification/">Quantification</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../statistical_comparisons/">Statistical Comparisons</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Explainable Machine Learning</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#example">Example</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../pathway_analysis/">Pathway Analysis</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Examples</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../examples/">Notebooks</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributing</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/quant_matrix_ref/">QuantMatrix</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">DPKS Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Usage</li>
+      <li class="breadcrumb-item active">Explainable Machine Learning</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/InfectionMedicineProteomics/DPKS/edit/master/docs/usage/explainable_machine_learning.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="explainable-machine-learning">Explainable Machine Learning</h1>
+<p>Sometimes when you are comparing experimental groups, it could be useful to identify only the most important proteins
+associated with a particular proteome state. By selecting panels of proteins using machine learning, you can accelerate
+the process of biomarker discovery, learn more about your dysregulated proteomes of interest, select important proteins
+from the noise for further analysis. Sometimes, it is enough to select the most statistically significant differentially
+abundant proteins, but many times these proteins may just be generic markers of inflammation in disease, but not specific
+to a particular disease, or the most important in classifying between 2 proteome states.</p>
+<p>Using DPKS, we can apply advanced explainable machine learning techniques using our bootstrapping approach combined with
+<a href="https://shap.readthedocs.io/en/latest/">SHAP</a> to calculate mean importances and mean ranks for proteins in an experiment
+to help you decide which proteins to focus on for further analysis.</p>
+<p>From a <code>QuantMatrix</code> object, it is trivial to apply these methods to your data:</p>
+<pre><code class="language-python">from dpks import QuantMatrix
+from xgboost import XGBClassifier
+
+clf = XGBClassifier(
+    max_depth=2,
+    reg_lambda=2,
+    objective=&quot;binary:logistic&quot;,
+    seed=42
+)
+
+qm = qm.explain(
+    clf,
+    comparisons=[(2, 1), (3, 1)],
+    n_iterations=10,
+    downsample_background=True
+)
+</code></pre>
+<p>You just need to pass in a classifier of your choice, and indicate the comparisons you want to perform. It is possible to
+perform multiple explanations, just like with differential abundance analysis.</p>
+<p>The output columns will be named <code>MeanSHAP2-1</code> or <code>MeanSHAP3-1</code> and <code>MeanRank2-1</code> or <code>MeanRank3-1</code> depending on the number
+of comparisons passed in to <code>explain()</code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you pass in a classifier other than <code>XGBCLassifier</code> or another tree based method, the SHAP value calulation will
+be extremely slow, so it is best to use <code>XGBClassifier</code> for now. We are working on adding fast support for linear
+methods without using SHAP.</p>
+</div>
+<p>From here, it is straightforward to visualize which proteins are most important for predicting a particular proteome state.</p>
+<figure>
+    <img src="/img/feature_importance_scatter.png">
+</figure>
+<figure>
+    <img src="/img/feature_importance_barplot.png">
+</figure>
+
+<h2 id="example">Example</h2>
+<p>There is a jupyter notebook with some examples of how to use this functionality and some possible plots.</p>
+<p><a href="https://github.com/InfectionMedicineProteomics/DPKS/blob/main/notebooks/explain_api.ipynb">Explainable Machine Learning</a>: Demonstrates how to compute feature importance for proteins when predicting some experimental conditions.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../statistical_comparisons/" class="btn btn-neutral float-left" title="Statistical Comparisons"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../pathway_analysis/" class="btn btn-neutral float-right" title="Pathway Analysis">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/InfectionMedicineProteomics/DPKS" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../statistical_comparisons/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../pathway_analysis/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

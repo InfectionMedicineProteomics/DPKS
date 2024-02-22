@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Quantification - DPKS Documentation</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Quantification";
+        var mkdocs_page_input_path = "usage/quantification.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../..">
+          <img src="../../img/logo.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Usage</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../loading_data/">Loading data</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../normalization/">Normalization</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Quantification</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#absolute-quantification">Absolute Quantification</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#relative-quantification">Relative Quantification</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#combined-quantification">Combined Quantification</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../statistical_comparisons/">Statistical Comparisons</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../explainable_machine_learning/">Explainable Machine Learning</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../pathway_analysis/">Pathway Analysis</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Examples</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../examples/">Notebooks</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../contributing/">Contributing</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API Reference</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../reference/quant_matrix_ref/">QuantMatrix</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">DPKS Documentation</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Usage</li>
+      <li class="breadcrumb-item active">Quantification</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/InfectionMedicineProteomics/DPKS/edit/master/docs/usage/quantification.md" class="icon icon-github"> Edit on GitHub</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="quantification">Quantification</h1>
+<p>Generally in bottom-up LC-MS/MS proteomics, you quantify precursors, which are broken up pieces of a protein (peptide)
+that contain some charge state. To make biological sense of quantified signal, it is useful to combine these precursors
+into their parent protein for downstream analysis. This process of protein quantification can be tricky, as there is no
+set standard that should always be used.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Our research tends to focus on using DIA-MS, and we restrict the spectral libraries used to analyze the data to
+proteotypic peptides, meaning that each precursor in the library is only linked to 1 protein. This makes protein
+quantification easier as no assumptions need to be made about precursors shared between proteins.</p>
+</div>
+<p>DPKS provides 2 main protein quantification methods:</p>
+<ol>
+<li><strong>Absolute Quantification</strong>: Using the <code>top_n</code> method.</li>
+<li><strong>Relative Quantification</strong>: Using the <code>maxlfq</code> method.</li>
+</ol>
+<h2 id="absolute-quantification">Absolute Quantification</h2>
+<p>Absolute quantification is performed using the <code>top_n</code> method by combining a specified number of the most abundant
+precursors for each protein using a summarization method (<code>sum</code>, <code>mean</code>, or <code>median</code>).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is particularly useful if you want to compare proteins to other proteins in an experiment, like with a protein
+rank plot, to see what proteins are most abundant in your samples.</p>
+</div>
+<p>Absolute quantification can be performed as follows:</p>
+<pre><code class="language-python">qm = qm.quantify(
+    method=&quot;top_n&quot;,
+    top_n=3
+)
+</code></pre>
+<p>The <code>top_n</code> parameter indicates how many of the precursors you want to use per protein for quantification.</p>
+<h2 id="relative-quantification">Relative Quantification</h2>
+<p>DPKS uses the iq<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> implementation of the MaxLFQ algorithm<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup> to extract optimal ratios between samples for each
+protein and combines them into a resulting protein quantity.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Since this relative quantification approach uses all precursors for a protein, this is not suitable for protein
+rank plots, as certain proteins will have their absolute abundance underestimated. It is, however, considered
+state-of-the-art when measuring the differences in protein abundance between 2 experimental groups.</p>
+</div>
+<p>Relative quantification can be performed as follows:</p>
+<pre><code class="language-python">qm = qm.quantify(
+    method=&quot;maxlfq&quot;,
+    level=&quot;protein&quot;,
+    threads=5
+)
+</code></pre>
+<p>Relative quantification takes much longer to process than absolute quantification, so we have optimized for performance
+using Numba for JIT compilation of the relative quantification algorithms. To enable multithreading, indicate the
+desired number of threads using the <code>threads</code> parameter.</p>
+<p>The <code>level</code> parameter indicates what level you want to quantify, whether it is proteins, peptides, or precursors. It is
+possible to quantify peptides using precursors, and precursors using fragment quantities (for DIA experiments) if the
+correct columns are supplied to the <code>QuantMatrix</code>.</p>
+<h2 id="combined-quantification">Combined Quantification</h2>
+<p>To get the best of both worlds, a combined quantification approach is possible that applies relative quantification to
+the indicated <code>top_n</code> percursors for each protein. This allows for the overall abundance rank of the protein to remain
+intact while reaping the benefits of signal smoothing and ratio extraction used for relative quantification.</p>
+<p>Combined quantification can be performed simply by providing a value <code>&gt;0</code> to the <code>top_n</code> parameter of the <code>quantify()</code>
+method:</p>
+<pre><code class="language-python">qm = qm.quantify(
+    method=&quot;maxlfq&quot;,
+    level=&quot;protein&quot;,
+    threads=5,
+    top_n=3
+)
+</code></pre>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:1">
+<p>Thang V Pham, Alex A Henneman, Connie R Jimenez, iq: an R package to estimate relative protein abundances from ion quantification in DIA-MS-based proteomics, Bioinformatics, Volume 36, Issue 8, April 2020, Pages 2611–2613, <a href="https://doi.org/10.1093/bioinformatics/btz961">https://doi.org/10.1093/bioinformatics/btz961</a>&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:2">
+<p>Cox, Jürgen et al. Accurate Proteome-wide Label-free Quantification by Delayed Normalization and Maximal Peptide Ratio Extraction, Termed MaxLFQ. Molecular &amp; Cellular Proteomics, Volume 13, Issue 9, 2513 - 2526, <a href="https://doi.org/10.1074/mcp.M113.031591">https://doi.org/10.1074/mcp.M113.031591</a>&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../normalization/" class="btn btn-neutral float-left" title="Normalization"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../statistical_comparisons/" class="btn btn-neutral float-right" title="Statistical Comparisons">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/InfectionMedicineProteomics/DPKS" class="fa fa-github" style="color: #fcfcfc"> GitHub</a>
+        </span>
+    
+    
+      <span><a href="../normalization/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../statistical_comparisons/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
