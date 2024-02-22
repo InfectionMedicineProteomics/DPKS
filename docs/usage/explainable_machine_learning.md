@@ -45,8 +45,8 @@ of comparisons passed in to `explain()`.
 
 From here, it is straightforward to visualize which proteins are most important for predicting a particular proteome state.
 
-![feature_importance_scatter](/../img/feature_importance_scatter.png)
-![feature_importance_barplot](/../img/feature_importance_barplot.png)
+![feature_importance_scatter](../img/feature_importance_scatter.png)
+![feature_importance_barplot](../img/feature_importance_barplot.png)
 
 ## Example
 

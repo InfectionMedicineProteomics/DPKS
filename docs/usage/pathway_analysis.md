@@ -57,7 +57,7 @@ enr = quantified_data.enrich(
 The above `enr` results are detailed in the GSEAPY documentation, and can be used to easily make pathway plots and
 perform network analysis.
 
-![pathway_scatter](/../img/pathway_scatter.png)
+![pathway_scatter](../img/pathway_scatter.png)
 
 ## Example
 
