@@ -1,5 +1,7 @@
+<p>
+    <img src="/docs/img/logo.png", width="100" />
+</p>
 
-<img src="/docs/img/logo.png", width="100" />
 
 # DPKS (Data Processing Kitchen Sink)
 
