@@ -111,8 +111,7 @@ DPKS makes complicated analysis easy, and allows you to explore multiple analyti
 
 ## Getting started
 
--   Take a look at the [Usage](usage/installation.md)
-    section for instructions on how to get started.
+-   Take a look at the [documentation](https://infectionmedicineproteomics.github.io/DPKS/) for instructions on how to get started.
 
 # Contributors
 
