@@ -19,7 +19,7 @@ workflows and allow for exploration. Additionally, it exposes advances explainab
 with a simple API allowing them to be used by non-machine learning practicioners in the field.
 
 <figure>
-    <img src="/img/dpks_overview_figure.png">
+    <img src="img/dpks_overview_figure.png">
     <figcaption>An overview of DPKS and some of its main functionality.</figcaption>
 </figure>
 
@@ -104,7 +104,7 @@ using explainable machine learning with 100 iterations of a downsampled bootstra
 with their corresponding gene names. Finally, we take the output from the above analysis and perform pathway enrichment overrepresentation
 statistical tests using 3 different pathway databases on only proteins considered important during classification from the `explain` step.
 
-DPKS makes complicated analysis easy, and allows you to explore multiple analytical avenues in a clean and concise manner.~~
+DPKS makes complicated analysis easy, and allows you to explore multiple analytical avenues in a clean and concise manner.
 
 ## Getting started
 

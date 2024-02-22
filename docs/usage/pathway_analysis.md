@@ -58,7 +58,7 @@ The above `enr` results are detailed in the GSEAPY documentation, and can be use
 perform network analysis.
 
 <figure>
-    <img src="/img/pathway_scatter.png">
+    <img src="img/pathway_scatter.png">
 </figure>
 
 ## Example
