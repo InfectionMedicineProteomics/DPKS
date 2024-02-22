@@ -8,7 +8,7 @@
 DPKS provides easily accesible data processing and explainable machine learning for omics data.
 
 -   Free software: MIT license
--   Documentation: <placeholder>.
+-   Documentation: [here](https://infectionmedicineproteomics.github.io/DPKS/).
 
 
 ## Overview
