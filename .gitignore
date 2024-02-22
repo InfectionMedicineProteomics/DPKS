@@ -102,3 +102,6 @@ cookiecutter-pypackage-env/
 
 # Virtual environment
 .venv
+
+site/
+site/*

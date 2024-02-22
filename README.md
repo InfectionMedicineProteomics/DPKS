@@ -1,5 +1,5 @@
 
-<img src="docs/img/logo.png", width="100" />
+<img src="/docs/img/logo.png", width="100" />
 
 # DPKS (Data Processing Kitchen Sink)
 
@@ -19,26 +19,26 @@ workflows and allow for exploration. Additionally, it exposes advances explainab
 with a simple API allowing them to be used by non-machine learning practicioners in the field.
 
 <figure>
-    <img src="/img/dpks_overview_figure.png">
+    <img src="/docs/img/dpks_overview_figure.png">
     <figcaption>An overview of DPKS and some of its main functionality.</figcaption>
 </figure>
 
 From the abstract from our preprint:
 
-!!! abstract
-    The application of machine learning algorithms to facilitate the
-    understanding of changes in proteome states has emerged as a promising
-    methodology in proteomics research. Unfortunately, these methods can prove
-    difficult to interpret, as it may not be immediately obvious how models reach
-    their predictions. We present the data processing kitchen sink (DPKS) which provides
-    reproducible access to classic statistical methods and advanced explainable
-    machine learning algorithms to build highly accurate and fully interpretable
-    predictive models. In DPKS, explainable machine learning methods are used to
-    calculate the importance of each protein towards the prediction of a model for a
-    particular proteome state. The calculated importance of each protein can enable the
-    identification of proteins that drive phenotypic change in a data-driven manner
-    while classic techniques rely on arbitrary cutoffs that may exclude important
-    features from consideration. DPKS is a free and open source Python package available at [https://github.com/InfectionMedicineProteomics/DPKS](https://github.com/InfectionMedicineProteomics/DPKS). [^1]
+
+The application of machine learning algorithms to facilitate the
+understanding of changes in proteome states has emerged as a promising
+methodology in proteomics research. Unfortunately, these methods can prove
+difficult to interpret, as it may not be immediately obvious how models reach
+their predictions. We present the data processing kitchen sink (DPKS) which provides
+reproducible access to classic statistical methods and advanced explainable
+machine learning algorithms to build highly accurate and fully interpretable
+predictive models. In DPKS, explainable machine learning methods are used to
+calculate the importance of each protein towards the prediction of a model for a
+particular proteome state. The calculated importance of each protein can enable the
+identification of proteins that drive phenotypic change in a data-driven manner
+while classic techniques rely on arbitrary cutoffs that may exclude important
+features from consideration. DPKS is a free and open source Python package available at [https://github.com/InfectionMedicineProteomics/DPKS](https://github.com/InfectionMedicineProteomics/DPKS). [^1]
 
 ## Example
 
@@ -111,11 +111,6 @@ DPKS makes complicated analysis easy, and allows you to explore multiple analyti
 -   Take a look at the [Usage](usage/installation.md)
     section for instructions on how to get started.
 
-
-[^1]: Aaron M. Scott, Erik Hartman, Johan Malmström, Lars Malmström. Explainable machine learning for the identification of proteome states via the data processing kitchen sink.
-bioRxiv 2023.08.30.555506; doi: https://doi.org/10.1101/2023.08.30.555506
-
-
 # Contributors
 
 - Aaron Scott aaron.scott@med.lu.se
@@ -128,3 +123,8 @@ This package was created with
 [Cookiecutter](https://github.com/audreyr/cookiecutter) and the
 [audreyr/cookiecutter-pypackage](https://github.com/audreyr/cookiecutter-pypackage)
 project template.
+
+# References
+
+[^1]: Aaron M. Scott, Erik Hartman, Johan Malmström, Lars Malmström. Explainable machine learning for the identification of proteome states via the data processing kitchen sink.
+bioRxiv 2023.08.30.555506; doi: https://doi.org/10.1101/2023.08.30.555506
