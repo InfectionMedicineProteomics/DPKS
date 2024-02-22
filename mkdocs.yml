@@ -1,0 +1,34 @@
+### Site metadata ###
+
+site_name: DPKS Documentation
+site_description: Documentation for the DPKS python package
+repo_url: https://github.com/InfectionMedicineProteomics/DPKS
+
+theme:
+    name: readthedocs
+    logo: img/logo.png
+
+nav:
+  - Home: index.md
+  - Usage:
+        - Installation: usage/installation.md
+        - Loading data: usage/loading_data.md
+        - Normalization: usage/normalization.md
+        - Quantification: usage/quantification.md
+        - Statistical Comparisons: usage/statistical_comparisons.md
+        - Explainable Machine Learning: usage/explainable_machine_learning.md
+        - Pathway Analysis: usage/pathway_analysis.md
+  - Examples:
+        - Notebooks: examples.md
+  - Contributing: contributing.md
+  - API Reference:
+        - QuantMatrix: reference/quant_matrix_ref.md
+
+plugins:
+- search
+- mkdocstrings:
+      default_handler: python
+
+markdown_extensions:
+  - footnotes
+  - admonition

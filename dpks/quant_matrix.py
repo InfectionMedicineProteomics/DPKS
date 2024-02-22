@@ -57,8 +57,7 @@ from dpks.interpretation import BootstrapInterpreter
 
 
 class QuantMatrix:
-    """holds a quantitative matrix and a design matrix, exposes an API to manipulate the quantitative matrix"""
-
+    """Class for working with quantitative matrices."""
     quantification_file_path: Union[str, pd.DataFrame]
     design_matrix_file: Union[str, pd.DataFrame]
     num_rows: int
@@ -71,11 +70,21 @@ class QuantMatrix:
         quantification_file: Union[str, pd.DataFrame],
         design_matrix_file: Union[str, pd.DataFrame],
         annotation_fasta_file: str = None,
-        build_quant_graph: bool = False,
         quant_type: str = "gps",
         diann_qvalue: float = 0.01,
     ) -> None:
-        """init"""
+        """Initialize the QuantMatrix instance.
+
+        Args:
+            quantification_file (Union[str, pd.DataFrame]): Path to the quantification file or DataFrame.
+            design_matrix_file (Union[str, pd.DataFrame]): Path to the design matrix file or DataFrame.
+            annotation_fasta_file (str, optional): Path to the annotation FASTA file. Defaults to None.
+            quant_type (str, optional): Type of quantification. Defaults to "gps".
+            diann_qvalue (float, optional): DIANN q-value. Defaults to 0.01.
+
+        Examples:
+            >>> quant_matrix = QuantMatrix("quantification.tsv", "design_matrix.csv", annotation_fasta_file="annotation.fasta")
+        """
 
         self.annotated = False
         self.explain_results = None
@@ -133,47 +142,28 @@ class QuantMatrix:
             dtype=np.float64,
         )
 
-        if build_quant_graph:
-            pass
-
     @property
     def proteins(self) -> List[str]:
-        """returns unique list of Proteins.
-
-        >>> sorted(quant_matrix.proteins)[40:42]
-        ['sp|G5E8V9|ARFP1_MOUSE', 'sp|O08528|HXK2_MOUSE']
-
-        """
 
         return list(self.quantitative_data.obs["Protein"].unique())
 
     @property
     def protein_labels(self) -> List[str]:
+
         return self.row_annotations["ProteinLabel"].to_list()
 
     @property
     def sample_groups(self) -> List[str]:
+
         return self.sample_annotations["group"].to_list()
 
     @property
     def peptides(self) -> List[str]:
-        """returns unique list of PeptideSequences
-
-        >>> sorted(quant_matrix.peptides)[0:2]
-        ['AAAAGALAPGPLPDLAAR', 'AAAEGVANLHLDEATGEMVSK']
-
-        """
 
         return list(self.quantitative_data.obs["PeptideSequence"].unique())
 
     @property
     def precursors(self) -> List[str]:
-        """returns unique list of PrecursorIds
-
-        >>> sorted(quant_matrix.precursors)[0:2]
-        ['AAAAGALAPGPLPDLAAR_2', 'AAAEGVANLHLDEATGEMVSK_3']
-
-        """
 
         self.row_annotations["PrecursorId"] = (
             self.row_annotations["PeptideSequence"]
@@ -185,59 +175,26 @@ class QuantMatrix:
 
     @property
     def sample_annotations(self) -> pd.DataFrame:
-        """returns list of the sample annotations
-
-        >>> sorted(quant_matrix.sample_annotations)
-        ['group', 'sample']
-
-        """
 
         return self.quantitative_data.var
 
     @property
     def row_annotations(self) -> pd.DataFrame:
-        """returns the row observations
-
-        >>> sorted(quant_matrix.row_annotations)
-        ['Charge',
-         'Decoy',
-         'PeptideQValue',
-         'PeptideSequence',
-         'PrecursorId',
-         'Protein',
-         'ProteinQValue',
-         'RT']
-
-        """
 
         return self.quantitative_data.obs
 
     @row_annotations.setter
     def row_annotations(self, value: pd.DataFrame) -> None:
+
         self.quantitative_data.obs = value
 
     def get_samples(self, group: int) -> List[str]:
-        """return sample names for wanted group
-
-        >>> sorted(quant_matrix.get_samples(group=4))
-        ['AAS_P2009_169',
-         'AAS_P2009_178',
-         'AAS_P2009_187',
-         'AAS_P2009_196',
-         'AAS_P2009_205',
-         'AAS_P2009_214',
-         'AAS_P2009_232',
-         'AAS_P2009_241',
-         'AAS_P2009_250']
-
-        """
 
         return list(
             self.sample_annotations[self.sample_annotations["group"] == group]["sample"]
         )
 
     def get_pairs(self, samples: list) -> List[str]:
-        """returns the ordered pairs for samples in wanted group"""
 
         sorted_samples = (
             self.sample_annotations[self.sample_annotations["sample"].isin(samples)]
@@ -255,17 +212,23 @@ class QuantMatrix:
         remove_contaminants: bool = True,
         remove_non_proteotypic: bool = True,
     ) -> QuantMatrix:
-        """filter the QuantMatrix
+        """Filter the QuantMatrix.
 
-        - removes decoys by default
-        - removes contaminants by default
-        - filters on peptide_q_value <= 0.01 by default
-        - filters on protein_q_value <= 0.01 by default
+        Args:
+            peptide_q_value (float, optional): Peptide q-value threshold. Defaults to 0.01.
+            protein_q_value (float, optional): Protein q-value threshold. Defaults to 0.01.
+            remove_decoys (bool, optional): Whether to remove decoy entries. Defaults to True.
+            remove_contaminants (bool, optional): Whether to remove contaminant entries. Defaults to True.
+            remove_non_proteotypic (bool, optional): Whether to remove non-proteotypic entries. Defaults to True.
 
-        >>> print(quant_matrix.to_df().shape)
-        (16679, 26)
-        >>> print(quant_matrix.filter(peptide_q_value=0.001).to_df().shape)
-        (15355, 26)
+        Returns:
+            QuantMatrix: Filtered QuantMatrix object.
+
+        Examples:
+            >>> print(quant_matrix.to_df().shape)
+            (16679, 26)
+            >>> print(quant_matrix.filter(peptide_q_value=0.001).to_df().shape)
+            (15355, 26)
 
         """
 
@@ -324,6 +287,18 @@ class QuantMatrix:
         self,
         method: str,
     ) -> QuantMatrix:
+        """Scale the QuantMatrix data at the feature level (i.e Precursor or Protein).
+
+        Args:
+            method (str): Scaling method. Options are 'zscore', 'minmax', or 'absmax'.
+
+        Returns:
+            QuantMatrix: Scaled QuantMatrix object.
+
+        Raises:
+            ValueError: If the provided scaling method is not supported.
+
+        """
         base_method: ScalingMethod = ScalingMethod()
 
         if method == "zscore":
@@ -334,6 +309,10 @@ class QuantMatrix:
 
         elif method == "absmax":
             base_method = AbsMaxScaling()
+
+        else:
+
+            raise ValueError(f"Unsupported scaling method: {method}")
 
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
 
@@ -346,14 +325,22 @@ class QuantMatrix:
         use_rt_sliding_window_filter: bool = False,
         **kwargs: Union[int, bool, str],
     ) -> QuantMatrix:
-        """normalize the QuantMatrix
+        """Normalize the QuantMatrix data.
 
-        - need to specify a method
-        - log-transform by default
-        - can use a sliding window filter, not turned on by default
+        Args:
+            method (str): Normalization method. Options are 'tic', 'median', or 'mean'.
+            log_transform (bool, optional): Whether to log-transform the data. Defaults to True.
+            use_rt_sliding_window_filter (bool, optional): Whether to use a sliding window filter. Defaults to False. Can only use if a RetentionTime column was loaded in the QuantMatrix
+            **kwargs: Additional keyword arguments depending on the chosen method.
 
-        >>> isinstance(quant_matrix.normalize(method="tic"), QuantMatrix)
-        True
+        Returns:
+            QuantMatrix: Normalized QuantMatrix object.
+
+        Raises:
+            ValueError: If the provided normalization method is not supported.
+
+        Examples:
+            >>> quant_matrix.normalize(method="mean")
 
         """
 
@@ -367,6 +354,9 @@ class QuantMatrix:
 
         elif method == "mean":
             base_method = MeanNormalization()
+
+        else:
+            raise ValueError(f"Unsupported normalization method: {method}")
 
         if use_rt_sliding_window_filter:
             minimum_data_points = int(kwargs.get("minimum_data_points", 100))
@@ -399,21 +389,24 @@ class QuantMatrix:
     def quantify(
         self,
         method: str,
-        resolve_protein_groups: bool = False,
         **kwargs: Union[int, str],
     ) -> QuantMatrix:
-        """calculate protein quantities
+        """Calculate protein quantities.
 
-        - have to specify a method
-        - does not resolve protein groups by default
+        Args:
+            method (str): Quantification method. Options are 'top_n' or 'maxlfq'.
+            **kwargs: Additional keyword arguments depending on the chosen method.
 
-        >>> quant_matrix.quantify(method="top_n", top_n=1).to_df().shape
-        (3738, 19)
+        Returns:
+            QuantMatrix: Quantified protein matrix.
+
+        Raises:
+            ValueError: If the provided quantification method is not supported.
+
+        Examples:
+            >>> quant_matrix.quantify(method="top_n", top_n=1)
 
         """
-
-        if resolve_protein_groups:
-            pass
 
         if method == "top_n":
             level = str(kwargs.get("level", "protein"))
@@ -449,21 +442,49 @@ class QuantMatrix:
                 quantifications, design_matrix_file=design_matrix
             )
 
+        else:
+            raise ValueError(f"Unsupported quantification method: {method}")
+
         return protein_quantifications
 
-    def to_df(self) -> pd.DataFrame:
-        """to_df converts the QuantMatrix object to a pandas dataframe
+    def impute(self, method: str, **kwargs: int) -> QuantMatrix:
+        """Impute missing values in the quantitative data.
 
-        >>> isinstance(quant_matrix.to_df(), pd.DataFrame)
-        True
+        Args:
+            method (str): The imputation method to use. Options are "uniform_percentile" and "uniform_range"
+            **kwargs (int): Additional keyword arguments specific to the imputation method.
+
+        Returns:
+            QuantMatrix: The QuantMatrix object with missing values imputed.
+
+        Raises:
+            ValueError: If an unsupported imputation method is provided.
+
+        Examples:
+            >>> quant_matrix.impute(method="uniform_percentile", percentile=0.1)
 
         """
 
-        quant_data = self.quantitative_data[self.row_annotations.index, :].to_df()
+        base_method: ImputerMethod = ImputerMethod()
 
-        merged = pd.concat([self.row_annotations, quant_data], axis=1)
+        if method == "uniform_percentile":
+            percentile = float(kwargs.get("percentile", 0.1))
 
-        return merged
+            base_method = UniformPercentileImputer(percentile=percentile)
+
+        elif method == "uniform_range":
+            maxvalue = int(kwargs.get("maxvalue", 1))
+            minvalue = int(kwargs.get("minvalue", 0))
+
+            base_method = UniformRangeImputer(maxvalue=maxvalue, minvalue=minvalue)
+
+        else:
+
+            raise ValueError(f"Unsupported imputation method: {method}")
+
+        self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
+
+        return self
 
     def compare(
         self,
@@ -473,12 +494,38 @@ class QuantMatrix:
         level: str = "protein",
         multiple_testing_correction_method: str = "fdr_tsbh",
     ) -> QuantMatrix:
-        """compare groups by differential testing
+        """Compare groups by differential testing.
 
-        >>> isinstance(quant_matrix.compare(method="linregress", group_a=4, group_b=6), QuantMatrix)
-        True
+        Args:
+            method (str): Statistical comparison method. Options are 'ttest', 'linregress', 'anova', 'ttest_paired'.
+            comparisons (list): List of tuples specifying the group comparisons.
+            min_samples_per_group (int, optional): Minimum number of samples per group. Defaults to 2.
+            level (str, optional): Level of comparison. Defaults to 'protein'.
+            multiple_testing_correction_method (str, optional): Method for multiple testing correction. Defaults to 'fdr_tsbh'.
+
+        Returns:
+            QuantMatrix: Matrix containing the results of the differential testing.
+
+        Raises:
+            ValueError: If the provided statistical comparison method is not supported.
+
+        Examples:
+            >>> quantified_data = quantified_data.compare(
+            >>>     method="linregress",
+            >>>     min_samples_per_group=2,
+            >>>     comparisons=[(2, 1), (3, 1)]
+            >>> )
+
 
         """
+
+        if not method in {
+            'ttest',
+            'linregress',
+            'anova',
+            'ttest_paired'
+        }:
+            raise ValueError(f"Unsupported statistical comparison method: {method}")
 
         differential_test = DifferentialTest(
             method,
@@ -502,6 +549,36 @@ class QuantMatrix:
         downsample_background: bool = True,
         feature_column: str = "Protein",
     ) -> QuantMatrix:
+        """Explain group differences using explainable machine learning and feature importance.
+
+        Args:
+            clf: Classifier object used for prediction.
+            comparisons (list): List of tuples specifying the group comparisons.
+            n_iterations (int, optional): Number of iterations for bootstrapping. Defaults to 100.
+            downsample_background (bool, optional): Whether to downsample the background. Defaults to True.
+            feature_column (str, optional): Name of the feature column. Defaults to 'Protein'.
+
+        Returns:
+            QuantMatrix: Matrix containing the results of the explanation.
+
+        Examples:
+            >>> import xgboost
+            >>>
+            >>> clf = xgboost.XGBClassifier(
+            >>>     max_depth=2,
+            >>>     reg_lambda=2,
+            >>>     objective="binary:logistic",
+            >>>     seed=42
+            >>> )
+            >>>
+            >>> quantified_data = quantified_data.explain(
+            >>>     clf,
+            >>>     comparisons=[(2, 1), (3, 1)],
+            >>>     n_iterations=10,
+            >>>     downsample_background=True
+            >>> )
+
+        """
         explain_results = []
 
         for comparison in comparisons:
@@ -556,6 +633,36 @@ class QuantMatrix:
         shap_column: str = "MeanSHAP2-1",
         subset_library: bool = False,
     ):
+        """Perform gene set enrichment analysis.
+
+        Args:
+           method (str, optional): Enrichment method to use. Options are "enrichr_overreptest" and "overreptest". Defaults to "overreptest".
+           libraries (Optional[List[str]], optional): List of gene set libraries. Defaults to None.
+           organism (str, optional): Organism for the analysis. Defaults to "human".
+           background (Optional[Union[List[str], str]], optional): Background gene set. Defaults to None.
+           filter_pvalue (bool, optional): Whether to filter by p-value. Defaults to False.
+           pvalue_cutoff (float, optional): P-value cutoff for filtering. Defaults to 0.1.
+           pvalue_column (str, optional): Column name for p-values. Defaults to "CorrectedPValue2-1".
+           filter_shap (bool, optional): Whether to filter by SHAP value. Defaults to False.
+           shap_cutoff (float, optional): SHAP value cutoff for filtering. Defaults to 0.0.
+           shap_column (str, optional): Column name for SHAP values. Defaults to "MeanSHAP2-1".
+           subset_library (bool, optional): Whether to subset the library. Defaults to False.
+
+        Returns:
+           Any: Enrichment result.
+
+        Raises:
+           ValueError: If the method is not supported.
+
+        Examples:
+            >>> enr = quantified_data.enrich(
+            >>>     method="enrichr_overreptest",
+            >>>     filter_pvalue=True,
+            >>>     pvalue_column="CorrectedPValue2-1",
+            >>>     pvalue_cutoff=0.1
+            >>> )
+
+        """
         if not self.annotated:
             self.annotate()
 
@@ -624,9 +731,22 @@ class QuantMatrix:
                     organism=organism,
                 )
 
+        else:
+
+            raise ValueError(f"Unsupported pathway enrichment method: {method}")
+
         return enr
 
     def annotate(self):
+        """Annotate proteins with gene names.
+
+        Returns:
+            QuantMatrix: The annotated QuantMatrix object.
+
+        Examples:
+            >>> quant_matrix.annotate()
+
+        """
         request = IdMappingClient.submit(
             source="UniProtKB_AC-ID", dest="Gene_Name", ids=self.proteins
         )
@@ -678,6 +798,20 @@ class QuantMatrix:
         scaler: Any = None,
         scale: bool = True,
     ) -> QuantMatrix:
+        """Predict labels using a classifier.
+
+        Args:
+            classifier: The classifier model to use for prediction.
+            scaler (optional): The scaler object to use for data scaling.
+            scale (bool): Whether to scale the data before prediction. Defaults to True.
+
+        Returns:
+            QuantMatrix: The QuantMatrix object with predicted labels.
+
+        Examples:
+            >>> quant_matrix.predict(classifier=clf, scaler=std_scaler)
+
+        """
         X = format_data(self)
 
         if scale:
@@ -701,6 +835,22 @@ class QuantMatrix:
         scale: bool = True,
         downsample_background=False,
     ) -> QuantMatrix:
+        """Interpret the model's predictions using SHAP values.
+
+        Args:
+            classifier: The classifier model to interpret.
+            scaler (optional): The scaler object to use for data scaling.
+            shap_algorithm (str): The SHAP algorithm to use. Defaults to "auto".
+            scale (bool): Whether to scale the data before interpretation. Defaults to True.
+            downsample_background (bool): Whether to downsample background data. Defaults to False.
+
+        Returns:
+            QuantMatrix: The QuantMatrix object with SHAP values added to observations.
+
+        Examples:
+            >>> quant_matrix.interpret(classifier=clf, scaler=std_scaler)
+
+        """
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
 
@@ -743,6 +893,25 @@ class QuantMatrix:
         random_state: int = 42,
         shuffle: bool = False,
     ) -> TrainResult:
+        """Train a classifier on the quantitative data.
+
+        Args:
+            classifier: The classifier object or class to use for training.
+            scaler (Any): The scaler object to scale the data. Defaults to None.
+            scale (bool): Whether to scale the data. Defaults to True.
+            validate (bool): Whether to perform cross-validation. Defaults to True.
+            scoring (str): The scoring metric for cross-validation. Defaults to "accuracy".
+            num_folds (int): The number of folds for cross-validation. Defaults to 3.
+            random_state (int): Random seed for reproducibility. Defaults to 42.
+            shuffle (bool): Whether to shuffle the data before splitting in cross-validation. Defaults to False.
+
+        Returns:
+            TrainResult: The result of the training process, including the trained classifier, scaler, and validation scores.
+
+        Examples:
+            >>> result = quant_matrix.train(classifier=RandomForestClassifier(), validate=True)
+
+        """
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
 
@@ -780,6 +949,29 @@ class QuantMatrix:
         verbose: Union[bool, int] = False,
         **kwargs: Union[dict, int, str, bool],
     ) -> ParamSearchResult:
+        """Optimize hyperparameters of a classifier using different search methods.
+
+        Args:
+            classifier: The classifier object or class to optimize.
+            param_search_method (str): The parameter search method to use ("genetic" or "random").
+            param_grid (dict): The parameter grid to search over.
+            scaler (Any): The scaler object to scale the data. Defaults to None.
+            scale (bool): Whether to scale the data. Defaults to True.
+            threads (int): The number of threads to use for optimization. Defaults to 1.
+            random_state (int): Random seed for reproducibility. Defaults to 42.
+            folds (int): The number of folds for cross-validation. Defaults to 3.
+            verbose (Union[bool, int]): Verbosity level. Defaults to False.
+            **kwargs: Additional keyword arguments specific to each search method.
+
+        Returns:
+            ParamSearchResult: The result of the parameter search, including the best estimator and parameter populations.
+
+        Examples:
+            >>> param_grid = {'max_depth': [3, 5, 7], 'min_samples_split': [2, 5, 10]}
+            >>> result = quant_matrix.optimize(classifier=DecisionTreeClassifier(), param_search_method='random', param_grid=param_grid, verbose=True)
+            >>> result.best_estimator_
+            DecisionTreeClassifier(max_depth=5, min_samples_split=10)
+        """
         X = format_data(self)
         y = encode_labels(self.quantitative_data.var["group"].values)
 
@@ -828,25 +1020,7 @@ class QuantMatrix:
 
         return result
 
-    def impute(self, method: str, **kwargs: int) -> QuantMatrix:
-        """impute missing values"""
 
-        base_method: ImputerMethod = ImputerMethod()
-
-        if method == "uniform_percentile":
-            percentile = float(kwargs.get("percentile", 0.1))
-
-            base_method = UniformPercentileImputer(percentile=percentile)
-
-        elif method == "uniform_range":
-            maxvalue = int(kwargs.get("maxvalue", 1))
-            minvalue = int(kwargs.get("minvalue", 0))
-
-            base_method = UniformRangeImputer(maxvalue=maxvalue, minvalue=minvalue)
-
-        self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
-
-        return self
 
     def plot(
         self,
@@ -861,7 +1035,26 @@ class QuantMatrix:
             str,
         ],
     ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
-        """generate plots"""
+        """Generate plots based on specified plot type.
+
+        Args:
+            plot_type (str): The type of plot to generate. Possible values are:
+                - "shap_summary": SHAP summary plot.
+                - "rfe_pca": Recursive Feature Elimination (RFE) with Principal Component Analysis (PCA) plot.
+            save (bool): Whether to save the plot. Defaults to False.
+            fig (matplotlib.figure.Figure): The matplotlib figure object. Defaults to None.
+            ax (Union[list, matplotlib.axes.Axes]): The list of matplotlib axes objects or a single axes object. Defaults to None.
+            **kwargs: Additional keyword arguments specific to each plot type.
+
+        Returns:
+            tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]: The matplotlib figure and axes objects.
+
+        Raises:
+            ValueError: If an unsupported plot type is provided.
+
+        Examples:
+            >>> fig, ax = quant_matrix.plot(plot_type='shap_summary', save=True, n_display=10)
+        """
 
         if plot_type == "shap_summary":
             try:
@@ -910,42 +1103,65 @@ class QuantMatrix:
 
         return fig, ax
 
-    def outlier_detection(self) -> None:
-        """detect outlies
+    def detect(self) -> None:
+        """Not implemented
 
-
-        not implemented
-
+        Detect outliers in the samples
         """
 
         pass
 
-    def flag_bad_runs(self) -> None:
-        """flag bad runs
+    def write(self, file_path: str) -> None:
+        """Write the QuantMatrix to a tab-separated file.
 
-        not implemented"""
+        Args:
+            file_path (str): The path where the file will be saved.
 
-        pass
+        Returns:
+            None
 
-    def write(self, file_path: str = "") -> None:
-        """write the QuantMatrix to a tab-separated file
-
-        >>> from pathlib import Path
-        >>> filename = Path("protein.tsv")
-        >>> quant_matrix.write(str(filename))
-        >>>> filename.is_file()
-        True
-
+        Examples:
+            >>> filename = "protein.tsv"
+            >>> quant_matrix.write(filename)
         """
 
         self.to_df().to_csv(file_path, sep="\t", index=False)
 
+    def to_df(self) -> pd.DataFrame:
+        """Convert the QuantMatrix object to a pandas DataFrame.
+
+        Returns:
+            pd.DataFrame: DataFrame representation of the QuantMatrix.
+
+        Examples:
+            >>> quant_matrix.to_df()
+
+        """
+
+        quant_data = self.quantitative_data[self.row_annotations.index, :].to_df()
+
+        merged = pd.concat([self.row_annotations, quant_data], axis=1)
+
+        return merged
     def to_ml(
         self,
         feature_column: str = "Protein",
         label_column: str = "group",
         comparison: tuple = (1, 2),
     ) -> tuple[Any, Any]:
+        """Converts the QuantMatrix object to features and labels for machine learning.
+
+        Args:
+            feature_column (str, optional): The column to use as features. Defaults to "Protein".
+            label_column (str, optional): The column to use as labels. Defaults to "group".
+            comparison (tuple, optional): The comparison groups. Defaults to (1, 2).
+
+        Returns:
+            tuple[Any, Any]: A tuple containing features and labels.
+
+        Examples:
+            >>> features, labels = quant_matrix.to_ml()
+        """
         qm_df = self.to_df()
 
         samples = self.sample_annotations[
