@@ -2,6 +2,6 @@
 
 __author__ = """Aaron Scott"""
 __email__ = "aaron.scott@med.lu.se"
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 from dpks.quant_matrix import QuantMatrix

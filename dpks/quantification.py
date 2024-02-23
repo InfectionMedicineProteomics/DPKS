@@ -1,3 +1,4 @@
+import warnings
 from typing import List, Any, TYPE_CHECKING, Tuple, Union
 
 # from itertools import combinations, repeat  # not used yet
@@ -346,7 +347,17 @@ class MaxLFQ:
                 quant_matrix.quantitative_data.obs["Protein"] == group_id
             ].copy()
 
-            group_data.obs["MeanAbundance"] = np.nanmean(group_data.X, axis=1)
+            with warnings.catch_warnings():
+
+                warnings.filterwarnings('error')
+
+                try:
+
+                    group_data.obs["MeanAbundance"] = np.nanmean(group_data.X, axis=1)
+
+                except RuntimeWarning:
+
+                    group_data.obs["MeanAbundance"] = 0
 
             sort_indices = np.argsort(group_data.obs["MeanAbundance"].values)[::-1]
 

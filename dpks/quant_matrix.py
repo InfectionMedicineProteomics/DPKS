@@ -139,7 +139,6 @@ class QuantMatrix:
             quantitative_data,
             obs=row_obs,
             var=design_matrix_file.copy().set_index(design_matrix_file["sample"]),
-            dtype=np.float64,
         )
 
     @property
@@ -277,8 +276,7 @@ class QuantMatrix:
         self.quantitative_data = ad.AnnData(
             quantitative_data,
             obs=row_obs,
-            var=filtered_data.var,
-            dtype=np.float64,
+            var=filtered_data.var
         )
 
         return self

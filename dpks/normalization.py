@@ -1,4 +1,6 @@
 """**normalizes quantitative matrices**, supports multiple methods as specified below"""
+import warnings
+
 from typing import TYPE_CHECKING, Any, List
 
 import numpy as np
@@ -31,7 +33,12 @@ class TicNormalization(NormalizationMethod):
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-        sample_sums = np.nansum(X, axis=0)
+
+        with warnings.catch_warnings():
+
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+
+            sample_sums = np.nansum(X, axis=0)
 
         median_signal = np.nanmedian(sample_sums)
 
@@ -45,7 +52,12 @@ class MedianNormalization(NormalizationMethod):
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-        sample_medians = np.nanmedian(X, axis=0)
+
+        with warnings.catch_warnings():
+
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+
+            sample_medians = np.nanmedian(X, axis=0)
 
         mean_sample_median = np.mean(sample_medians)
 
@@ -103,7 +115,12 @@ class MeanNormalization(NormalizationMethod):
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-        sample_means = np.nanmean(X, axis=0)
+
+        with warnings.catch_warnings():
+
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+
+            sample_means = np.nanmean(X, axis=0)
 
         mean_sample_means = np.mean(sample_means)
 
