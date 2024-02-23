@@ -41,25 +41,12 @@ test_requirements = [
 setup(
     author="Aaron Scott",
     author_email="aaron.scott@med.lu.se",
-    python_requires=">=3.5",
-    classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: MIT License",
-        "Natural Language :: English",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-    ],
-    description="Data processing package for the analysis of omics data",
     entry_points={
         "console_scripts": [
             "dpks=dpks.cli:main",
         ],
     },
     install_requires=requirements,
-    license="MIT license",
     long_description="Data processing package for the statistical analysis and application of explainable machine learning for omics data.",
     include_package_data=True,
     keywords="dpks",
@@ -68,7 +55,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite="tests",
     tests_require=test_requirements,
-    url="https://github.com/arnscott/dpks",
+    url="https://github.com/InfectionMedicineProteomics/DPKS",
     version=version,
     zip_safe=False,
 )
