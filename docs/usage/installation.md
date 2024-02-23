@@ -2,6 +2,16 @@
 
 ## Install DPKS
 
+`DPKS` can be install via `pip`:
+
+### Via `pip`
+
+```shell
+pip install dpks
+```
+
+### From Source
+
 The sources for dpks can be downloaded from the [Github repo](git://github.com/InfectionMedicineProteomics/DPKS).
 
 You can clone the repository:

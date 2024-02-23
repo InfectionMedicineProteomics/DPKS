@@ -12,6 +12,13 @@ DPKS provides easily accesible data processing and explainable machine learning 
 -   Free software: MIT license
 -   Documentation: [here](https://infectionmedicineproteomics.github.io/DPKS/).
 
+## Installation
+
+`DPKS` can be install via `pip`:
+
+```shell
+pip install dpks
+```
 
 ## Overview
 
