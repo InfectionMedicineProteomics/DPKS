@@ -1,6 +1,12 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools==68.2.2"
+]
+
 [project]
 name = "dpks"
-version = "0.1.2"
+version = "0.1.4"
 authors = [
     { name="Aaron Scott", email="aaron.scott@med.lu.se" },
     { name="Erik Hartman", email="erik.hartman@med.lu.se" },
@@ -8,7 +14,6 @@ authors = [
 
 ]
 description = "Data processing package for the analysis of omics data"
-
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
@@ -16,12 +21,11 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dynamic=['dependencies']
 
 [project.urls]
 Homepage = "https://github.com/InfectionMedicineProteomics/DPKS"
 Documentation = "https://infectionmedicineproteomics.github.io/DPKS/"
 Issues = "https://github.com/InfectionMedicineProteomics/DPKS/issues"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+

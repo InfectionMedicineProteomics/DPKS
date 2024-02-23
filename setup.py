@@ -4,9 +4,9 @@
 
 from setuptools import setup, find_packages  # type: ignore
 
-version = "0.1.2"
+version = "0.1.4"
 
-requirements = [
+install_requires = [
     "click",
     "numpy",
     "numba",
@@ -30,32 +30,15 @@ requirements = [
     "tbb"
 ]
 
-setup_requirements = [
-    "pytest-runner",
-]
-
-test_requirements = [
-    "pytest>=3",
-]
 
 setup(
+    name="dpks",
     author="Aaron Scott",
     author_email="aaron.scott@med.lu.se",
-    entry_points={
-        "console_scripts": [
-            "dpks=dpks.cli:main",
-        ],
-    },
-    install_requires=requirements,
+    install_requires=install_requires,
     long_description="Data processing package for the statistical analysis and application of explainable machine learning for omics data.",
     include_package_data=True,
-    keywords="dpks",
-    name="dpks",
-    packages=find_packages(include=["dpks", "dpks.*"], exclude=["tests", "tests.*"]),
-    setup_requires=setup_requirements,
-    test_suite="tests",
-    tests_require=test_requirements,
+    packages=find_packages(include=["dpks", "dpks.*"]),
     url="https://github.com/InfectionMedicineProteomics/DPKS",
     version=version,
-    zip_safe=False,
 )
