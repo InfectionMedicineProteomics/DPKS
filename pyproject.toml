@@ -21,3 +21,7 @@ classifiers = [
 Homepage = "https://github.com/InfectionMedicineProteomics/DPKS"
 Documentation = "https://infectionmedicineproteomics.github.io/DPKS/"
 Issues = "https://github.com/InfectionMedicineProteomics/DPKS/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
