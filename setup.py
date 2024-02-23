@@ -4,14 +4,10 @@
 
 from setuptools import setup, find_packages  # type: ignore
 
-with open("README.rst") as readme_file:
-    readme = readme_file.read()
-
-with open("HISTORY.rst") as history_file:
-    history = history_file.read()
+version = "0.1.2"
 
 requirements = [
-    "Click>=7.0",
+    "click",
     "numpy",
     "numba",
     "scipy",
@@ -29,7 +25,9 @@ requirements = [
     "imbalanced-learn",
     "kneed",
     "gseapy",
-    "unipressed"
+    "unipressed",
+    "jupyterlab",
+    "tbb"
 ]
 
 setup_requirements = [
@@ -50,12 +48,11 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
-    description="Data processing package for the analysis of mass spectrometry proteomics data",
+    description="Data processing package for the analysis of omics data",
     entry_points={
         "console_scripts": [
             "dpks=dpks.cli:main",
@@ -63,7 +60,7 @@ setup(
     },
     install_requires=requirements,
     license="MIT license",
-    long_description=readme + "\n\n" + history,
+    long_description="Data processing package for the statistical analysis and application of explainable machine learning for omics data.",
     include_package_data=True,
     keywords="dpks",
     name="dpks",
@@ -72,6 +69,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/arnscott/dpks",
-    version="0.1.1",
+    version=version,
     zip_safe=False,
 )

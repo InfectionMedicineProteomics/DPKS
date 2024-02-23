@@ -1,0 +1,22 @@
+[project]
+name = "dpks"
+version = "0.1.2"
+authors = [
+    { name="Aaron Scott", email="aaron.scott@med.lu.se" },
+    { name="Erik Hartman", email="erik.hartman@med.lu.se" },
+    { name="Lars Malmström", email="lars.malmstrom@med.lu.se" },
+
+]
+description = "Data processing package for the analysis of omics data"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/InfectionMedicineProteomics/DPKS"
+Documentation = "https://infectionmedicineproteomics.github.io/DPKS/"
+Issues = "https://github.com/InfectionMedicineProteomics/DPKS/issues"
