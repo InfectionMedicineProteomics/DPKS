@@ -63,8 +63,8 @@ class ZScoreScaling(ScalingMethod):
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
         """carry out the z-score normalization"""
 
-        means = np.mean(X, axis=1)
-        stddevs = np.std(X, axis=1)
+        means = np.nanmean(X, axis=1)
+        stddevs = np.nanstd(X, axis=1)
 
         return np.array((X - means[:, None]) / stddevs[:, None])
 
@@ -85,8 +85,8 @@ class MinMaxScaling(ScalingMethod):
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
         """carry out the min-max normalization"""
 
-        mins = np.min(X, axis=1)
-        maxes = np.max(X, axis=1)
+        mins = np.nanmin(X, axis=1)
+        maxes = np.nanmax(X, axis=1)
 
         return np.array((X - mins[:, None]) / (maxes[:, None] - mins[:, None]))
 
@@ -107,6 +107,6 @@ class AbsMaxScaling(ScalingMethod):
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
         """carry out the min-max normalization"""
 
-        maxes = np.max(X, axis=1)
+        maxes = np.nanmax(X, axis=1)
 
         return np.array(X / maxes[:, None])
