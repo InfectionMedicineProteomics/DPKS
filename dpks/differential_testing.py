@@ -206,6 +206,10 @@ class DifferentialTest:
                 f"CorrectedPValue{group_a}-{group_b}"
             ] = corrected_results
 
+            quant_matrix.quantitative_data.obs[
+                f"-Log10CorrectedPValue{group_a}-{group_b}"
+            ] = -np.log10(corrected_results)
+
             quant_matrix.quantitative_data.obs.index = (
                 quant_matrix.quantitative_data.obs.index.map(int)
             )
