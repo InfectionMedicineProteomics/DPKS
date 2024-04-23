@@ -132,52 +132,6 @@ class MeanNormalization(NormalizationMethod):
         return normalized_signal
 
 
-class BatchNormalization(NormalizationMethod):
-
-    def __init__(self) -> None:
-        pass
-
-    def fit_transform(self, X: np.ndarray, batches: np.ndarray) -> np.ndarray:
-
-        unique_batches = np.unique(batches)
-        normalized_signal = np.zeros_like(X)
-
-        for batch in unique_batches:
-
-            batch_indices = np.where(batches == batch)[0]
-            batch_data = X[batch_indices]
-
-            batch_mean = np.nanmean(batch_data, axis=0)
-            batch_std = np.nanstd(batch_data, axis=0)
-
-            normalized_batch_data = (batch_data - batch_mean) / batch_std
-            normalized_signal[batch_indices] = normalized_batch_data
-
-        return normalized_signal
-    
-class BatchCombat(NormalizationMethod):
-
-    def __init__(self) -> None:
-        pass
-
-    def fit_transform(self, X: np.ndarray, batches) -> np.ndarray:
-        
-        le = LabelEncoder()
-        batch_indices = le.fit_transform(batches)
-
-        X_nan_to_num = np.nan_to_num(X, nan=0)
-
-        non_zero_rows_mask = ~np.all(X_nan_to_num == 0, axis=1)
-        X_non_zero = X_nan_to_num[non_zero_rows_mask]
-
-        corrected_data = pycombat_norm(X_non_zero, batch=batch_indices)
-
-        corrected_data_full = np.zeros((X.shape[0], corrected_data.shape[1]))
-        corrected_data_full[non_zero_rows_mask] = corrected_data
-
-        return corrected_data_full
-
-
 class RTSlidingWindowNormalization:
     base_method: NormalizationMethod
     minimum_data_points: int

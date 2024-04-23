@@ -43,7 +43,6 @@ from dpks.normalization import (
     Log2Normalization,
     NormalizationMethod,
     RTSlidingWindowNormalization,
-    BatchCombat,
 )
 from dpks.parsers import parse_diann
 from dpks.plot import SHAPPlot, RFEPCA
@@ -54,6 +53,7 @@ from dpks.scaling import (
     MinMaxScaling,
     AbsMaxScaling,
 )
+from dpks.correction import CorrectionMethod, BatchCombat
 
 from dpks.interpretation import BootstrapInterpreter
 
@@ -190,11 +190,15 @@ class QuantMatrix:
 
         self.quantitative_data.obs = value
 
-    def get_samples(self, group: int) -> List[str]:
-
-        return list(
-            self.sample_annotations[self.sample_annotations["group"] == group]["sample"]
-        )
+    def get_samples(self, group=None) -> List[str]:
+        if group:
+            return list(
+                self.sample_annotations[self.sample_annotations["group"] == group][
+                    "sample"
+                ]
+            )
+        else:
+            return self.sample_annotations["sample"]
 
     def get_pairs(self, samples: list) -> List[str]:
 
@@ -216,6 +220,7 @@ class QuantMatrix:
         remove_decoys: bool = True,
         remove_contaminants: bool = True,
         remove_non_proteotypic: bool = True,
+        remove_all_zeros: bool = True,
     ) -> QuantMatrix:
         """Filter the QuantMatrix.
 
@@ -266,6 +271,11 @@ class QuantMatrix:
             filtered_data = filtered_data[
                 ~filtered_data.obs["Protein"].str.contains(";")
             ].copy()
+
+        if remove_all_zeros:
+            X_nan_to_num = np.nan_to_num(filtered_data.X, nan=0)
+            non_zero_rows_mask = ~np.all(X_nan_to_num == 0, axis=1)
+            filtered_data = filtered_data[non_zero_rows_mask].copy()
 
         self.num_rows = len(filtered_data)
 
@@ -325,7 +335,6 @@ class QuantMatrix:
         method: str,
         log_transform: bool = True,
         use_rt_sliding_window_filter: bool = False,
-        batch_normalize: bool = False,
         **kwargs: Union[int, bool, str],
     ) -> QuantMatrix:
         """Normalize the QuantMatrix data.
@@ -386,15 +395,21 @@ class QuantMatrix:
             self.quantitative_data.X = Log2Normalization().fit_transform(
                 self.quantitative_data.X
             )
-            
-        if batch_normalize:
-            batches = self.get_batches()
 
-            batch_normalization = BatchCombat()
+        return self
 
-            self.quantitative_data.X = batch_normalization.fit_transform(
-                self.quantitative_data.X, batches
-            )
+    def correct(self, method: str = "combat"):
+
+        base_method: CorrectionMethod = CorrectionMethod()
+        batches = self.get_batches()
+
+        if method == "combat":
+
+            base_method = BatchCombat()
+
+        self.quantitative_data.X = base_method.fit_transform(
+            self.quantitative_data.X, batches
+        )
 
         return self
 
