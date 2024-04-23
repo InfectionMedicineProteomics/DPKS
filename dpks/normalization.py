@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any, List
 
 import numpy as np
 import pandas as pd  # type: ignore
+from inmoose.pycombat import pycombat_norm
+from sklearn.preprocessing import LabelEncoder
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
@@ -152,6 +154,28 @@ class BatchNormalization(NormalizationMethod):
             normalized_signal[batch_indices] = normalized_batch_data
 
         return normalized_signal
+    
+class BatchCombat(NormalizationMethod):
+
+    def __init__(self) -> None:
+        pass
+
+    def fit_transform(self, X: np.ndarray, batches) -> np.ndarray:
+        
+        le = LabelEncoder()
+        batch_indices = le.fit_transform(batches)
+
+        X_nan_to_num = np.nan_to_num(X, nan=0)
+
+        non_zero_rows_mask = ~np.all(X_nan_to_num == 0, axis=1)
+        X_non_zero = X_nan_to_num[non_zero_rows_mask]
+
+        corrected_data = pycombat_norm(X_non_zero, batch=batch_indices)
+
+        corrected_data_full = np.zeros((X.shape[0], corrected_data.shape[1]))
+        corrected_data_full[non_zero_rows_mask] = corrected_data
+
+        return corrected_data_full
 
 
 class RTSlidingWindowNormalization:

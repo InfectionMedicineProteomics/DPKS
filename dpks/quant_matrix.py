@@ -43,7 +43,7 @@ from dpks.normalization import (
     Log2Normalization,
     NormalizationMethod,
     RTSlidingWindowNormalization,
-    BatchNormalization,
+    BatchCombat,
 )
 from dpks.parsers import parse_diann
 from dpks.plot import SHAPPlot, RFEPCA
@@ -361,15 +361,6 @@ class QuantMatrix:
         else:
             raise ValueError(f"Unsupported normalization method: {method}")
 
-        if batch_normalize:
-            batches = self.get_batches()
-
-            batch_normalization = BatchNormalization()
-            
-            self.quantitative_data.X = batch_normalization.fit_transform(
-                self.quantitative_data.X, batches
-            )
-
         if use_rt_sliding_window_filter:
             minimum_data_points = int(kwargs.get("minimum_data_points", 100))
             stride = int(kwargs.get("stride", 1))
@@ -394,6 +385,15 @@ class QuantMatrix:
         if log_transform:
             self.quantitative_data.X = Log2Normalization().fit_transform(
                 self.quantitative_data.X
+            )
+            
+        if batch_normalize:
+            batches = self.get_batches()
+
+            batch_normalization = BatchCombat()
+
+            self.quantitative_data.X = batch_normalization.fit_transform(
+                self.quantitative_data.X, batches
             )
 
         return self
