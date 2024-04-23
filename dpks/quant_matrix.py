@@ -6,6 +6,7 @@ instanciate a quant matrix:
 >>> quant_matrix = QuantMatrix( quantification_file="tests/input_files/minimal_matrix.tsv", design_matrix_file="tests/input_files/minimal_design_matrix.tsv")
 
 """
+
 from __future__ import annotations
 
 from typing import Union, List, Any, Tuple, Optional
@@ -42,6 +43,7 @@ from dpks.normalization import (
     Log2Normalization,
     NormalizationMethod,
     RTSlidingWindowNormalization,
+    BatchNormalization,
 )
 from dpks.parsers import parse_diann
 from dpks.plot import SHAPPlot, RFEPCA
@@ -58,6 +60,7 @@ from dpks.interpretation import BootstrapInterpreter
 
 class QuantMatrix:
     """Class for working with quantitative matrices."""
+
     quantification_file_path: Union[str, pd.DataFrame]
     design_matrix_file: Union[str, pd.DataFrame]
     num_rows: int
@@ -203,6 +206,9 @@ class QuantMatrix:
 
         return list(sorted_samples["pair"])
 
+    def get_batches(self) -> np.ndarray:
+        return self.sample_annotations["batch"].values
+
     def filter(
         self,
         peptide_q_value: float = 0.01,
@@ -274,9 +280,7 @@ class QuantMatrix:
         )
 
         self.quantitative_data = ad.AnnData(
-            quantitative_data,
-            obs=row_obs,
-            var=filtered_data.var
+            quantitative_data, obs=row_obs, var=filtered_data.var
         )
 
         return self
@@ -321,6 +325,7 @@ class QuantMatrix:
         method: str,
         log_transform: bool = True,
         use_rt_sliding_window_filter: bool = False,
+        batch_normalize: bool = False,
         **kwargs: Union[int, bool, str],
     ) -> QuantMatrix:
         """Normalize the QuantMatrix data.
@@ -355,6 +360,15 @@ class QuantMatrix:
 
         else:
             raise ValueError(f"Unsupported normalization method: {method}")
+
+        if batch_normalize:
+            batches = self.get_batches()
+
+            batch_normalization = BatchNormalization()
+            
+            self.quantitative_data.X = batch_normalization.fit_transform(
+                self.quantitative_data.X, batches
+            )
 
         if use_rt_sliding_window_filter:
             minimum_data_points = int(kwargs.get("minimum_data_points", 100))
@@ -517,12 +531,7 @@ class QuantMatrix:
 
         """
 
-        if not method in {
-            'ttest',
-            'linregress',
-            'anova',
-            'ttest_paired'
-        }:
+        if not method in {"ttest", "linregress", "anova", "ttest_paired"}:
             raise ValueError(f"Unsupported statistical comparison method: {method}")
 
         differential_test = DifferentialTest(
@@ -1018,8 +1027,6 @@ class QuantMatrix:
 
         return result
 
-
-
     def plot(
         self,
         plot_type: str,
@@ -1141,6 +1148,7 @@ class QuantMatrix:
         merged = pd.concat([self.row_annotations, quant_data], axis=1)
 
         return merged
+
     def to_ml(
         self,
         feature_column: str = "Protein",

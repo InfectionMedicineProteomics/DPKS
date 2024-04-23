@@ -1,4 +1,5 @@
 """**normalizes quantitative matrices**, supports multiple methods as specified below"""
+
 import warnings
 
 from typing import TYPE_CHECKING, Any, List
@@ -125,6 +126,30 @@ class MeanNormalization(NormalizationMethod):
         mean_sample_means = np.mean(sample_means)
 
         normalized_signal: np.ndarray = (X / sample_means[None, :]) * mean_sample_means
+
+        return normalized_signal
+
+
+class BatchNormalization(NormalizationMethod):
+
+    def __init__(self) -> None:
+        pass
+
+    def fit_transform(self, X: np.ndarray, batches: np.ndarray) -> np.ndarray:
+
+        unique_batches = np.unique(batches)
+        normalized_signal = np.zeros_like(X)
+
+        for batch in unique_batches:
+
+            batch_indices = np.where(batches == batch)[0]
+            batch_data = X[batch_indices]
+
+            batch_mean = np.nanmean(batch_data, axis=0)
+            batch_std = np.nanstd(batch_data, axis=0)
+
+            normalized_batch_data = (batch_data - batch_mean) / batch_std
+            normalized_signal[batch_indices] = normalized_batch_data
 
         return normalized_signal
 
