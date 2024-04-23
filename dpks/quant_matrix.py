@@ -366,7 +366,8 @@ class QuantMatrix:
 
         elif method == "mean":
             base_method = MeanNormalization()
-
+        elif method == "log2":
+            base_method = Log2Normalization()
         else:
             raise ValueError(f"Unsupported normalization method: {method}")
 
@@ -391,7 +392,7 @@ class QuantMatrix:
                 self.quantitative_data.X
             )
 
-        if log_transform:
+        if log_transform and not (method == "log2"):
             self.quantitative_data.X = Log2Normalization().fit_transform(
                 self.quantitative_data.X
             )
