@@ -220,7 +220,9 @@ class QuantMatrix:
         remove_decoys: bool = True,
         remove_contaminants: bool = True,
         remove_non_proteotypic: bool = True,
-        remove_all_zeros: bool = True,
+        remove_proteins_with_all_zeros: bool = True,
+        remove_proteins_with_more_than_n_zeros : bool = False,
+        max_n_zeros : int = None
     ) -> QuantMatrix:
         """Filter the QuantMatrix.
 
@@ -272,10 +274,19 @@ class QuantMatrix:
                 ~filtered_data.obs["Protein"].str.contains(";")
             ].copy()
 
-        if remove_all_zeros:
+        if remove_proteins_with_all_zeros:
             X_nan_to_num = np.nan_to_num(filtered_data.X, nan=0)
             non_zero_rows_mask = ~np.all(X_nan_to_num == 0, axis=1)
             filtered_data = filtered_data[non_zero_rows_mask].copy()
+
+        if remove_proteins_with_more_than_n_zeros:
+            if max_n_zeros == None:
+                raise ValueError("If remove proteins with more than n zeros, must pass max_n_zeros.")
+            X_nan_to_num = np.nan_to_num(filtered_data.X, nan=0)
+            zero_counts = np.sum(X_nan_to_num == 0, axis=1)
+            rows_to_keep = zero_counts <= max_n_zeros
+            filtered_data = filtered_data[rows_to_keep].copy()
+            
 
         self.num_rows = len(filtered_data)
 
