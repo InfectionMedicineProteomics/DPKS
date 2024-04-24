@@ -39,7 +39,7 @@ qm = qm.normalize(
 )
 ```
 
-Many of the set paramters above are defaults and do not need to be passed everytime.
+Many of the set parameters above are defaults and do not need to be passed every time.
 
 
 [^1]: Jakob Willforss, Aakash Chawade, and Fredrik Levander. NormalyzerDE: Online Tool for Improved Normalization of Omics Expression Data and High-Sensitivity Differential Expression Analysis.

@@ -6,6 +6,7 @@ instanciate a quant matrix:
 >>> quant_matrix = QuantMatrix( quantification_file="tests/input_files/minimal_matrix.tsv", design_matrix_file="tests/input_files/minimal_design_matrix.tsv")
 
 """
+
 from __future__ import annotations
 
 from typing import Union, List, Any, Tuple, Optional
@@ -52,12 +53,14 @@ from dpks.scaling import (
     MinMaxScaling,
     AbsMaxScaling,
 )
+from dpks.correction import CorrectionMethod, CombatCorrection, MeanCorrection
 
 from dpks.interpretation import BootstrapInterpreter
 
 
 class QuantMatrix:
     """Class for working with quantitative matrices."""
+
     quantification_file_path: Union[str, pd.DataFrame]
     design_matrix_file: Union[str, pd.DataFrame]
     num_rows: int
@@ -187,11 +190,15 @@ class QuantMatrix:
 
         self.quantitative_data.obs = value
 
-    def get_samples(self, group: int) -> List[str]:
-
-        return list(
-            self.sample_annotations[self.sample_annotations["group"] == group]["sample"]
-        )
+    def get_samples(self, group=None) -> List[str]:
+        if group:
+            return list(
+                self.sample_annotations[self.sample_annotations["group"] == group][
+                    "sample"
+                ]
+            )
+        else:
+            return self.sample_annotations["sample"]
 
     def get_pairs(self, samples: list) -> List[str]:
 
@@ -203,6 +210,9 @@ class QuantMatrix:
 
         return list(sorted_samples["pair"])
 
+    def get_batches(self) -> np.ndarray:
+        return self.sample_annotations["batch"].values
+
     def filter(
         self,
         peptide_q_value: float = 0.01,
@@ -210,6 +220,9 @@ class QuantMatrix:
         remove_decoys: bool = True,
         remove_contaminants: bool = True,
         remove_non_proteotypic: bool = True,
+        remove_zero_rows: bool = True,
+        remove_n_zero_rows : bool = False,
+        max_n_zeros : int = None
     ) -> QuantMatrix:
         """Filter the QuantMatrix.
 
@@ -261,6 +274,20 @@ class QuantMatrix:
                 ~filtered_data.obs["Protein"].str.contains(";")
             ].copy()
 
+        if remove_zero_rows:
+            X_nan_to_num = np.nan_to_num(filtered_data.X, nan=0)
+            non_zero_rows_mask = ~np.all(X_nan_to_num == 0, axis=1)
+            filtered_data = filtered_data[non_zero_rows_mask].copy()
+
+        if remove_n_zero_rows:
+            if max_n_zeros == None:
+                raise ValueError("If remove proteins with more than n zeros, must pass max_n_zeros.")
+            X_nan_to_num = np.nan_to_num(filtered_data.X, nan=0)
+            zero_counts = np.sum(X_nan_to_num == 0, axis=1)
+            rows_to_keep = zero_counts <= max_n_zeros
+            filtered_data = filtered_data[rows_to_keep].copy()
+            
+
         self.num_rows = len(filtered_data)
 
         quantitative_data = (
@@ -274,9 +301,7 @@ class QuantMatrix:
         )
 
         self.quantitative_data = ad.AnnData(
-            quantitative_data,
-            obs=row_obs,
-            var=filtered_data.var
+            quantitative_data, obs=row_obs, var=filtered_data.var
         )
 
         return self
@@ -352,7 +377,8 @@ class QuantMatrix:
 
         elif method == "mean":
             base_method = MeanNormalization()
-
+        elif method == "log2":
+            base_method = Log2Normalization()
         else:
             raise ValueError(f"Unsupported normalization method: {method}")
 
@@ -377,10 +403,32 @@ class QuantMatrix:
                 self.quantitative_data.X
             )
 
-        if log_transform:
+        if log_transform and not (method == "log2"):
             self.quantitative_data.X = Log2Normalization().fit_transform(
                 self.quantitative_data.X
             )
+
+        return self
+
+    def correct(self, method: str = "combat", reference_batch =None):
+
+        base_method: CorrectionMethod = CorrectionMethod()
+        batches = self.get_batches()
+
+        if method == "combat":
+
+            base_method = CombatCorrection()
+
+        elif method == "mean":
+            
+            if reference_batch not in batches:
+                raise ValueError("The reference batch is not one of the batches.")
+            
+            base_method = MeanCorrection(reference_batch=reference_batch)
+
+        self.quantitative_data.X = base_method.fit_transform(
+            self.quantitative_data.X, batches
+        )
 
         return self
 
@@ -517,12 +565,7 @@ class QuantMatrix:
 
         """
 
-        if not method in {
-            'ttest',
-            'linregress',
-            'anova',
-            'ttest_paired'
-        }:
+        if not method in {"ttest", "linregress", "anova", "ttest_paired"}:
             raise ValueError(f"Unsupported statistical comparison method: {method}")
 
         differential_test = DifferentialTest(
@@ -1018,8 +1061,6 @@ class QuantMatrix:
 
         return result
 
-
-
     def plot(
         self,
         plot_type: str,
@@ -1141,6 +1182,7 @@ class QuantMatrix:
         merged = pd.concat([self.row_annotations, quant_data], axis=1)
 
         return merged
+
     def to_ml(
         self,
         feature_column: str = "Protein",

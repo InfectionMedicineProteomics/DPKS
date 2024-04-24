@@ -27,7 +27,6 @@ install_requires = [
     "gseapy",
     "unipressed",
     "jupyterlab",
-    "tbb"
 ]
 
 
