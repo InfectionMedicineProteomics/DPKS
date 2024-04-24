@@ -39,12 +39,20 @@ import numpy as np
 
 data_file = pd.read_csv("../tests/input_files/de_matrix.tsv", sep="\t")
 
+quant_matrix = QuantMatrix(
+    quantification_file=data_file,
+    design_matrix_file=design_matrix,
+).normalize(method="log2")
+
+data_file = quant_matrix.to_df()
 for sample in design_matrix[design_matrix["batch"] == 1]["sample"]:
-    data_file[sample] = data_file[sample] + np.random.normal(loc=5e6) # Adding synthetic batch effect
+    data_file[sample] = data_file[sample] + 3 # Add synthetic batch effect
 ```
+
 The data divides into batches.
 ![](../img/non_corrected_umaps.png)
 ![](../img/non_corrected_boxes.png)
+![](../img/non_corrected_density.png)
 
 Running batch correction removes the grouping on batch.
 ````
@@ -59,7 +67,7 @@ quantified_data = (
 ````
 ![](../img/corrected_umaps.png)
 ![](../img/corrected_boxes.png)
-
+![](../img/corrected_density.png)
 
 [^1]: W. Evan Johnson, Cheng Li and Ariel Rabinovic. Adjusting batch effects in microarray expression data using empirical Bayes methods.
 Biostatistics, 2007
