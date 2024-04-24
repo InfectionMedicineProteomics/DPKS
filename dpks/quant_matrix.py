@@ -53,7 +53,7 @@ from dpks.scaling import (
     MinMaxScaling,
     AbsMaxScaling,
 )
-from dpks.correction import CorrectionMethod, BatchCombat
+from dpks.correction import CorrectionMethod, CombatCorrection, MeanCorrection
 
 from dpks.interpretation import BootstrapInterpreter
 
@@ -399,14 +399,21 @@ class QuantMatrix:
 
         return self
 
-    def correct(self, method: str = "combat"):
+    def correct(self, method: str = "combat", reference_batch =None):
 
         base_method: CorrectionMethod = CorrectionMethod()
         batches = self.get_batches()
 
         if method == "combat":
 
-            base_method = BatchCombat()
+            base_method = CombatCorrection()
+
+        elif method == "mean":
+            
+            if reference_batch not in batches:
+                raise ValueError("The reference batch is not one of the batches.")
+            
+            base_method = MeanCorrection(reference_batch=reference_batch)
 
         self.quantitative_data.X = base_method.fit_transform(
             self.quantitative_data.X, batches
