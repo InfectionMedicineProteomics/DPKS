@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <link rel="shortcut icon" href="../../img/favicon.ico" />
-    <title>Normalization - DPKS Documentation</title>
+    <title>Correction of batch effects - DPKS Documentation</title>
     <link rel="stylesheet" href="../../css/theme.css" />
     <link rel="stylesheet" href="../../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -13,8 +13,8 @@
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Normalization";
-        var mkdocs_page_input_path = "usage/normalization.md";
+        var mkdocs_page_name = "Correction of batch effects";
+        var mkdocs_page_input_path = "usage/batch_correction.md";
         var mkdocs_page_url = null;
       </script>
     
@@ -46,14 +46,12 @@
                 </li>
               </ul>
               <p class="caption"><span class="caption-text">Usage</span></p>
-              <ul class="current">
+              <ul>
                   <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../loading_data/">Loading data</a>
                   </li>
-                  <li class="toctree-l1 current"><a class="reference internal current" href="./">Normalization</a>
-    <ul class="current">
-    </ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../normalization/">Normalization</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../quantification/">Quantification</a>
                   </li>
@@ -92,10 +90,9 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
-          <li class="breadcrumb-item">Usage</li>
-      <li class="breadcrumb-item active">Normalization</li>
+      <li class="breadcrumb-item active">Correction of batch effects</li>
     <li class="wy-breadcrumbs-aside">
-          <a href="https://github.com/InfectionMedicineProteomics/DPKS/edit/master/docs/usage/normalization.md" class="icon icon-github"> Edit on GitHub</a>
+          <a href="https://github.com/InfectionMedicineProteomics/DPKS/edit/master/docs/usage/batch_correction.md" class="icon icon-github"> Edit on GitHub</a>
     </li>
   </ul>
   <hr/>
@@ -103,62 +100,82 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="normalization">Normalization</h1>
-<p>Normalization a standard method used in omic analysis to minimize batch effect and technical variation between samples
-prior to further downstream analysis. This is particularly important to ensure that the signal you are seeing in your
-analysis is actual biological signal and not just noise. DPKS exposes 3 main methods for normalizing your quantitative
-matrices:</p>
+                <h1 id="correction-of-batch-effects">Correction of batch effects</h1>
+<p>Normalization and correction is a crucial step in omics analysis to mitigate batch effects and technical variability between samples, ensuring that the observed signal reflects true biological variations rather than technical artifacts. DPKS currently offers two methods for handling batch effects:</p>
 <ul>
-<li><code>tic</code> - Total ion chromatogram normalization: The sum of all signal in each sample is used to scale each measured intensity, and the median of the sums is used to rescale the data.</li>
-<li><code>median</code> - Median normalization: The median of each sample is used to scale each intensity and the mean of the medians is used to rescale the data.</li>
-<li><code>mean</code> - Mean normalization: The mean of each sample is used to scale each intensity and the mean of the means is used to rescale the data.</li>
+<li>
+<p><code>combat</code> - The Combat method is a tool for batch correction, leveraging the ComBat algorithm <sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>. It models the sources of variation across batches and adjusts the data to harmonize feature distributions while preserving biological variability. </p>
+</li>
+<li>
+<p><code>mean</code> - The mean normalization method corrects for batch effects by adjusting the data based on the mean values and standard deviations within each batch. This approach assumes systematic differences in mean expression levels between batches and aims to align them, reducing batch-related variability.</p>
+</li>
 </ul>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>An implementation of retention time sliding window normalization <sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> can be applied if your input data was LC-MS/MS data and a RetentionTime column is available. This is recommended.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The combat method is heavily influenced by missing data. Be careful when applying it if your dataset contains missing values.</p>
 </div>
-<p>The data is then log2 transformed to allow for interpretable downstream analysis.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>You should always (generally) log2 transform your data. Especially if you are doing differential expression analysis.
-This is a default in DPKS, so you do not need to worry about this.</p>
-</div>
-<p>Normalization can be performed as follows:</p>
+<p>Batch correction can be performed as follows:</p>
 <pre><code class="language-python">from dpks.quant_matrix import QuantMatrix
 
 qm = QuantMatrix(
     quantification_file=&quot;../tests/input_files/de_matrix.tsv&quot;,
     design_matrix_file=&quot;../tests/input_files/de_design_matrix.tsv&quot;
-).filter()
+).filter().normalize(method=&quot;log2&quot;).correct(method=&quot;mean&quot;, reference_batch=1)
 
-qm = qm.normalize(
-    method=&quot;mean&quot;,
-    log_transform=True,
-    use_rt_sliding_window_filter=True,
-    minimum_data_points=100,
-    stride=5,
-    use_overlapping_windows=True,
-    rt_unit=&quot;seconds&quot;
+</code></pre>
+<h2 id="example">Example</h2>
+<pre><code class="language-py">import pandas as pd
+
+from dpks.quant_matrix import QuantMatrix
+
+design_matrix_file = &quot;../tests/input_files/de_design_matrix.tsv&quot;
+
+design_matrix = pd.read_csv(design_matrix_file, sep=&quot;\t&quot;)
+design_matrix[&quot;batch&quot;] = [1] * 10 + [2] * 8 # Dividing data into batches
+
+import numpy as np
+
+data_file = pd.read_csv(&quot;../tests/input_files/de_matrix.tsv&quot;, sep=&quot;\t&quot;)
+
+quant_matrix = QuantMatrix(
+    quantification_file=data_file,
+    design_matrix_file=design_matrix,
+).normalize(method=&quot;log2&quot;)
+
+data_file = quant_matrix.to_df()
+for sample in design_matrix[design_matrix[&quot;batch&quot;] == 1][&quot;sample&quot;]:
+    data_file[sample] = data_file[sample] + 3 # Add synthetic batch effect
+</code></pre>
+<p>The data divides into batches.
+<img alt="" src="../../img/non_corrected_umaps.png" />
+<img alt="" src="../../img/non_corrected_boxes.png" />
+<img alt="" src="../../img/non_corrected_density.png" /></p>
+<p>Running batch correction removes the grouping on batch.</p>
+<pre><code>quant_matrix = QuantMatrix(
+    quantification_file=data_file,
+    design_matrix_file=design_matrix,
+)
+
+quantified_data = (
+    quant_matrix.filter().impute(method=&quot;uniform_percentile&quot;).correct(method=&quot;mean&quot;, reference_batch=1)
 )
 </code></pre>
-<p>Many of the set parameters above are defaults and do not need to be passed every time.</p>
+<p><img alt="" src="../../img/corrected_umaps.png" />
+<img alt="" src="../../img/corrected_boxes.png" />
+<img alt="" src="../../img/corrected_density.png" /></p>
 <div class="footnote">
 <hr />
 <ol>
 <li id="fn:1">
-<p>Jakob Willforss, Aakash Chawade, and Fredrik Levander. NormalyzerDE: Online Tool for Improved Normalization of Omics Expression Data and High-Sensitivity Differential Expression Analysis.
-Journal of Proteome Research 2019 18 (2), 732-740
-<a href="https://doi.org/10.1021/acs.jproteome.8b00523" target="_blank">DOI: 10.1021/acs.jproteome.8b00523</a>&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+<p>W. Evan Johnson, Cheng Li and Ariel Rabinovic. Adjusting batch effects in microarray expression data using empirical Bayes methods.
+Biostatistics, 2007
+<a href="https://doi.org/10.1093/biostatistics/kxj037" target="_blank">DOI: https://doi.org/10.1093/biostatistics/kxj037</a>&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
 </li>
 </ol>
 </div>
               
             </div>
           </div><footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="../loading_data/" class="btn btn-neutral float-left" title="Loading data"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../quantification/" class="btn btn-neutral float-right" title="Quantification">Next <span class="icon icon-circle-arrow-right"></span></a>
-    </div>
 
   <hr/>
 
@@ -184,10 +201,6 @@ Journal of Proteome Research 2019 18 (2), 732-740
         </span>
     
     
-      <span><a href="../loading_data/" style="color: #fcfcfc">&laquo; Previous</a></span>
-    
-    
-      <span><a href="../quantification/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>
