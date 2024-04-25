@@ -15,6 +15,7 @@ nav:
         - Installation: usage/installation.md
         - Loading data: usage/loading_data.md
         - Normalization: usage/normalization.md
+        - Batch Correction: usage/batch_correction.md
         - Quantification: usage/quantification.md
         - Statistical Comparisons: usage/statistical_comparisons.md
         - Explainable Machine Learning: usage/explainable_machine_learning.md
