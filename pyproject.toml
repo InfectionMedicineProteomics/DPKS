@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "dpks"
-version = "0.1.4"
+version = "0.1.5"
 authors = [
     { name="Aaron Scott", email="aaron.scott@med.lu.se" },
     { name="Erik Hartman", email="erik.hartman@med.lu.se" },
