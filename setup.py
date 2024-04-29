@@ -4,7 +4,7 @@
 
 from setuptools import setup, find_packages  # type: ignore
 
-version = "0.1.4"
+version = "0.1.5"
 
 install_requires = [
     "click",
@@ -27,6 +27,7 @@ install_requires = [
     "gseapy",
     "unipressed",
     "jupyterlab",
+    "inmoose"
 ]
 
 
