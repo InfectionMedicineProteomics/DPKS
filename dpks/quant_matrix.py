@@ -410,16 +410,12 @@ class QuantMatrix:
 
         return self
 
-    def correct(self, method: str = "combat", reference_batch =None):
+    def correct(self, method: str = "mean", reference_batch =None):
 
         base_method: CorrectionMethod = CorrectionMethod()
         batches = self.get_batches()
 
-        if method == "combat":
-
-            base_method = CombatCorrection()
-
-        elif method == "mean":
+        if method == "mean":
             
             if reference_batch not in batches:
                 raise ValueError("The reference batch is not one of the batches.")

@@ -1,15 +1,9 @@
 # Correction of batch effects
 
 
-Normalization and correction is a crucial step in omics analysis to mitigate batch effects and technical variability between samples, ensuring that the observed signal reflects true biological variations rather than technical artifacts. DPKS currently offers two methods for handling batch effects:
-
-
-* `combat` - The Combat method is a tool for batch correction, leveraging the ComBat algorithm [^1]. It models the sources of variation across batches and adjusts the data to harmonize feature distributions while preserving biological variability. 
+Normalization and correction is a crucial step in omics analysis to mitigate batch effects and technical variability between samples, ensuring that the observed signal reflects true biological variations rather than technical artifacts. DPKS currently offers one method for handling batch effects:
 
 * `mean` - The mean normalization method corrects for batch effects by adjusting the data based on the mean values and standard deviations within each batch. This approach assumes systematic differences in mean expression levels between batches and aims to align them, reducing batch-related variability.
-
-!!! warning
-    The combat method is heavily influenced by missing data. Be careful when applying it if your dataset contains missing values.
 
 Batch correction can be performed as follows:
 
