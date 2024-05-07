@@ -1,13 +1,5 @@
-import warnings
-
-from typing import TYPE_CHECKING, Any
-
 import numpy as np
 
-if TYPE_CHECKING:
-    from .quant_matrix import QuantMatrix
-else:
-    QuantMatrix = Any
 
 
 class CorrectionMethod:

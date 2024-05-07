@@ -1,12 +1,6 @@
 """**impute quantitative matrices**, supports multiple methods as specified below"""
-from typing import TYPE_CHECKING, Any
 
 import numpy as np
-
-if TYPE_CHECKING:
-    from .quant_matrix import QuantMatrix
-else:
-    QuantMatrix = Any
 
 
 class ImputerMethod:

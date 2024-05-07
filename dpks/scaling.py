@@ -10,15 +10,8 @@
 
 """
 
-from typing import TYPE_CHECKING, Any
 import numpy as np
 
-# import numpy.typing as npt  # not used yet
-
-if TYPE_CHECKING:
-    from .quant_matrix import QuantMatrix
-else:
-    QuantMatrix = Any
 
 
 class ScalingMethod:

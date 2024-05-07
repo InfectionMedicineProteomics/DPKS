@@ -53,7 +53,7 @@ from dpks.scaling import (
     MinMaxScaling,
     AbsMaxScaling,
 )
-from dpks.correction import CorrectionMethod, CombatCorrection, MeanCorrection
+from dpks.correction import CorrectionMethod, MeanCorrection
 
 from dpks.interpretation import BootstrapInterpreter
 
