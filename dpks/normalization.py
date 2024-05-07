@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING, Any, List
 
 import numpy as np
 import pandas as pd  # type: ignore
-from inmoose.pycombat import pycombat_norm
-from sklearn.preprocessing import LabelEncoder
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
