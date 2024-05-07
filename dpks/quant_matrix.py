@@ -35,6 +35,7 @@ from dpks.imputer import (
     ImputerMethod,
     UniformRangeImputer,
     UniformPercentileImputer,
+    ConstantImputer
 )
 from dpks.normalization import (
     TicNormalization,
@@ -515,10 +516,15 @@ class QuantMatrix:
             base_method = UniformPercentileImputer(percentile=percentile)
 
         elif method == "uniform_range":
-            maxvalue = int(kwargs.get("maxvalue", 1))
-            minvalue = int(kwargs.get("minvalue", 0))
+            maxvalue = float(kwargs.get("maxvalue", 1))
+            minvalue = float(kwargs.get("minvalue", 0))
 
             base_method = UniformRangeImputer(maxvalue=maxvalue, minvalue=minvalue)
+
+        elif method=="constant":
+            constant = float(kwargs.get("constant",0))
+
+            base_method = ConstantImputer(constant=constant)
 
         else:
 
@@ -617,6 +623,9 @@ class QuantMatrix:
 
         """
         explain_results = []
+
+        if isinstance(comparisons, tuple):
+            comparisons = [comparisons]
 
         for comparison in comparisons:
             X, y = self.to_ml(feature_column=feature_column, comparison=comparison)

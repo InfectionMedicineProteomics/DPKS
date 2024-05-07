@@ -16,5 +16,7 @@ def quantified_data(paths):
 
 
 def test_rfe(quantified_data: QuantMatrix):
+    """
+    Not implemented.
+    """
     clf = xgboost.XGBClassifier()
-    quantified_data.rank(clf, rfe_step=100, verbose=True, threads=4)

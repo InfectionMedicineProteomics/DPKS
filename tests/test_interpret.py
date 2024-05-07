@@ -12,43 +12,31 @@ def quantified_data(paths):
         quantification_file=str(paths["sepsis_matrix_path"]),
         design_matrix_file=str(paths["sepsis_design_path"]),
     )
-    quantified_data = qm.normalize(
-        method="mean",
-    ).quantify(method="top_n", summarization_method="mean")
+    quantified_data = (
+        qm.normalize(
+            method="mean",
+        )
+        .quantify(method="top_n", summarization_method="mean")
+        .impute(method="constant", constant=0)
+    )
     return quantified_data
 
 
-def test_xgb(quantified_data):
+def test_xgb(quantified_data: QuantMatrix):
     clf = xgboost.XGBClassifier()
-    trained_classifier = quantified_data.train(clf)
-    quantified_data.interpret(trained_classifier.esimator_, trained_classifier.scaler)
+    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
 
 
 def test_decision_tree(quantified_data):
     clf = tree.DecisionTreeClassifier()
-    trained_classifier = quantified_data.train(clf)
-    quantified_data.interpret(
-        trained_classifier.esimator_,
-        trained_classifier.scaler,
-        shap_algorithm="tree",
-    )
+    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
 
 
 def test_knn(quantified_data):
     clf = KNeighborsClassifier()
-    trained_classifier = quantified_data.train(clf)
-    quantified_data.interpret(
-        trained_classifier.esimator_,
-        trained_classifier.scaler,
-        shap_algorithm="permutation",
-    )
+    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
 
 
 def test_svm(quantified_data):
     clf = SVC()
-    trained_classifier = quantified_data.train(clf)
-    quantified_data.interpret(
-        trained_classifier.esimator_,
-        trained_classifier.scaler,
-        shap_algorithm="linear",
-    )
+    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
