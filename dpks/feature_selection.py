@@ -251,7 +251,7 @@ def _rank_features(
     scores = dict()
 
     X_train, y_train = resample(
-        X, y, replace=replace, n_samples=X.shape[0] * downsample_rate, stratify=y
+        X, y, replace=replace, n_samples=int(X.shape[0] * downsample_rate), stratify=y
     )
 
     selector = RFE(
