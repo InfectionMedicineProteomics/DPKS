@@ -27,7 +27,11 @@ def test_rfe(quantified_data: QuantMatrix):
     """
     X,y = quantified_data.to_ml()
     clf = xgboost.XGBClassifier()
-    bootstrap_rfe = BoostrapRFE(step=20, downsample_rate=1)
+    bootstrap_rfe = BoostrapRFE(
+        step=20,
+        downsample_rate=1,
+        feature_names=X.columns.values
+    )
 
     bootstrap_rfe.fit(X,y, clf)
     feature_ranks = bootstrap_rfe.get_ranks()

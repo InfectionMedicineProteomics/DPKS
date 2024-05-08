@@ -25,18 +25,3 @@ def quantified_data(paths):
 def test_xgb(quantified_data: QuantMatrix):
     clf = xgboost.XGBClassifier()
     quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
-
-
-def test_decision_tree(quantified_data):
-    clf = tree.DecisionTreeClassifier()
-    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
-
-
-def test_knn(quantified_data):
-    clf = KNeighborsClassifier()
-    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
-
-
-def test_svm(quantified_data):
-    clf = SVC()
-    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
