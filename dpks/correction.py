@@ -1,7 +1,6 @@
 import numpy as np
 
 
-
 class CorrectionMethod:
     def __init__(self) -> None:
         pass

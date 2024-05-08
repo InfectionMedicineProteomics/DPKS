@@ -25,8 +25,7 @@ def test_differential_testing(paths):
         .quantify(method="top_n", top_n=1)
         .compare(
             method="linregress",
-            group_a=4,
-            group_b=6,
+            comparisons=(4,6),
             min_samples_per_group=2,
             level="protein",
             multiple_testing_correction_method="fdr_tsbh",

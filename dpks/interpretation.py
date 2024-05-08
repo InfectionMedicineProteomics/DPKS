@@ -42,7 +42,7 @@ class BootstrapInterpreter:
 
             if self.downsample_background:
                 rus = RandomUnderSampler(random_state=0)
-                X_resampled, y_resampled = rus.fit_resample(X_train, y_train)
+                X_resampled, _ = rus.fit_resample(X_train, y_train)
                 clf.interpret(X_resampled)
             else:
                 clf.interpret(X_train)

@@ -37,6 +37,19 @@ class UniformPercentileImputer(ImputerMethod):
         X[mask] = nums
 
         return X
+    
+
+class ConstantImputer(ImputerMethod):
+    """uniform percentile imputer"""
+
+    def __init__(self, constant: float) -> None:
+        """init"""
+        self.constant=constant
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+        """fit the transform"""
+        X = np.nan_to_num(X, nan=self.constant)  # Replace NaN with constant
+        return X
 
 
 class UniformRangeImputer(ImputerMethod):

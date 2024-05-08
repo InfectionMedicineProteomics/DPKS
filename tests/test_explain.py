@@ -1,8 +1,9 @@
 from dpks.quant_matrix import QuantMatrix
-from dpks.feature_selection import BoostrapRFE
 import pytest
 import xgboost
-import pandas as pd
+from sklearn.svm import SVC
+from sklearn import tree
+from sklearn.neighbors import KNeighborsClassifier
 
 
 @pytest.fixture
@@ -21,19 +22,6 @@ def quantified_data(paths):
     return quantified_data
 
 
-def test_rfe(quantified_data: QuantMatrix):
-    """
-    Not implemented.
-    """
-    X,y = quantified_data.to_ml()
+def test_xgb(quantified_data: QuantMatrix):
     clf = xgboost.XGBClassifier()
-    bootstrap_rfe = BoostrapRFE(
-        step=20,
-        downsample_rate=1,
-        feature_names=X.columns.values
-    )
-
-    bootstrap_rfe.fit(X,y, clf)
-    feature_ranks = bootstrap_rfe.get_ranks()
-    
-    assert isinstance(feature_ranks, pd.DataFrame)
+    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
