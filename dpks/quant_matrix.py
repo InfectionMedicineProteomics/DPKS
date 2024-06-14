@@ -22,6 +22,7 @@ from pandas import Series, DataFrame
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 from unipressed import IdMappingClient
 
+from dpks.fdr import DecoyFeatures
 from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
 import numpy as np
@@ -533,6 +534,42 @@ class QuantMatrix:
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
 
         return self
+    
+    def append(
+        self,
+        method: str = "mean",
+        feature_column: str = "Protein"
+    ) -> QuantMatrix:
+        
+        if method == "mean":
+
+            X, y = self.to_ml(
+                feature_column=feature_column
+            )
+
+            n_samples=X.shape[0]
+            n_features=X.shape[1]
+
+            decoy_features = DecoyFeatures(
+                n_samples=n_samples,
+                n_features=n_features,
+                feature_names=X.columns
+            )
+
+            decoy_features.fit(X)
+
+            combined_features = X.join(decoy_features.features)
+
+            combined_features = combined_features.T.reset_index(names=[feature_column])
+
+            combined_features['Decoy'] = np.where(
+                combined_features[feature_column].str.contains("decoy"), 1, 0
+            )
+
+        return QuantMatrix(
+            quantification_file=combined_features.copy(),
+            design_matrix_file=self.quantitative_data.var.copy()
+        )
 
     def compare(
         self,

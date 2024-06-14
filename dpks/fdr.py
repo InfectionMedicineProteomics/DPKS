@@ -10,10 +10,62 @@ from joblib import dump, load
 from typing import TYPE_CHECKING
 
 import numba
+import pandas as pd
 
 if TYPE_CHECKING:
     from gps.peptides import Peptide
     from gps.proteins import Protein
+
+
+
+
+class DecoyFeatures:
+
+    n_samples: int
+    n_features: int
+    decoy_features: np.ndarray
+    data_: pd.DataFrame
+
+    def __init__(
+        self,
+        n_samples: int,
+        n_features: int,
+        feature_names: list[str]
+    ):
+        
+        self.n_samples = n_samples
+        self.n_features = n_features
+        self.feature_names = feature_names
+        self.decoy_features = np.zeros(
+            (n_samples, n_features)
+        )
+
+    def fit(self, X: pd.DataFrame) -> None:
+
+        self.data_ = X
+
+        for i in range(self.n_features):
+
+            feature_slice = X.iloc[:, i]
+
+            feature_mean = np.nanmean(feature_slice)
+            feature_std = np.nanstd(feature_slice)
+
+            decoy_feature = np.random.normal(
+                loc=feature_mean,
+                scale=feature_std,
+                size=self.n_samples
+            )
+
+            self.decoy_features[:, i] = decoy_feature
+
+    @property
+    def features(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            self.decoy_features,
+            columns=[f"decoy_{i}" for i in self.feature_names],
+            index=self.data_.index
+        )
 
 
 @numba.jit(nopython=True)
