@@ -348,15 +348,12 @@ class MaxLFQ:
             ].copy()
 
             with warnings.catch_warnings():
-
-                warnings.filterwarnings('error')
+                warnings.filterwarnings("error")
 
                 try:
-
                     group_data.obs["MeanAbundance"] = np.nanmean(group_data.X, axis=1)
 
                 except RuntimeWarning:
-
                     group_data.obs["MeanAbundance"] = 0
 
             sort_indices = np.argsort(group_data.obs["MeanAbundance"].values)[::-1]

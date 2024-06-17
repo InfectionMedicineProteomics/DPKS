@@ -10,7 +10,6 @@ class CorrectionMethod:
 
 
 class MeanCorrection(CorrectionMethod):
-
     def __init__(self, reference_batch) -> None:
         self.reference_batch = reference_batch
 
@@ -19,7 +18,6 @@ class MeanCorrection(CorrectionMethod):
         X: np.ndarray,
         batches,
     ) -> np.ndarray:
-
         X = X.T
         unique_batches = np.unique(batches)
         X_normalized = np.zeros_like(X)
