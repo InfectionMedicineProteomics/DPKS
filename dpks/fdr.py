@@ -12,13 +12,6 @@ from typing import TYPE_CHECKING
 import numba
 import pandas as pd
 
-if TYPE_CHECKING:
-    from gps.peptides import Peptide
-    from gps.proteins import Protein
-
-
-
-
 class DecoyFeatures:
 
     n_samples: int
