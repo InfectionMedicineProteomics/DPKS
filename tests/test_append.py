@@ -8,7 +8,6 @@ from sklearn.neighbors import KNeighborsClassifier
 
 @pytest.fixture
 def quantified_data(paths):
-
     clf = xgboost.XGBClassifier()
 
     qm = QuantMatrix(
@@ -26,5 +25,10 @@ def quantified_data(paths):
 
 
 def test_append(quantified_data: QuantMatrix):
-    
-    quantified_data.append(method="shuffle", feature_column="Protein")
+
+    feature_length = quantified_data.row_annotations.shape[0]
+    expected_length = feature_length * 2
+
+    quantified_data_decoys = quantified_data.append(method="shuffle", feature_column="Protein")
+
+    assert (quantified_data_decoys.row_annotations.shape[0] == expected_length)
