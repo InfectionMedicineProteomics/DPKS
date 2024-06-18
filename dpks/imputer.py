@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from sklearn.impute import KNNImputer
+
 
 class ImputerMethod:
     """the base class"""
@@ -15,6 +17,17 @@ class ImputerMethod:
         """fit the transform"""
 
         pass
+
+
+class NeighborhoodImputer(ImputerMethod):
+    def __init__(self, n_neighbors: int = 5, weights: str = "distance") -> None:
+        self.n_neighbors = n_neighbors
+        self.weights = weights
+
+    def fit_transform(self, X: np.ndarray) -> np.ndarray:
+        imputer = KNNImputer(n_neighbors=self.n_neighbors, weights=self.weights)
+
+        return imputer.fit_transform(X)
 
 
 class UniformPercentileImputer(ImputerMethod):
@@ -37,14 +50,14 @@ class UniformPercentileImputer(ImputerMethod):
         X[mask] = nums
 
         return X
-    
+
 
 class ConstantImputer(ImputerMethod):
     """uniform percentile imputer"""
 
     def __init__(self, constant: float) -> None:
         """init"""
-        self.constant=constant
+        self.constant = constant
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
         """fit the transform"""

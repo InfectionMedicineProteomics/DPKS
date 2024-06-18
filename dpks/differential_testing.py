@@ -186,9 +186,7 @@ class DifferentialTest:
             correction_results = multipletests(
                 quant_matrix.quantitative_data.obs[
                     ~np.isnan(
-                        quant_matrix.quantitative_data.obs[
-                            f"PValue{group_a}-{group_b}"
-                        ]
+                        quant_matrix.quantitative_data.obs[f"PValue{group_a}-{group_b}"]
                     )
                 ][f"PValue{group_a}-{group_b}"],
                 method=self.multiple_testing_correction_method,

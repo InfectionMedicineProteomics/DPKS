@@ -103,7 +103,7 @@ class TopN:
         return quantification
 
 
-@njit(nogil=True, nopython=True)
+@njit(nogil=True)
 def get_ratios(quantitative_data, sample_combinations):
     num_samples = quantitative_data.shape[1]
 
@@ -124,7 +124,7 @@ def get_ratios(quantitative_data, sample_combinations):
     return ratios
 
 
-@njit(nogil=True, nopython=True)
+@njit(nogil=True)
 def solve_profile(X, ratios, sample_combinations):
     if np.all(np.isnan(X)):
         results = np.zeros((X.shape[1]))
@@ -175,7 +175,7 @@ def solve_profile(X, ratios, sample_combinations):
     return results
 
 
-@njit(nogil=True, nopython=True)
+@njit(nogil=True)
 def build_connection_graph(grouping):
     connected_sample_groups = numba.typed.Dict()
 
@@ -208,7 +208,7 @@ def build_connection_graph(grouping):
     return connected_sample_groups
 
 
-@njit(nogil=True, nopython=True)
+@njit(nogil=True)
 def build_combinations(subset):
     column_idx = np.arange(0, subset.shape[1])
 
@@ -221,7 +221,7 @@ def build_combinations(subset):
     return np.array(combos)
 
 
-@njit(nogil=True, nopython=True)
+@njit(nogil=True)
 def mask_group(grouping):
     nan_groups = []
 
@@ -234,7 +234,7 @@ def mask_group(grouping):
     return grouping
 
 
-@njit(nogil=True, nopython=True)
+@njit(nogil=True)
 def quantify_group(grouping, connected_graph):
     profile = np.zeros((grouping.shape[1]))
 
@@ -263,7 +263,7 @@ def quantify_group(grouping, connected_graph):
     return profile
 
 
-@njit(parallel=True, nopython=True)
+@njit(parallel=True)
 def quantify_groups(groupings, group_ids, minimum_subgroups):
     num_groups = len(group_ids)
 
@@ -348,15 +348,12 @@ class MaxLFQ:
             ].copy()
 
             with warnings.catch_warnings():
-
-                warnings.filterwarnings('error')
+                warnings.filterwarnings("error")
 
                 try:
-
                     group_data.obs["MeanAbundance"] = np.nanmean(group_data.X, axis=1)
 
                 except RuntimeWarning:
-
                     group_data.obs["MeanAbundance"] = 0
 
             sort_indices = np.argsort(group_data.obs["MeanAbundance"].values)[::-1]
