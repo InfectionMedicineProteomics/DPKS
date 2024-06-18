@@ -13,7 +13,6 @@
 import numpy as np
 
 
-
 class ScalingMethod:
     """the base class"""
 
