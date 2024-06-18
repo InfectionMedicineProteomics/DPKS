@@ -1,20 +1,17 @@
 from __future__ import annotations
 
-import numpy as np
-
-
-from typing import Dict, Union, Tuple, Any
-
-from joblib import dump, load
-
-from typing import TYPE_CHECKING
+from typing import Tuple
 
 import numba
+import numpy as np
 import pandas as pd
+
 
 class DecoyFeatures:
     def __init__(self) -> None:
-        pass
+        self.data_ = None
+        self.feature_names = None
+        self.decoy_features = None
 
     def fit(self, X: pd.DataFrame) -> None:
         pass
@@ -136,7 +133,7 @@ def _fast_distribution_q_values(scores, target_function, decoy_function, pit):  
 
 
 class ScoreDistribution:
-    pit: float
+    percent_incorrect_targets: float
     X: np.ndarray
     y: np.ndarray
     target_spline: Tuple[np.ndarray, np.ndarray]
@@ -144,10 +141,10 @@ class ScoreDistribution:
     target_scores: np.ndarray
     decoy_scores: np.ndarray
 
-    def __init__(self, pit: float = 1.0, num_threads: int = 1):
+    def __init__(self, percent_incorrect_targets: float = 1.0, num_threads: int = 1):
         numba.set_num_threads(num_threads)
 
-        self.pit = pit
+        self.percent_incorrect_targets = percent_incorrect_targets
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> ScoreDistribution:
         self.X = X
@@ -186,7 +183,7 @@ class ScoreDistribution:
 
     def q_values(self, X: np.ndarray) -> np.ndarray:
         return _fast_distribution_q_values(
-            X, self.target_spline, self.decoy_spline, self.pit
+            X, self.target_spline, self.decoy_spline, self.percent_incorrect_targets
         )
 
 
