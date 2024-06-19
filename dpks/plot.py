@@ -29,12 +29,12 @@ class Plot:
         pass
 
 
-class SHAPPlot(Plot):
+class ImportancePlot(Plot):
     def __init__(
         self,
         fig: matplotlib.figure.Figure,
         ax: matplotlib.axes.Axes,
-        shap_values: np.ndarray,
+        feature_importances: np.ndarray,
         X: np.ndarray,
         qm: QuantMatrix,
         cmap: Union[List, str],
@@ -42,20 +42,20 @@ class SHAPPlot(Plot):
         jitter: float = 0.1,
         alpha: float = 0.75,
         feature_column: str = "Protein",
-        order_by: str = "shap",
+        order_by: str = "importance",
         n_bins=100,
     ):
-        """Creates a SHAP summary plot-like figure.
+        """Creates a Local perturbation improtance summary plot-like figure.
 
         Args:
-            shap_values (np.ndarray): shap values
+            feature_importances (np.ndarray): importance values
             X (np.ndarray): feature values
             qm (QuantMatrix): quantmatrix
 
         Returns:
             plt.Figure: figure object
         """
-        self.shap_values = shap_values
+        self.feature_importances = feature_importances
         self.order_by = order_by
         self.X = X
         self.qm = qm
@@ -76,9 +76,9 @@ class SHAPPlot(Plot):
 
     def plot(self) -> Tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
         plot_frame = pd.DataFrame(columns=["feature", "x", "y"])
-        col_sum = np.mean(np.abs(self.shap_values), axis=0)
+        col_sum = np.mean(np.abs(self.feature_importances), axis=0)
 
-        if self.order_by == "shap":
+        if self.order_by == "importance":
             sort_index = np.argsort(-col_sum)
         elif self.order_by == "rank":
             sort_index = np.argsort(self.qm.row_annotations["FeatureRank"])
@@ -89,7 +89,7 @@ class SHAPPlot(Plot):
                 feature_idx
             ]
             feature_names.append(feature_name)
-            sv = self.shap_values[:, feature_idx]
+            sv = self.feature_importances[:, feature_idx]
             fv = self.X[:, feature_idx]
             plot_frame = pd.concat(
                 [
@@ -147,7 +147,7 @@ class SHAPPlot(Plot):
         cb.outline.set_visible(False)
         sns.despine(ax=self.ax, left=True, right=True, top=True)
 
-        self.ax.set_xlabel("SHAP value")
+        self.ax.set_xlabel("Importance Value")
         self.ax.set_ylabel("Feature")
         self.ax.set_yticks(range(self.n_display), feature_names)
         return self.fig, self.ax

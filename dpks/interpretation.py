@@ -29,6 +29,7 @@ class BootstrapInterpreter:
         results["feature"] = self.feature_names
 
         for i in range(self.n_iterations):
+
             X_train, y_train = resample(
                 X, y, replace=True, n_samples=X.shape[0] * 1, stratify=y, random_state=i
             )
@@ -38,7 +39,7 @@ class BootstrapInterpreter:
             else:
                 clf = Classifier(classifier=classifier)
 
-            clf.fit(X_train, y_train)
+            clf.fit(X_train.values, y_train)
 
             if self.downsample_background:
                 rus = RandomUnderSampler(random_state=0)
@@ -47,23 +48,23 @@ class BootstrapInterpreter:
             else:
                 clf.interpret(X_train)
 
-            results[f"iteration_{i}_shap"] = pd.Series(
+            results[f"iteration_{i}_importance"] = pd.Series(
                 clf.mean_importance / clf.mean_importance.max()
             )
-            results[f"iteration_{i}_rank"] = results[f"iteration_{i}_shap"].rank(
+            results[f"iteration_{i}_rank"] = results[f"iteration_{i}_importance"].rank(
                 ascending=False
             )
 
         self.importances = pd.DataFrame(results)
 
-        self.importances["mean_shap"] = self.importances[
-            [f"iteration_{i}_shap" for i in range(self.n_iterations)]
+        self.importances["mean_importance"] = self.importances[
+            [f"iteration_{i}_importance" for i in range(self.n_iterations)]
         ].mean(axis=1)
-        self.importances["median_shap"] = self.importances[
-            [f"iteration_{i}_shap" for i in range(self.n_iterations)]
+        self.importances["median_importance"] = self.importances[
+            [f"iteration_{i}_importance" for i in range(self.n_iterations)]
         ].median(axis=1)
-        self.importances["stdev_shap"] = self.importances[
-            [f"iteration_{i}_shap" for i in range(self.n_iterations)]
+        self.importances["stdev_importance"] = self.importances[
+            [f"iteration_{i}_importance" for i in range(self.n_iterations)]
         ].std(axis=1)
 
         self.importances["mean_rank"] = self.importances[
@@ -84,7 +85,7 @@ class BootstrapInterpreter:
         self,
         top_n: int = 10,
         percent: float = 0.5,
-        method: str = "shap",
+        method: str = "importance",
         metric="percent",
     ) -> List[str]:
         final_features = list()
@@ -93,7 +94,7 @@ class BootstrapInterpreter:
         if method == "count":
             for i in range(self.n_iterations):
                 selected_features = (
-                    self.importances.sort_values(f"iteration_{i}_shap", ascending=False)
+                    self.importances.sort_values(f"iteration_{i}_importance", ascending=False)
                     .head(top_n)["feature"]
                     .to_list()
                 )
@@ -141,24 +142,23 @@ class BootstrapInterpreter:
                     self.feature_counts["count"] > self.percent_cutoff
                 ]["feature"].to_list()
 
-        elif method == "shap":
-            # self.importances['shap_scaled'] = self.importances['mean_shap'] / self.importances['mean_shap'].sum()
+        elif method == "importance":
 
             if metric == "percent":
                 self.percent_cutoff = percent
 
                 final_features = self.importances[
-                    self.importances["mean_shap"] > self.percent_cutoff
+                    self.importances["mean_importance"] > self.percent_cutoff
                 ]["feature"].to_list()
 
             elif metric == "knee":
                 sorted_feature_counts = self.importances.sort_values(
-                    "mean_shap", ascending=False
+                    "mean_importance", ascending=False
                 ).reset_index(drop=True)
 
                 kn = KneeLocator(
                     sorted_feature_counts.index.values,
-                    sorted_feature_counts["mean_shap"].values,
+                    sorted_feature_counts["mean_importance"].values,
                     curve="convex",
                     direction="decreasing",
                 )
@@ -166,7 +166,7 @@ class BootstrapInterpreter:
                 self.percent_cutoff = kn.knee_y
 
                 final_features = self.importances[
-                    self.importances["mean_shap"] > self.percent_cutoff
+                    self.importances["mean_importance"] > self.percent_cutoff
                 ]["feature"].to_list()
 
         return final_features

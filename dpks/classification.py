@@ -2,10 +2,11 @@ from typing import TYPE_CHECKING, Any
 import xgboost
 from sklearn.model_selection import cross_val_score
 import numpy as np
-import shap
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import class_weight
+
+from dpks.inspection import FeatureImportance
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
@@ -63,34 +64,30 @@ class Classifier(BaseEstimator, ClassifierMixin):
 
     Parameters:
     - classifier: Base classifier or string identifier for XGBoost.
-    - shap_algorithm (str): SHAP algorithm to use.
     - use_sample_weight (bool): Whether to use sample weights during training.
 
     Methods:
     - fit(X, y): Fit the classifier to the data.
     - predict(X): Predict labels for input data.
     - cross_validation(X, y, k_folds): Perform cross-validation and store scores.
-    - interpret(X): Interpret the model using SHAP values.
-    - feature_importances_: Get feature importances based on SHAP values.
+    - interpret(X): Interpret the model using local purturbation importance values.
+    - feature_importances_: Get feature importances based on local purturbation importance values.
 
     """
 
     X: np.array
     y: np.array
-    shap_values: list
-    shap_algorithm: str
     mean_importance: np.ndarray
     use_sample_weight: bool
 
     def __init__(
-        self, classifier, shap_algorithm: str = "auto", use_sample_weight: bool = True
+        self, classifier, use_sample_weight: bool = True
     ):
         """
         Initialize the Classifier with a base classifier and optional parameters.
 
         Parameters:
         - classifier: Base classifier or string identifier for XGBoost.
-        - shap_algorithm: SHAP algorithm to use.
         - use_sample_weight: Whether to use sample weights during training.
 
         Returns:
@@ -112,7 +109,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
                 raise ValueError(
                     "The classifier does not have a fit and/or predict method"
                 )
-        self.shap_algorithm = shap_algorithm
         self.use_sample_weight = use_sample_weight
 
     def fit(self, X, y):
@@ -167,7 +163,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
 
     def interpret(self, X):
         """
-        Interpret the model using SHAP values.
+        Interpret the model.
 
         Parameters:
         - X: Input data.
@@ -177,46 +173,20 @@ class Classifier(BaseEstimator, ClassifierMixin):
         """
         self.X = X
 
-        if self.shap_algorithm == "permutation":
-            explainer = shap.Explainer(
-                self.classifier.predict, X, algorithm=self.shap_algorithm
-            )
+        explainer = FeatureImportance(
+            n_iterations=3,
+            feature_names=X.columns.values
+        )
 
-            self.shap_values = explainer(X, max_evals=2 * X.shape[1] + 1).values
-
-        elif (
-            self.shap_algorithm == "tree"
-            or self.shap_algorithm == "auto"
-            or self.shap_algorithm == "partition"
-        ):
-            explainer = shap.Explainer(
-                self.classifier, X, algorithm=self.shap_algorithm
-            )
-            self.shap_values = explainer.shap_values(X)
-        elif self.shap_algorithm == "linear":
-            explainer = shap.KernelExplainer(
-                self.classifier.predict, data=X, algorithm=self.shap_algorithm
-            )
-            self.shap_values = explainer.shap_values(X)
-
-        elif self.shap_algorithm == "predict_proba":
-            explainer = shap.KernelExplainer(
-                self.classifier.predict_proba,
-                data=shap.sample(X, 20),
-                algorithm=self.shap_algorithm,
-            )
-            self.shap_values = explainer.shap_values(X)
-
-        if isinstance(self.shap_values, list):
-            self.shap_values = np.swapaxes(np.array(self.shap_values), 1, 2)
+        explainer.fit(self.classifier, X.values)
 
         self.explainer = explainer
-        self.mean_importance = np.mean(abs(self.shap_values), axis=0)
+        self.mean_importance = explainer.global_explanations
 
     @property
     def feature_importances_(self):
         """
-        Get feature importances based on SHAP values.
+        Get feature importances.
 
         Returns:
         np.array: Feature importances.

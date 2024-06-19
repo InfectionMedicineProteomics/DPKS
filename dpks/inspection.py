@@ -26,7 +26,7 @@ class FeatureImportance:
 
         for i in range(X.shape[1]):
 
-            feature_slice = X.iloc[:, i].copy().values
+            feature_slice = X[:, i].copy()
 
             X_copy = X.copy()
 
@@ -35,7 +35,7 @@ class FeatureImportance:
             for _ in range(self.n_iterations):
                 np.random.shuffle(feature_slice)
 
-                X_copy.iloc[:, i] = feature_slice
+                X_copy[:, i] = feature_slice
 
                 if callable(decision_function):
                     new_predictions = clf.decision_function(X_copy)
@@ -59,9 +59,8 @@ class FeatureImportance:
                 )
             )
 
-            self.local_explanations = np.array(local_explanations)
+        self.local_explanations = np.array(local_explanations)
 
-            self.global_explanations = np.array(global_explanations)
+        self.global_explanations = np.array(global_explanations)
 
-            self.sample_index = X.index.values
 
