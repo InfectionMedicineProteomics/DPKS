@@ -21,7 +21,6 @@ install_requires = [
     "pytest",
     "pytest-runner",
     "xgboost",
-    "shap",
     "imbalanced-learn",
     "kneed",
     "gseapy",
