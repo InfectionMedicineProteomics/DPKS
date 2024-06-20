@@ -1,15 +1,11 @@
 from dpks.quant_matrix import QuantMatrix
 import pytest
-import xgboost
-from sklearn.svm import SVC
-from sklearn import tree
-from sklearn.neighbors import KNeighborsClassifier
-
+from sklearn.linear_model import LogisticRegression
 
 @pytest.fixture
 def quantified_data(paths):
 
-    clf = xgboost.XGBClassifier()
+    clf = LogisticRegression()
 
     qm = QuantMatrix(
         quantification_file=str(paths["sepsis_matrix_path"]),
@@ -27,5 +23,5 @@ def quantified_data(paths):
 
 
 def test_evaluate(quantified_data: QuantMatrix):
-    
+
     quantified_data.evaluate(method="basic", comparisons=[(2, 1)])

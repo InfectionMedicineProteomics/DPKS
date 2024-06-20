@@ -1,10 +1,5 @@
 from dpks.quant_matrix import QuantMatrix
 import pytest
-import xgboost
-from sklearn.svm import SVC
-from sklearn import tree
-from sklearn.neighbors import KNeighborsClassifier
-
 
 @pytest.fixture
 def quantified_data(paths):

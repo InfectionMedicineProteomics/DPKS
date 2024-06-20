@@ -16,9 +16,7 @@ import time
 import anndata as ad
 import gseapy as gp
 
-import xgboost
 from imblearn.under_sampling import RandomUnderSampler
-from pandas import Series, DataFrame
 from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict
 from sklearn.ensemble import HistGradientBoostingClassifier
 from unipressed import IdMappingClient

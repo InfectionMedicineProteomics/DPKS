@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING, Any
-import xgboost
 from sklearn.model_selection import cross_val_score
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
@@ -63,7 +62,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
     Wrapper class for classifiers with added functionality.
 
     Parameters:
-    - classifier: Base classifier or string identifier for XGBoost.
+    - classifier: Base classifier.
     - use_sample_weight (bool): Whether to use sample weights during training.
 
     Methods:
@@ -85,19 +84,16 @@ class Classifier(BaseEstimator, ClassifierMixin):
         Initialize the Classifier with a base classifier and optional parameters.
 
         Parameters:
-        - classifier: Base classifier or string identifier for XGBoost.
+        - classifier: Base classifier.
         - use_sample_weight: Whether to use sample weights during training.
 
         Returns:
         None
         """
         if isinstance(classifier, str):
-            if classifier == "xgboost":
-                self.classifier = xgboost.XGBClassifier(
-                    max_depth=30,
-                    eval_metric="logloss",
-                    verbosity=0,
-                )
+            raise ValueError(
+                "Must pass in an sklearn compatible classifier"
+            )
         else:
             fit_method = getattr(classifier, "fit", None)
             predict_method = getattr(classifier, "predict", None)
