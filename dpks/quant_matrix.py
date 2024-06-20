@@ -800,7 +800,8 @@ class QuantMatrix:
 
     def cluster(
         self,
-        feature_column:str = "Protein"
+        feature_column:str = "Protein",
+        q_value: float = 0.01
     ):
 
         X, y = self.to_ml(feature_column=feature_column)
@@ -820,7 +821,7 @@ class QuantMatrix:
                 (self.quantitative_data.obs['Decoy'] == 1)
             ].X
 
-        clusterer = FeatureClustering(q_value=0.01)
+        clusterer = FeatureClustering(q_value=q_value)
 
         cluster_ids = clusterer.fit_predict(X, x_background)
 
