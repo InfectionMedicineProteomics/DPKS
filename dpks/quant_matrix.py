@@ -23,6 +23,7 @@ from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_
 from sklearn.ensemble import HistGradientBoostingClassifier
 from unipressed import IdMappingClient
 
+from dpks.cluster import FeatureClustering
 from dpks.fdr import DecoyFeatures, MeanDecoyFeatures, ShuffleDecoyFeatures
 from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
@@ -794,6 +795,38 @@ class QuantMatrix:
                 print(f"Comparison {comparison[0]}-{comparison[1]}: {scores}")
 
         self.evaluate_results = evaluate_results
+
+        return self
+
+    def cluster(
+        self,
+        feature_column:str = "Protein"
+    ):
+
+        X, y = self.to_ml(feature_column=feature_column)
+
+        if not "Decoy" in self.row_annotations:
+
+            background = self.append(method="shuffle")
+
+            x_background, _ = QuantMatrix(
+                quantification_file=background.to_df()[background.to_df()['Decoy'] == 1].copy(),
+                design_matrix_file=self.sample_annotations
+            ).to_ml()
+
+        else:
+
+            x_background = self.quantitative_data[
+                (self.quantitative_data.obs['Decoy'] == 1)
+            ].X
+
+        clusterer = FeatureClustering(q_value=0.01)
+
+        cluster_ids = clusterer.fit_predict(X, x_background)
+
+        self.row_annotations['FeatureCluster'] = cluster_ids
+
+        self.clusterer = clusterer
 
         return self
 
