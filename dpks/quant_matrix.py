@@ -850,9 +850,9 @@ class QuantMatrix:
            filter_pvalue (bool, optional): Whether to filter by p-value. Defaults to False.
            pvalue_cutoff (float, optional): P-value cutoff for filtering. Defaults to 0.1.
            pvalue_column (str, optional): Column name for p-values. Defaults to "CorrectedPValue2-1".
-           filter_importance (bool, optional): Whether to filter by local purturbation importance value. Defaults to False.
-           importance_cutoff (float, optional): Local purturbation importance value cutoff for filtering. Defaults to 0.0.
-           importance_column (str, optional): Column name for local purturbation importance values. Defaults to "MeanImportance2-1".
+           filter_importance (bool, optional): Whether to filter by local perturbation importance value. Defaults to False.
+           importance_cutoff (float, optional): Local perturbation importance value cutoff for filtering. Defaults to 0.0.
+           importance_column (str, optional): Column name for local perturbation importance values. Defaults to "MeanImportance2-1".
            subset_library (bool, optional): Whether to subset the library. Defaults to False.
 
         Returns:
@@ -1040,7 +1040,7 @@ class QuantMatrix:
         scale: bool = True,
         downsample_background=False,
     ) -> QuantMatrix:
-        """Interpret the model's predictions using local purturbation importance values.
+        """Interpret the model's predictions using local perturbation importance values.
 
         Args:
             classifier: The classifier model to interpret.
@@ -1049,7 +1049,7 @@ class QuantMatrix:
             downsample_background (bool): Whether to downsample background data. Defaults to False.
 
         Returns:
-            QuantMatrix: The QuantMatrix object with local purturbation importance values added to observations.
+            QuantMatrix: The QuantMatrix object with local perturbation importance values added to observations.
 
         Examples:
             >>> quant_matrix.interpret(classifier=clf, scaler=std_scaler)
@@ -1241,7 +1241,7 @@ class QuantMatrix:
 
         Args:
             plot_type (str): The type of plot to generate. Possible values are:
-                - "importance_summary": Local purturbation importance summary plot.
+                - "importance_summary": Local perturbation importance summary plot.
                 - "rfe_pca": Recursive Feature Elimination (RFE) with Principal Component Analysis (PCA) plot.
             save (bool): Whether to save the plot. Defaults to False.
             fig (matplotlib.figure.Figure): The matplotlib figure object. Defaults to None.
@@ -1262,7 +1262,7 @@ class QuantMatrix:
             try:
                 getattr(self, "feature_importances_")
             except AttributeError:
-                print("Local purturbation importance values have not been generated")
+                print("Local perturbation importance values have not been generated")
             cmap = kwargs.get(
                 "cmap",
                 [

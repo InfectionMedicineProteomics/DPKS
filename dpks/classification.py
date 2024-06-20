@@ -70,8 +70,8 @@ class Classifier(BaseEstimator, ClassifierMixin):
     - fit(X, y): Fit the classifier to the data.
     - predict(X): Predict labels for input data.
     - cross_validation(X, y, k_folds): Perform cross-validation and store scores.
-    - interpret(X): Interpret the model using local purturbation importance values.
-    - feature_importances_: Get feature importances based on local purturbation importance values.
+    - interpret(X): Interpret the model using local perturbation importance values.
+    - feature_importances_: Get feature importances based on local perturbation importance values.
 
     """
 
