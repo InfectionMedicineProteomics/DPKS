@@ -29,7 +29,6 @@ class BootstrapInterpreter:
         results["feature"] = self.feature_names
 
         for i in range(self.n_iterations):
-
             X_train, y_train = resample(
                 X, y, replace=True, n_samples=X.shape[0] * 1, stratify=y, random_state=i
             )
@@ -94,7 +93,9 @@ class BootstrapInterpreter:
         if method == "count":
             for i in range(self.n_iterations):
                 selected_features = (
-                    self.importances.sort_values(f"iteration_{i}_importance", ascending=False)
+                    self.importances.sort_values(
+                        f"iteration_{i}_importance", ascending=False
+                    )
                     .head(top_n)["feature"]
                     .to_list()
                 )
@@ -143,7 +144,6 @@ class BootstrapInterpreter:
                 ]["feature"].to_list()
 
         elif method == "importance":
-
             if metric == "percent":
                 self.percent_cutoff = percent
 

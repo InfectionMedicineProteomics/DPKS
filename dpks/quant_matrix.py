@@ -798,34 +798,29 @@ class QuantMatrix:
 
         return self
 
-    def cluster(
-        self,
-        feature_column:str = "Protein",
-        q_value: float = 0.01
-    ):
-
+    def cluster(self, feature_column: str = "Protein", q_value: float = 0.01):
         X, y = self.to_ml(feature_column=feature_column)
 
         if not "Decoy" in self.row_annotations:
-
             background = self.append(method="shuffle")
 
             x_background, _ = QuantMatrix(
-                quantification_file=background.to_df()[background.to_df()['Decoy'] == 1].copy(),
-                design_matrix_file=self.sample_annotations
+                quantification_file=background.to_df()[
+                    background.to_df()["Decoy"] == 1
+                ].copy(),
+                design_matrix_file=self.sample_annotations,
             ).to_ml()
 
         else:
-
             x_background = self.quantitative_data[
-                (self.quantitative_data.obs['Decoy'] == 1)
+                (self.quantitative_data.obs["Decoy"] == 1)
             ].X
 
         clusterer = FeatureClustering(q_value=q_value)
 
         cluster_ids = clusterer.fit_predict(X, x_background)
 
-        self.row_annotations['FeatureCluster'] = cluster_ids
+        self.row_annotations["FeatureCluster"] = cluster_ids
 
         self.clusterer = clusterer
 

@@ -80,9 +80,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
     mean_importance: np.ndarray
     use_sample_weight: bool
 
-    def __init__(
-        self, classifier, use_sample_weight: bool = True
-    ):
+    def __init__(self, classifier, use_sample_weight: bool = True):
         """
         Initialize the Classifier with a base classifier and optional parameters.
 
@@ -173,10 +171,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
         """
         self.X = X
 
-        explainer = FeatureImportance(
-            n_iterations=3,
-            feature_names=X.columns.values
-        )
+        explainer = FeatureImportance(n_iterations=3, feature_names=X.columns.values)
 
         explainer.fit(self.classifier, X.values)
 
