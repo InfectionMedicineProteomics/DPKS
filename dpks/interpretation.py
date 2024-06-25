@@ -1,13 +1,281 @@
 from typing import Optional, List
+from typing import TYPE_CHECKING, Any
 
+import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import LabelEncoder
 
-from sklearn.utils import resample
-
-from dpks.classification import Classifier
+from sklearn.utils import resample, class_weight
 
 from imblearn.under_sampling import RandomUnderSampler
 from kneed import KneeLocator
+
+
+if TYPE_CHECKING:
+    from .quant_matrix import QuantMatrix
+else:
+    QuantMatrix = Any
+
+
+class TrainResult:
+    """
+    Class to store the results of a training process.
+
+    Parameters:
+    - classifier: Trained classifier.
+    - scaler: Scaler used during training.
+    - validation_results: Results from the validation process.
+
+    Attributes:
+    - classifier: Trained classifier.
+    - scaler: Scaler used during training.
+    - validation_results: Results from the validation process.
+    - estimator_: Alias for the trained classifier.
+
+    """
+
+    def __init__(self, classifier, scaler, validation_results):
+        """
+        Initialize TrainResult with classifier, scaler, and validation results.
+
+        Parameters:
+        - classifier: Trained classifier.
+        - scaler: Scaler used during training.
+        - validation_results: Results from the validation process.
+
+        Returns:
+        None
+        """
+        self.classifier = classifier
+        self.scaler = scaler
+        self.validation_results = validation_results
+
+    @property
+    def estimator_(self):
+        """
+        Alias for the trained classifier.
+
+        Returns:
+        Any: Trained classifier.
+        """
+        return self.classifier.classifier
+
+
+class Classifier(BaseEstimator, ClassifierMixin):
+    """
+    Wrapper class for classifiers with added functionality.
+
+    Parameters:
+    - classifier: Base classifier.
+    - use_sample_weight (bool): Whether to use sample weights during training.
+
+    Methods:
+    - fit(X, y): Fit the classifier to the data.
+    - predict(X): Predict labels for input data.
+    - cross_validation(X, y, k_folds): Perform cross-validation and store scores.
+    - interpret(X): Interpret the model using local perturbation importance values.
+    - feature_importances_: Get feature importances based on local perturbation importance values.
+
+    """
+
+    X: np.array
+    y: np.array
+    mean_importance: np.ndarray
+    use_sample_weight: bool
+
+    def __init__(self, classifier, use_sample_weight: bool = True):
+        """
+        Initialize the Classifier with a base classifier and optional parameters.
+
+        Parameters:
+        - classifier: Base classifier.
+        - use_sample_weight: Whether to use sample weights during training.
+
+        Returns:
+        None
+        """
+        if isinstance(classifier, str):
+            raise ValueError(
+                "Must pass in an sklearn compatible classifier"
+            )
+        else:
+            fit_method = getattr(classifier, "fit", None)
+            predict_method = getattr(classifier, "predict", None)
+            if callable(fit_method) and callable(predict_method):
+                self.classifier = classifier
+            else:
+                raise ValueError(
+                    "The classifier does not have a fit and/or predict method"
+                )
+        self.use_sample_weight = use_sample_weight
+
+    def fit(self, X, y):
+        """
+        Fit the classifier to the data.
+
+        Parameters:
+        - X: Input data.
+        - y: Target labels.
+
+        Returns:
+        Classifier: The fitted classifier.
+        """
+        self.X = X
+        self.y = y
+        if self.use_sample_weight:
+            sample_weights = class_weight.compute_sample_weight(
+                class_weight="balanced", y=y
+            )
+            self.classifier.fit(X, y, sample_weight=sample_weights)
+
+        else:
+            self.classifier.fit(X, y)
+        return self
+
+    def predict(self, X):
+        """
+        Predict labels for input data.
+
+        Parameters:
+        - X: Input data.
+
+        Returns:
+        np.array: Predicted labels.
+        """
+
+        return self.classifier.predict(X)
+
+    def cross_validation(self, X, y, k_folds: int = 5):
+        """
+        Perform cross-validation and store scores.
+
+        Parameters:
+        - X: Input data.
+        - y: Target labels.
+        - k_folds: Number of folds for cross-validation.
+
+        Returns:
+        None
+        """
+        self.scores = cross_val_score(self.classifier, X, y, cv=k_folds)
+
+    def interpret(self, X):
+        """
+        Interpret the model.
+
+        Parameters:
+        - X: Input data.
+
+        Returns:
+        None
+        """
+        self.X = X
+
+        explainer = FeatureImportance(n_iterations=3, feature_names=X.columns.values)
+
+        explainer.fit(self.classifier, X.values)
+
+        self.explainer = explainer
+        self.mean_importance = explainer.global_explanations
+
+    @property
+    def feature_importances_(self):
+        """
+        Get feature importances.
+
+        Returns:
+        np.array: Feature importances.
+        """
+        self.interpret(self.X)
+        return self.mean_importance
+
+    @property
+    def classes_(self):
+        return np.unique(self.y)
+
+
+def encode_labels(labels: np.ndarray) -> np.ndarray:
+    """
+    Encode labels using LabelEncoder.
+
+    Parameters:
+    - labels: Array of labels.
+
+    Returns:
+    np.ndarray: Encoded labels.
+    """
+    encoder = LabelEncoder()
+
+    return encoder.fit_transform(labels)
+
+
+def format_data(quant_matrix: QuantMatrix) -> np.ndarray:
+    """
+    Format quantitative matrix data.
+
+    Parameters:
+    - quant_matrix: QuantMatrix instance.
+
+    Returns:
+    np.ndarray: Formatted data.
+    """
+    X = quant_matrix.quantitative_data.X.copy().transpose()
+
+    return np.nan_to_num(X, copy=True, nan=0.0)
+
+class FeatureImportance:
+    all_predictions: np.ndarray
+    feature_names: list[str]
+
+    def __init__(self, n_iterations: int = 3, feature_names: list[str] = None):
+        self.n_iterations = n_iterations
+        self.feature_names = feature_names
+
+    def fit(self, clf, X) -> None:
+        decision_function = getattr(clf, "decision_function", None)
+
+        if callable(decision_function):
+            all_predictions = clf.decision_function(X)
+        else:
+            all_predictions = clf.predict_proba(X)[:, 1]
+
+        global_explanations = []
+
+        local_explanations = []
+
+        for i in range(X.shape[1]):
+            feature_slice = X[:, i].copy()
+
+            X_copy = X.copy()
+
+            losses = []
+
+            for _ in range(self.n_iterations):
+                np.random.shuffle(feature_slice)
+
+                X_copy[:, i] = feature_slice
+
+                if callable(decision_function):
+                    new_predictions = clf.decision_function(X_copy)
+                else:
+                    new_predictions = clf.predict_proba(X_copy)[:, 1]
+
+                local_lossses = all_predictions - new_predictions
+
+                losses.append(local_lossses)
+
+            local_explanation = np.mean(np.array(losses), axis=0)
+
+            local_explanations.append(local_explanation)
+            # print(np.std(losses) / np.mean(losses))
+
+            global_explanations.append(np.mean(np.mean(np.abs(local_explanation))))
+
+        self.local_explanations = np.array(local_explanations)
+
+        self.global_explanations = np.array(global_explanations)
 
 
 class BootstrapInterpreter:

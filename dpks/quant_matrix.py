@@ -9,19 +9,16 @@ instanciate a quant matrix:
 
 from __future__ import annotations
 
-from typing import Union, List, Any, Tuple, Optional
-
-import time
+from typing import Union, List, Any, Optional
 
 import anndata as ad
 import gseapy as gp
 
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict
-from sklearn.ensemble import HistGradientBoostingClassifier
-from unipressed import IdMappingClient
 
-from dpks.cluster import FeatureClustering
+
+from dpks.clustering import FeatureClustering
 from dpks.fdr import DecoyFeatures, MeanDecoyFeatures, ShuffleDecoyFeatures
 from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
@@ -29,8 +26,7 @@ import numpy as np
 import pandas as pd  # type: ignore
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
-from dpks.annotate_proteins import get_protein_labels
-from dpks.classification import Classifier, encode_labels, format_data, TrainResult
+from dpks.annotation import get_protein_labels, get_genes_from_proteins
 from dpks.differential_testing import DifferentialTest
 from dpks.imputer import (
     ImputerMethod,
@@ -58,7 +54,7 @@ from dpks.scaling import (
 )
 from dpks.correction import CorrectionMethod, MeanCorrection
 
-from dpks.interpretation import BootstrapInterpreter
+from dpks.interpretation import BootstrapInterpreter, Classifier, encode_labels, format_data, TrainResult
 
 from dpks.fdr import DecoyCounter
 
@@ -692,7 +688,7 @@ class QuantMatrix:
                 downsample_background=downsample_background,
             )
 
-            interpreter.fit(X, y, clf_)
+            interpreter.fit(X, y.values.ravel(), clf_)
 
             explain_results.append((comparison, interpreter))
 
@@ -716,12 +712,16 @@ class QuantMatrix:
         return self
 
     def evaluate(
-        self,
-        comparisons: list,
-        method: str = "basic",
-        feature_column: str = "Protein",
-        verbose: str = False,
+            self,
+            clf,
+            comparisons: list,
+            method: str = "all",
+            feature_column: str = "Protein",
+            verbose: str = False,
+            score_columns: Optional[list] = None,
     ):
+        if score_columns is None:
+            score_columns = []
         if not "Decoy" in self.row_annotations:
             raise ValueError(
                 "No Decoy features found, must call append() on a QuantMatrix first."
@@ -733,17 +733,37 @@ class QuantMatrix:
             comparisons = [comparisons]
 
         for comparison in comparisons:
-            score_columns = [
-                f"DEScore{comparison[0]}-{comparison[1]}",
-                f"Group{comparison[0]}Mean",
-                f"Group{comparison[1]}Mean",
-                f"Group{comparison[0]}Stdev",
-                f"Group{comparison[1]}Stdev",
-                f"Log2FoldChange{comparison[0]}-{comparison[1]}",
-                f"CorrectedPValue{comparison[0]}-{comparison[1]}",
-                f"MeanImportance{comparison[0]}-{comparison[1]}",
-                f"MeanRank{comparison[0]}-{comparison[1]}",
-            ]
+
+            if method == "all":
+                score_columns = [
+                    f"DEScore{comparison[0]}-{comparison[1]}",
+                    f"Group{comparison[0]}Mean",
+                    f"Group{comparison[1]}Mean",
+                    f"Group{comparison[0]}Stdev",
+                    f"Group{comparison[1]}Stdev",
+                    f"Log2FoldChange{comparison[0]}-{comparison[1]}",
+                    f"CorrectedPValue{comparison[0]}-{comparison[1]}",
+                    f"MeanImportance{comparison[0]}-{comparison[1]}",
+                    f"MeanRank{comparison[0]}-{comparison[1]}",
+                ]
+
+            elif method == "ml":
+                score_columns = [
+                    f"MeanImportance{comparison[0]}-{comparison[1]}",
+                    f"MeanRank{comparison[0]}-{comparison[1]}",
+                ]
+
+            elif method == "deg":
+
+                score_columns = [
+                    f"DEScore{comparison[0]}-{comparison[1]}",
+                    f"Group{comparison[0]}Mean",
+                    f"Group{comparison[1]}Mean",
+                    f"Group{comparison[0]}Stdev",
+                    f"Group{comparison[1]}Stdev",
+                    f"Log2FoldChange{comparison[0]}-{comparison[1]}",
+                    f"CorrectedPValue{comparison[0]}-{comparison[1]}",
+                ]
 
             X = self.row_annotations[score_columns].copy()
 
@@ -752,8 +772,6 @@ class QuantMatrix:
             scaler = StandardScaler()
 
             X[X.columns] = scaler.fit_transform(X[X.columns])
-
-            clf = HistGradientBoostingClassifier()
 
             feature_scores = cross_val_predict(
                 clf, X, y, cv=3, method="decision_function"
@@ -765,24 +783,24 @@ class QuantMatrix:
                 {
                     "feature_name": self.row_annotations[feature_column],
                     "label": y,
-                    f"FeatureScore{comparison[0]}-{comparison[1]}": feature_scores,
+                    f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}": feature_scores,
                 }
             )
 
             decoy_counter = DecoyCounter()
 
             feature_score_results[
-                f"FeatureQValue{comparison[0]}-{comparison[1]}"
+                f"{method.capitalize()}FeatureQValue{comparison[0]}-{comparison[1]}"
             ] = decoy_counter.q_values(
-                feature_score_results[f"FeatureScore{comparison[0]}-{comparison[1]}"],
+                feature_score_results[f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}"],
                 feature_score_results["label"].values,
             )
 
             self.row_annotations = self.row_annotations.join(
                 feature_score_results[
                     [
-                        f"FeatureScore{comparison[0]}-{comparison[1]}",
-                        f"FeatureQValue{comparison[0]}-{comparison[1]}",
+                        f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}",
+                        f"{method.capitalize()}FeatureQValue{comparison[0]}-{comparison[1]}",
                     ]
                 ]
             )
@@ -951,38 +969,8 @@ class QuantMatrix:
             >>> quant_matrix.annotate()
 
         """
-        request = IdMappingClient.submit(
-            source="UniProtKB_AC-ID", dest="Gene_Name", ids=self.proteins
-        )
 
-        while True:
-            status = request.get_status()
-            if status in {"FINISHED", "ERROR"}:
-                break
-            else:
-                time.sleep(1)
-
-        translation_result = list(request.each_result())
-
-        id_mapping = dict()
-
-        for id_result in translation_result:
-            mapping = id_mapping.get(id_result["from"], [])
-
-            mapping.append(id_result["to"])
-
-            id_mapping[id_result["from"]] = mapping
-
-        final_mapping = dict()
-
-        for key, value in id_mapping.items():
-            value = value[0]
-
-            final_mapping[key] = value
-
-        mapping_df = pd.DataFrame(
-            {"Protein": final_mapping.keys(), "Gene": final_mapping.values()}
-        )
+        mapping_df = get_genes_from_proteins(self.proteins)
 
         self.row_annotations = self.row_annotations.join(
             mapping_df.set_index("Protein"), on="Protein", how="left"

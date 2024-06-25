@@ -1,8 +1,11 @@
+import time
 from typing import List
 
+import pandas as pd
 from Bio import SeqIO
 import gzip
 
+from unipressed import IdMappingClient
 
 def parse_fasta(fasta):
     fasta_dict = {}
@@ -47,3 +50,41 @@ def get_protein_labels(accessions: List[str], fasta_path: str) -> List[str]:
             protein_label = accession
         protein_labels.append(protein_label)
     return protein_labels
+
+
+def get_genes_from_proteins(proteins: List[str]) -> pd.DataFrame:
+
+    request = IdMappingClient.submit(
+        source="UniProtKB_AC-ID", dest="Gene_Name", ids=proteins
+    )
+
+    while True:
+        status = request.get_status()
+        if status in {"FINISHED", "ERROR"}:
+            break
+        else:
+            time.sleep(1)
+
+    translation_result = list(request.each_result())
+
+    id_mapping = dict()
+
+    for id_result in translation_result:
+        mapping = id_mapping.get(id_result["from"], [])
+
+        mapping.append(id_result["to"])
+
+        id_mapping[id_result["from"]] = mapping
+
+    final_mapping = dict()
+
+    for key, value in id_mapping.items():
+        value = value[0]
+
+        final_mapping[key] = value
+
+    mapping_df = pd.DataFrame(
+        {"Protein": final_mapping.keys(), "Gene": final_mapping.values()}
+    )
+
+    return mapping_df
