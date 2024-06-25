@@ -7,6 +7,7 @@ import gzip
 
 from unipressed import IdMappingClient
 
+
 def parse_fasta(fasta):
     fasta_dict = {}
     for record in SeqIO.parse(fasta, "fasta"):

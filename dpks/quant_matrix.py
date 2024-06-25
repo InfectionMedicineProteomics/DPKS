@@ -54,7 +54,13 @@ from dpks.scaling import (
 )
 from dpks.correction import CorrectionMethod, MeanCorrection
 
-from dpks.interpretation import BootstrapInterpreter, Classifier, encode_labels, format_data, TrainResult
+from dpks.interpretation import (
+    BootstrapInterpreter,
+    Classifier,
+    encode_labels,
+    format_data,
+    TrainResult,
+)
 
 from dpks.fdr import DecoyCounter
 
@@ -712,13 +718,13 @@ class QuantMatrix:
         return self
 
     def evaluate(
-            self,
-            clf,
-            comparisons: list,
-            method: str = "all",
-            feature_column: str = "Protein",
-            verbose: str = False,
-            score_columns: Optional[list] = None,
+        self,
+        clf,
+        comparisons: list,
+        method: str = "all",
+        feature_column: str = "Protein",
+        verbose: str = False,
+        score_columns: Optional[list] = None,
     ):
         if score_columns is None:
             score_columns = []
@@ -792,7 +798,9 @@ class QuantMatrix:
             feature_score_results[
                 f"{method.capitalize()}FeatureQValue{comparison[0]}-{comparison[1]}"
             ] = decoy_counter.q_values(
-                feature_score_results[f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}"],
+                feature_score_results[
+                    f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}"
+                ],
                 feature_score_results["label"].values,
             )
 

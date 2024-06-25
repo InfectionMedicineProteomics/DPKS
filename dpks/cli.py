@@ -1,4 +1,5 @@
 """Console script for dpks."""
+
 import sys
 from typing import Union
 

@@ -97,9 +97,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
         None
         """
         if isinstance(classifier, str):
-            raise ValueError(
-                "Must pass in an sklearn compatible classifier"
-            )
+            raise ValueError("Must pass in an sklearn compatible classifier")
         else:
             fit_method = getattr(classifier, "fit", None)
             predict_method = getattr(classifier, "predict", None)
@@ -224,6 +222,7 @@ def format_data(quant_matrix: QuantMatrix) -> np.ndarray:
     X = quant_matrix.quantitative_data.X.copy().transpose()
 
     return np.nan_to_num(X, copy=True, nan=0.0)
+
 
 class FeatureImportance:
     all_predictions: np.ndarray
