@@ -1,6 +1,7 @@
 from dpks.quant_matrix import QuantMatrix
 import pytest
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import HistGradientBoostingClassifier
 
 @pytest.fixture
 def quantified_data(paths):
@@ -24,4 +25,6 @@ def quantified_data(paths):
 
 def test_evaluate(quantified_data: QuantMatrix):
 
-    quantified_data.evaluate(method="basic", comparisons=[(2, 1)])
+    clf = HistGradientBoostingClassifier(max_depth=2)
+
+    quantified_data.evaluate(clf, method="all", comparisons=[(2, 1)])
