@@ -1,7 +1,7 @@
 from dpks.quant_matrix import QuantMatrix
 from dpks.feature_selection import BoostrapRFE
 import pytest
-import xgboost
+from sklearn.linear_model import LogisticRegression
 import pandas as pd
 
 
@@ -26,7 +26,7 @@ def test_rfe(quantified_data: QuantMatrix):
     Not implemented.
     """
     X,y = quantified_data.to_ml()
-    clf = xgboost.XGBClassifier()
+    clf = LogisticRegression()
     bootstrap_rfe = BoostrapRFE(
         step=20,
         downsample_rate=1,
@@ -35,5 +35,5 @@ def test_rfe(quantified_data: QuantMatrix):
 
     bootstrap_rfe.fit(X,y, clf)
     feature_ranks = bootstrap_rfe.get_ranks()
-    
+
     assert isinstance(feature_ranks, pd.DataFrame)

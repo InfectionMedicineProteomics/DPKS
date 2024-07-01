@@ -22,7 +22,6 @@ class BoostrapRFE:
     - k_folds (int): Number of folds for cross-validation.
     - threads (int): Number of threads for parallel processing.
     - verbose (bool): Verbosity of the process.
-    - shap_algorithm (str): SHAP algorithm to use.
     - random_state (int): Random seed for reproducibility.
     - shuffle (bool): Whether to shuffle data during resampling.
     - replace (bool): Whether to use replacement during resampling.
@@ -46,7 +45,6 @@ class BoostrapRFE:
         k_folds: int = 3,
         threads: int = 1,
         verbose: bool = False,
-        shap_algorithm: str = "auto",
         random_state: int = 42,
         shuffle: bool = True,
         replace: bool = True,
@@ -72,7 +70,6 @@ class BoostrapRFE:
         self.min_features_to_select = min_features_to_select
         self.step = step
         self.importance_getter = importance_getter
-        self.shap_algorithm = shap_algorithm
         self.random_state = random_state
         self.shuffle = shuffle
         self.replace = replace

@@ -20,8 +20,6 @@ install_requires = [
     "biopython",
     "pytest",
     "pytest-runner",
-    "xgboost",
-    "shap",
     "imbalanced-learn",
     "kneed",
     "gseapy",
