@@ -640,6 +640,7 @@ class QuantMatrix:
         downsample_background: bool = True,
         feature_column: str = "Protein",
         fillna: bool = True,
+        use_sample_weight: bool = True,
     ) -> QuantMatrix:
         """Explain group differences using explainable machine learning and feature importance.
 
@@ -686,7 +687,7 @@ class QuantMatrix:
 
             X[:] = scaler.fit_transform(X[:])
 
-            clf_ = Classifier(clf)
+            clf_ = Classifier(clf, use_sample_weight=use_sample_weight)
 
             interpreter = BootstrapInterpreter(
                 feature_names=X.columns,
@@ -1362,7 +1363,7 @@ class QuantMatrix:
         qm_df = self.to_df()
 
         samples = self.sample_annotations[
-            self.sample_annotations["group"].isin(comparison)
+            self.sample_annotations[label_column].isin(comparison)
         ]["sample"].to_list()
 
         transposed_features = qm_df.set_index(feature_column)[samples].T
