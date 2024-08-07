@@ -85,7 +85,7 @@ class Classifier(BaseEstimator, ClassifierMixin):
     mean_importance: np.ndarray
     use_sample_weight: bool
 
-    def __init__(self, classifier, use_sample_weight: bool = True):
+    def __init__(self, classifier, use_sample_weight: bool = True, shuffle_iterations: int = 3, feature_names: list[str] = None):
         """
         Initialize the Classifier with a base classifier and optional parameters.
 
@@ -108,6 +108,8 @@ class Classifier(BaseEstimator, ClassifierMixin):
                     "The classifier does not have a fit and/or predict method"
                 )
         self.use_sample_weight = use_sample_weight
+        self.shuffle_iterations = shuffle_iterations
+        self.feature_names = feature_names
 
     def fit(self, X, y):
         """
@@ -145,6 +147,20 @@ class Classifier(BaseEstimator, ClassifierMixin):
 
         return self.classifier.predict(X)
 
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+
+        """
+        Predict probabilityies for input data.
+
+        Parameters:
+        - X: Input data.
+
+        Returns:
+        np.array: Predicted probabilities.
+        """
+
+        return self.classifier.predict_proba(X)
+
     def cross_validation(self, X, y, k_folds: int = 5):
         """
         Perform cross-validation and store scores.
@@ -171,9 +187,9 @@ class Classifier(BaseEstimator, ClassifierMixin):
         """
         self.X = X
 
-        explainer = FeatureImportance(n_iterations=3, feature_names=X.columns.values)
+        explainer = FeatureImportance(n_iterations=self.shuffle_iterations, feature_names=self.feature_names)
 
-        explainer.fit(self.classifier, X.values)
+        explainer.fit(self.classifier, X)
 
         self.explainer = explainer
         self.mean_importance = explainer.global_explanations
@@ -228,17 +244,24 @@ class FeatureImportance:
     all_predictions: np.ndarray
     feature_names: list[str]
 
-    def __init__(self, n_iterations: int = 3, feature_names: list[str] = None):
+    def __init__(self, n_iterations: int = 3, feature_names: list[str] = None, problem_type: str ="classification"):
         self.n_iterations = n_iterations
         self.feature_names = feature_names
+        self.problem_type = problem_type
 
     def fit(self, clf, X) -> None:
         decision_function = getattr(clf, "decision_function", None)
 
-        if callable(decision_function):
-            all_predictions = clf.decision_function(X)
-        else:
-            all_predictions = clf.predict_proba(X)[:, 1]
+        if self.problem_type == "classification":
+
+            if callable(decision_function):
+                all_predictions = clf.decision_function(X)
+            else:
+                all_predictions = clf.predict_proba(X)[:, 1]
+
+        elif self.problem_type == "regression":
+
+            all_predictions = clf.predict(X)
 
         global_explanations = []
 
@@ -256,10 +279,17 @@ class FeatureImportance:
 
                 X_copy[:, i] = feature_slice
 
-                if callable(decision_function):
-                    new_predictions = clf.decision_function(X_copy)
-                else:
-                    new_predictions = clf.predict_proba(X_copy)[:, 1]
+
+                if self.problem_type == "classification":
+
+                    if callable(decision_function):
+                        new_predictions = clf.decision_function(X_copy)
+                    else:
+                        new_predictions = clf.predict_proba(X_copy)[:, 1]
+
+                elif self.problem_type == "regression":
+
+                    new_predictions = clf.predict(X_copy)
 
                 local_lossses = all_predictions - new_predictions
 
@@ -283,14 +313,20 @@ class BootstrapInterpreter:
         n_iterations: int = 10,
         feature_names: Optional[List[str]] = None,
         downsample_background: bool = False,
+        problem_type: str ="classification",
+        shuffle_iterations: int = 3
+
     ):
         self.percent_cutoff = None
         self.feature_counts = None
         self.n_iterations = n_iterations
         self.feature_names = feature_names
         self.downsample_background = downsample_background
+        self.problem_type = problem_type
+        self.shuffle_iterations = shuffle_iterations
 
-    def fit(self, X, y, classifier) -> None:
+    def fit(self, X, y, clf) -> None:
+
         results = dict()
 
         results["feature"] = self.feature_names
@@ -300,22 +336,22 @@ class BootstrapInterpreter:
                 X, y, replace=True, n_samples=X.shape[0] * 1, stratify=y, random_state=i
             )
 
-            if isinstance(classifier, Classifier):
-                clf = classifier
-            else:
-                clf = Classifier(classifier=classifier)
-
-            clf.fit(X_train.values, y_train)
+            explainer = FeatureImportance(n_iterations=self.shuffle_iterations, feature_names=self.feature_names, problem_type=self.problem_type)
 
             if self.downsample_background:
                 rus = RandomUnderSampler(random_state=0)
-                X_resampled, _ = rus.fit_resample(X_train, y_train)
-                clf.interpret(X_resampled)
+
+                X_resampled, y_train = rus.fit_resample(X_train, y_train)
+                clf.fit(X_resampled, y_train)
+                explainer.fit(clf, X_resampled)
+
             else:
-                clf.interpret(X_train)
+                clf.fit(X_train, y_train)
+                explainer.fit(clf, X_train)
+
 
             results[f"iteration_{i}_importance"] = pd.Series(
-                clf.mean_importance / clf.mean_importance.max()
+                explainer.global_explanations / explainer.global_explanations.max()
             )
             results[f"iteration_{i}_rank"] = results[f"iteration_{i}_importance"].rank(
                 ascending=False
