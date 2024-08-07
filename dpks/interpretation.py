@@ -147,6 +147,20 @@ class Classifier(BaseEstimator, ClassifierMixin):
 
         return self.classifier.predict(X)
 
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+
+        """
+        Predict probabilityies for input data.
+
+        Parameters:
+        - X: Input data.
+
+        Returns:
+        np.array: Predicted probabilities.
+        """
+
+        return self.classifier.predict_proba(X)
+
     def cross_validation(self, X, y, k_folds: int = 5):
         """
         Perform cross-validation and store scores.

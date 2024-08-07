@@ -687,15 +687,13 @@ class QuantMatrix:
 
             X[:] = scaler.fit_transform(X[:])
 
-            clf_ = Classifier(clf, use_sample_weight=use_sample_weight)
-
             interpreter = BootstrapInterpreter(
                 feature_names=X.columns,
                 n_iterations=n_iterations,
                 downsample_background=downsample_background,
             )
 
-            interpreter.fit(X, y.values.ravel(), clf_)
+            interpreter.fit(X.values, y.values.ravel(), clf)
 
             explain_results.append((comparison, interpreter))
 
