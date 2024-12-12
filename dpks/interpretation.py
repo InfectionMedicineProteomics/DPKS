@@ -85,7 +85,13 @@ class Classifier(BaseEstimator, ClassifierMixin):
     mean_importance: np.ndarray
     use_sample_weight: bool
 
-    def __init__(self, classifier, use_sample_weight: bool = True, shuffle_iterations: int = 3, feature_names: list[str] = None):
+    def __init__(
+        self,
+        classifier,
+        use_sample_weight: bool = True,
+        shuffle_iterations: int = 3,
+        feature_names: list[str] = None,
+    ):
         """
         Initialize the Classifier with a base classifier and optional parameters.
 
@@ -148,7 +154,6 @@ class Classifier(BaseEstimator, ClassifierMixin):
         return self.classifier.predict(X)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
-
         """
         Predict probabilityies for input data.
 
@@ -187,7 +192,9 @@ class Classifier(BaseEstimator, ClassifierMixin):
         """
         self.X = X
 
-        explainer = FeatureImportance(n_iterations=self.shuffle_iterations, feature_names=self.feature_names)
+        explainer = FeatureImportance(
+            n_iterations=self.shuffle_iterations, feature_names=self.feature_names
+        )
 
         explainer.fit(self.classifier, X)
 
@@ -244,7 +251,12 @@ class FeatureImportance:
     all_predictions: np.ndarray
     feature_names: list[str]
 
-    def __init__(self, n_iterations: int = 3, feature_names: list[str] = None, problem_type: str ="classification"):
+    def __init__(
+        self,
+        n_iterations: int = 3,
+        feature_names: list[str] = None,
+        problem_type: str = "classification",
+    ):
         self.n_iterations = n_iterations
         self.feature_names = feature_names
         self.problem_type = problem_type
@@ -279,7 +291,6 @@ class FeatureImportance:
 
                 X_copy[:, i] = feature_slice
 
-
                 if self.problem_type == "classification":
 
                     if callable(decision_function):
@@ -313,9 +324,8 @@ class BootstrapInterpreter:
         n_iterations: int = 10,
         feature_names: Optional[List[str]] = None,
         downsample_background: bool = False,
-        problem_type: str ="classification",
-        shuffle_iterations: int = 3
-
+        problem_type: str = "classification",
+        shuffle_iterations: int = 3,
     ):
         self.percent_cutoff = None
         self.feature_counts = None
@@ -336,7 +346,11 @@ class BootstrapInterpreter:
                 X, y, replace=True, n_samples=X.shape[0] * 1, stratify=y, random_state=i
             )
 
-            explainer = FeatureImportance(n_iterations=self.shuffle_iterations, feature_names=self.feature_names, problem_type=self.problem_type)
+            explainer = FeatureImportance(
+                n_iterations=self.shuffle_iterations,
+                feature_names=self.feature_names,
+                problem_type=self.problem_type,
+            )
 
             if self.downsample_background:
                 rus = RandomUnderSampler(random_state=0)
@@ -348,7 +362,6 @@ class BootstrapInterpreter:
             else:
                 clf.fit(X_train, y_train)
                 explainer.fit(clf, X_train)
-
 
             results[f"iteration_{i}_importance"] = pd.Series(
                 explainer.global_explanations / explainer.global_explanations.max()
