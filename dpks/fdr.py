@@ -20,7 +20,7 @@ class DecoyFeatures:
     def features(self) -> pd.DataFrame:
         return pd.DataFrame(
             self.decoy_features,
-            columns=[f"decoy_{i}" for i in self.feature_names],
+            columns=self.feature_names,
             index=self.data_.index,
         )
 

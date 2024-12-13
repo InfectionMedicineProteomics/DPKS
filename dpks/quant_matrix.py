@@ -13,27 +13,32 @@ from typing import Union, List, Any, Optional
 
 import anndata as ad
 import gseapy as gp
-
-from imblearn.under_sampling import RandomUnderSampler
-from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict
-
-
-from dpks.clustering import FeatureClustering
-from dpks.fdr import DecoyFeatures, MeanDecoyFeatures, ShuffleDecoyFeatures
-from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
+from imblearn.under_sampling import RandomUnderSampler
+from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
 from dpks.annotation import get_protein_labels, get_genes_from_proteins
+from dpks.clustering import FeatureClustering
+from dpks.correction import CorrectionMethod, MeanCorrection
 from dpks.differential_testing import DifferentialTest
+from dpks.fdr import DecoyCounter
+from dpks.fdr import DecoyFeatures, MeanDecoyFeatures, ShuffleDecoyFeatures
 from dpks.imputer import (
     ImputerMethod,
     NeighborhoodImputer,
     UniformRangeImputer,
     UniformPercentileImputer,
     ConstantImputer,
+)
+from dpks.interpretation import (
+    BootstrapInterpreter,
+    Classifier,
+    encode_labels,
+    format_data,
+    TrainResult,
 )
 from dpks.normalization import (
     TicNormalization,
@@ -43,6 +48,7 @@ from dpks.normalization import (
     NormalizationMethod,
     RTSlidingWindowNormalization,
 )
+from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 from dpks.parsers import parse_diann
 from dpks.plot import ImportancePlot, RFEPCA
 from dpks.quantification import TopN, MaxLFQ
@@ -52,17 +58,6 @@ from dpks.scaling import (
     MinMaxScaling,
     AbsMaxScaling,
 )
-from dpks.correction import CorrectionMethod, MeanCorrection
-
-from dpks.interpretation import (
-    BootstrapInterpreter,
-    Classifier,
-    encode_labels,
-    format_data,
-    TrainResult,
-)
-
-from dpks.fdr import DecoyCounter
 
 
 class QuantMatrix:
@@ -563,18 +558,27 @@ class QuantMatrix:
 
             self.decoy_features.fit(X)
 
-        combined_features = X.join(self.decoy_features.features)
+        decoy_df = self.decoy_features.features.T
 
-        combined_features = combined_features.T.reset_index(names=[feature_column])
+        id_columns = ["Protein", "ProteinLabel", "Gene"]
+
+        id_df = self.row_annotations[
+            [col for col in self.row_annotations.columns if col in id_columns]
+        ].set_index(feature_column)
+
+        used_id_columns = list(id_df.columns) + [feature_column]
+
+        decoy_df = decoy_df.join(id_df).reset_index(names=[feature_column])
+
+        for col in used_id_columns:
+            decoy_df[col] = "decoy_" + decoy_df[col]
+
+        target_df = self.to_df()
+
+        combined_features = pd.concat([target_df, decoy_df], axis=0)
 
         combined_features["Decoy"] = np.where(
             combined_features[feature_column].str.contains("decoy"), 1, 0
-        )
-
-        combined_features = (
-            combined_features.set_index(feature_column)
-            .join(self.row_annotations.set_index(feature_column))
-            .reset_index(names=[feature_column])
         )
 
         return QuantMatrix(
@@ -697,19 +701,31 @@ class QuantMatrix:
 
             explain_results.append((comparison, interpreter))
 
-            importances_df = interpreter.importances[
-                ["feature", "mean_importance", "mean_rank"]
+            importances_df = interpreter.results_[
+                [
+                    "feature",
+                    "mean_importance",
+                    "mean_rank",
+                    "median_importance",
+                    "stdev_importance",
+                    "median_rank",
+                    "stdev_rank",
+                ]
             ].set_index("feature")
 
             importances_df = importances_df.rename(
                 columns={
                     "mean_importance": f"MeanImportance{comparison[0]}-{comparison[1]}",
                     "mean_rank": f"MeanRank{comparison[0]}-{comparison[1]}",
+                    "median_importance": f"MedianImportance{comparison[0]}-{comparison[1]}",
+                    "stdev_importance": f"StdevImportance{comparison[0]}-{comparison[1]}",
+                    "median_rank": f"MedianRank{comparison[0]}-{comparison[1]}",
+                    "stdev_rank": f"StdevRank{comparison[0]}-{comparison[1]}",
                 }
             )
 
             self.row_annotations = self.row_annotations.join(
-                importances_df, on="Protein"
+                importances_df, on=feature_column
             )
 
         self.explain_results = explain_results
@@ -723,9 +739,9 @@ class QuantMatrix:
         method: str = "all",
         feature_column: str = "Protein",
         verbose: str = False,
-        score_columns: Optional[list] = None,
+        base_score_columns: Optional[list] = None,
     ):
-        if score_columns is None:
+        if base_score_columns is None:
             score_columns = []
         if not "Decoy" in self.row_annotations:
             raise ValueError(
@@ -739,36 +755,48 @@ class QuantMatrix:
 
         for comparison in comparisons:
 
-            if method == "all":
-                score_columns = [
-                    f"DEScore{comparison[0]}-{comparison[1]}",
-                    f"Group{comparison[0]}Mean",
-                    f"Group{comparison[1]}Mean",
-                    f"Group{comparison[0]}Stdev",
-                    f"Group{comparison[1]}Stdev",
-                    f"Log2FoldChange{comparison[0]}-{comparison[1]}",
-                    f"CorrectedPValue{comparison[0]}-{comparison[1]}",
-                    f"MeanImportance{comparison[0]}-{comparison[1]}",
-                    f"MeanRank{comparison[0]}-{comparison[1]}",
-                ]
-
-            elif method == "ml":
-                score_columns = [
-                    f"MeanImportance{comparison[0]}-{comparison[1]}",
-                    f"MeanRank{comparison[0]}-{comparison[1]}",
-                ]
-
-            elif method == "deg":
+            if base_score_columns:
 
                 score_columns = [
-                    f"DEScore{comparison[0]}-{comparison[1]}",
-                    f"Group{comparison[0]}Mean",
-                    f"Group{comparison[1]}Mean",
-                    f"Group{comparison[0]}Stdev",
-                    f"Group{comparison[1]}Stdev",
-                    f"Log2FoldChange{comparison[0]}-{comparison[1]}",
-                    f"CorrectedPValue{comparison[0]}-{comparison[1]}",
+                    f"{score_column}{comparison[0]}-{comparison[1]}"
+                    for score_column in base_score_columns
                 ]
+
+            else:
+
+                if method == "all":
+
+                    score_columns = [
+                        f"DEScore{comparison[0]}-{comparison[1]}",
+                        f"Group{comparison[0]}Mean",
+                        f"Group{comparison[1]}Mean",
+                        f"Group{comparison[0]}Stdev",
+                        f"Group{comparison[1]}Stdev",
+                        f"Log2FoldChange{comparison[0]}-{comparison[1]}",
+                        f"CorrectedPValue{comparison[0]}-{comparison[1]}",
+                        f"MeanImportance{comparison[0]}-{comparison[1]}",
+                        f"MeanRank{comparison[0]}-{comparison[1]}",
+                    ]
+
+                elif method == "ml":
+                    score_columns = [
+                        f"MeanImportance{comparison[0]}-{comparison[1]}",
+                        f"MeanRank{comparison[0]}-{comparison[1]}",
+                        f"MedianImportance{comparison[0]}-{comparison[1]}",
+                        f"MedianRank{comparison[0]}-{comparison[1]}",
+                    ]
+
+                elif method == "deg":
+
+                    score_columns = [
+                        f"DEScore{comparison[0]}-{comparison[1]}",
+                        f"Group{comparison[0]}Mean",
+                        f"Group{comparison[1]}Mean",
+                        f"Group{comparison[0]}Stdev",
+                        f"Group{comparison[1]}Stdev",
+                        f"Log2FoldChange{comparison[0]}-{comparison[1]}",
+                        f"CorrectedPValue{comparison[0]}-{comparison[1]}",
+                    ]
 
             X = self.row_annotations[score_columns].copy()
 
