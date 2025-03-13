@@ -44,7 +44,7 @@ explain = None
 select = None
 
 #with ui.grid(rows=1, columns=3).style('min-width: 1000px; max-width: 1000px; min-height: 500px; max-height: 500px;'):
-with ui.splitter() as splitter:
+with ui.splitter(value=20) as splitter:
 
     with splitter.before:
         with ui.column().style('min-width: 100px; max-width: 100px;'):
@@ -59,7 +59,7 @@ with ui.splitter() as splitter:
 
     with splitter.after:
 
-        with ui.splitter() as splitter2:
+        with ui.splitter(value=30) as splitter2:
 
             with splitter2.before:
 
