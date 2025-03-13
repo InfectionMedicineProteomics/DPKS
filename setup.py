@@ -8,7 +8,7 @@ version = "0.1.5"
 
 install_requires = [
     "click",
-    "numpy<1.24",
+    "numpy<1.27",
     "numba",
     "scipy",
     "networkx",
