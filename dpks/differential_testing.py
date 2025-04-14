@@ -1,7 +1,8 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, List, Optional
 
 import numpy as np
 from scipy import stats  # type: ignore
+import statsmodels.api as sm  # type: ignore
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
@@ -18,6 +19,7 @@ class DifferentialTest:
     group_a: int
     group_b: int
     multiple_testing_correction_method: str
+    covariates: Optional[List[str]]
 
     def __init__(
         self,
@@ -26,11 +28,14 @@ class DifferentialTest:
         min_samples_per_group: int = 2,
         level: str = "precursor",
         multiple_testing_correction_method: str = "fdr_tsbh",
+        covariates: Optional[List[str]] = None,
     ):
         self.method = method
         self.comparisons = comparisons
         self.min_samples_per_group = min_samples_per_group
         self.multiple_testing_correction_method = multiple_testing_correction_method
+        self.covariates = covariates if covariates else []
+
         if level == "precursor":
             self.level = "PrecursorId"
 
@@ -141,7 +146,29 @@ class DifferentialTest:
                         test_results = stats.ttest_ind(group_a_data, group_b_data)
 
                     elif self.method == "linregress":
-                        test_results = stats.linregress(x=expression_data, y=labels)
+                        if not self.covariates:
+                            test_results = stats.linregress(x=expression_data, y=labels)
+                        else:
+                            all_samples = group_a_samples + group_b_samples
+                            
+                            X = sm.add_constant(labels - min(labels))  
+                            for covariate in self.covariates:
+                                    covariate_values = []
+                                    for sample in all_samples:
+                                        value = quant_matrix.sample_annotations.loc[sample, covariate]
+                                        covariate_values.append(value)
+                                    
+                                    if isinstance(covariate_values[0], str): # categorical covariate
+                                        unique_values = list(set(covariate_values))
+                                        for val in unique_values[:-1]:
+                                            dummy_var = np.array([1 if cv == val else 0 for cv in covariate_values])
+                                            X = np.column_stack([X, dummy_var])
+                                    else:
+                                        X = np.column_stack([X, covariate_values])
+
+                            model = sm.OLS(expression_data, X)
+                            results = model.fit()
+                            test_results = type('TestResults', (), {'pvalue': results.pvalues[1]})
 
                     elif self.method == "anova":
                         test_results = stats.f_oneway(group_a_data, group_b_data)
