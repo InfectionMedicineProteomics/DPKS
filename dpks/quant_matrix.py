@@ -9,33 +9,36 @@ instanciate a quant matrix:
 
 from __future__ import annotations
 
-from typing import Union, List, Any, Tuple, Optional
-
-import time
+from typing import Union, List, Any, Optional
 
 import anndata as ad
 import gseapy as gp
-
-import xgboost
-from imblearn.under_sampling import RandomUnderSampler
-from pandas import Series, DataFrame
-from sklearn.model_selection import cross_val_score, StratifiedKFold
-from unipressed import IdMappingClient
-
-from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
+from imblearn.under_sampling import RandomUnderSampler
+from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
-from dpks.annotate_proteins import get_protein_labels
-from dpks.classification import Classifier, encode_labels, format_data, TrainResult
+from dpks.annotation import get_protein_labels, get_genes_from_proteins
+from dpks.clustering import FeatureClustering
+from dpks.correction import CorrectionMethod, MeanCorrection
 from dpks.differential_testing import DifferentialTest
+from dpks.fdr import DecoyCounter
+from dpks.fdr import DecoyFeatures, MeanDecoyFeatures, ShuffleDecoyFeatures
 from dpks.imputer import (
     ImputerMethod,
+    NeighborhoodImputer,
     UniformRangeImputer,
     UniformPercentileImputer,
-    ConstantImputer
+    ConstantImputer,
+)
+from dpks.interpretation import (
+    BootstrapInterpreter,
+    Classifier,
+    encode_labels,
+    format_data,
+    TrainResult,
 )
 from dpks.normalization import (
     TicNormalization,
@@ -45,8 +48,9 @@ from dpks.normalization import (
     NormalizationMethod,
     RTSlidingWindowNormalization,
 )
+from dpks.param_search import GeneticAlgorithmSearch, RandomizedSearch, ParamSearchResult  # type: ignore
 from dpks.parsers import parse_diann
-from dpks.plot import SHAPPlot, RFEPCA
+from dpks.plot import ImportancePlot, RFEPCA
 from dpks.quantification import TopN, MaxLFQ
 from dpks.scaling import (
     ScalingMethod,
@@ -54,9 +58,6 @@ from dpks.scaling import (
     MinMaxScaling,
     AbsMaxScaling,
 )
-from dpks.correction import CorrectionMethod, MeanCorrection
-
-from dpks.interpretation import BootstrapInterpreter
 
 
 class QuantMatrix:
@@ -147,27 +148,22 @@ class QuantMatrix:
 
     @property
     def proteins(self) -> List[str]:
-
         return list(self.quantitative_data.obs["Protein"].unique())
 
     @property
     def protein_labels(self) -> List[str]:
-
         return self.row_annotations["ProteinLabel"].to_list()
 
     @property
     def sample_groups(self) -> List[str]:
-
         return self.sample_annotations["group"].to_list()
 
     @property
     def peptides(self) -> List[str]:
-
         return list(self.quantitative_data.obs["PeptideSequence"].unique())
 
     @property
     def precursors(self) -> List[str]:
-
         self.row_annotations["PrecursorId"] = (
             self.row_annotations["PeptideSequence"]
             + "_"
@@ -178,17 +174,14 @@ class QuantMatrix:
 
     @property
     def sample_annotations(self) -> pd.DataFrame:
-
         return self.quantitative_data.var
 
     @property
     def row_annotations(self) -> pd.DataFrame:
-
         return self.quantitative_data.obs
 
     @row_annotations.setter
     def row_annotations(self, value: pd.DataFrame) -> None:
-
         self.quantitative_data.obs = value
 
     def get_samples(self, group=None) -> List[str]:
@@ -202,7 +195,6 @@ class QuantMatrix:
             return self.sample_annotations["sample"]
 
     def get_pairs(self, samples: list) -> List[str]:
-
         sorted_samples = (
             self.sample_annotations[self.sample_annotations["sample"].isin(samples)]
             .set_index("sample")
@@ -222,8 +214,8 @@ class QuantMatrix:
         remove_contaminants: bool = True,
         remove_non_proteotypic: bool = True,
         remove_zero_rows: bool = True,
-        remove_n_zero_rows : bool = False,
-        max_n_zeros : int = None
+        remove_n_zero_rows: bool = False,
+        max_n_zeros: int = None,
     ) -> QuantMatrix:
         """Filter the QuantMatrix.
 
@@ -282,12 +274,13 @@ class QuantMatrix:
 
         if remove_n_zero_rows:
             if max_n_zeros == None:
-                raise ValueError("If remove proteins with more than n zeros, must pass max_n_zeros.")
+                raise ValueError(
+                    "If remove proteins with more than n zeros, must pass max_n_zeros."
+                )
             X_nan_to_num = np.nan_to_num(filtered_data.X, nan=0)
             zero_counts = np.sum(X_nan_to_num == 0, axis=1)
             rows_to_keep = zero_counts <= max_n_zeros
             filtered_data = filtered_data[rows_to_keep].copy()
-            
 
         self.num_rows = len(filtered_data)
 
@@ -335,7 +328,6 @@ class QuantMatrix:
             base_method = AbsMaxScaling()
 
         else:
-
             raise ValueError(f"Unsupported scaling method: {method}")
 
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
@@ -411,16 +403,14 @@ class QuantMatrix:
 
         return self
 
-    def correct(self, method: str = "mean", reference_batch =None):
-
+    def correct(self, method: str = "mean", reference_batch=None):
         base_method: CorrectionMethod = CorrectionMethod()
         batches = self.get_batches()
 
         if method == "mean":
-            
             if reference_batch not in batches:
                 raise ValueError("The reference batch is not one of the batches.")
-            
+
             base_method = MeanCorrection(reference_batch=reference_batch)
 
         self.quantitative_data.X = base_method.fit_transform(
@@ -521,18 +511,80 @@ class QuantMatrix:
 
             base_method = UniformRangeImputer(maxvalue=maxvalue, minvalue=minvalue)
 
-        elif method=="constant":
-            constant = float(kwargs.get("constant",0))
+        elif method == "constant":
+            constant = float(kwargs.get("constant", 0))
 
             base_method = ConstantImputer(constant=constant)
 
-        else:
+        elif method == "neighborhood":
+            n_neighbors = int(kwargs.get("n_neighbors", 5))
+            weights = str(kwargs.get("weights", "distance"))
 
+            base_method = NeighborhoodImputer(n_neighbors=n_neighbors, weights=weights)
+
+        else:
             raise ValueError(f"Unsupported imputation method: {method}")
 
         self.quantitative_data.X = base_method.fit_transform(self.quantitative_data.X)
 
         return self
+
+    def append(
+        self, method: str = "mean", feature_column: str = "Protein"
+    ) -> QuantMatrix:
+        self.decoy_features = DecoyFeatures()
+
+        if method == "mean":
+            X, y = self.to_ml(feature_column=feature_column)
+
+            n_samples = X.shape[0]
+            n_features = X.shape[1]
+
+            self.decoy_features = MeanDecoyFeatures(
+                n_samples=n_samples, n_features=n_features, feature_names=X.columns
+            )
+
+            self.decoy_features.fit(X)
+
+        elif method == "shuffle":
+            X, y = self.to_ml(feature_column=feature_column)
+
+            n_samples = X.shape[0]
+            n_features = X.shape[1]
+
+            self.decoy_features = ShuffleDecoyFeatures(
+                n_samples=n_samples, n_features=n_features, feature_names=X.columns
+            )
+
+            self.decoy_features.fit(X)
+
+        decoy_df = self.decoy_features.features.T
+
+        id_columns = ["Protein", "ProteinLabel", "Gene"]
+
+        id_df = self.row_annotations[
+            [col for col in self.row_annotations.columns if col in id_columns]
+        ].set_index(feature_column)
+
+        used_id_columns = list(id_df.columns) + [feature_column]
+
+        decoy_df = decoy_df.join(id_df).reset_index(names=[feature_column])
+
+        for col in used_id_columns:
+            decoy_df[col] = "decoy_" + decoy_df[col]
+
+        target_df = self.to_df()
+
+        combined_features = pd.concat([target_df, decoy_df], axis=0)
+
+        combined_features["Decoy"] = np.where(
+            combined_features[feature_column].str.contains("decoy"), 1, 0
+        )
+
+        return QuantMatrix(
+            quantification_file=combined_features.copy(),
+            design_matrix_file=self.quantitative_data.var.copy(),
+        )
 
     def compare(
         self,
@@ -599,6 +651,8 @@ class QuantMatrix:
         n_iterations: int = 100,
         downsample_background: bool = True,
         feature_column: str = "Protein",
+        fillna: bool = True,
+        use_sample_weight: bool = True,
     ) -> QuantMatrix:
         """Explain group differences using explainable machine learning and feature importance.
 
@@ -640,9 +694,10 @@ class QuantMatrix:
 
             scaler = StandardScaler()
 
-            X[:] = scaler.fit_transform(X[:])
+            if fillna:
+                X[:] = X[:].fillna(0.0)
 
-            clf_ = Classifier(clf)
+            X[:] = scaler.fit_transform(X[:])
 
             interpreter = BootstrapInterpreter(
                 feature_names=X.columns,
@@ -650,26 +705,183 @@ class QuantMatrix:
                 downsample_background=downsample_background,
             )
 
-            interpreter.fit(X, y, clf_)
+            interpreter.fit(X.values, y.values.ravel(), clf)
 
             explain_results.append((comparison, interpreter))
 
-            importances_df = interpreter.importances[
-                ["feature", "mean_shap", "mean_rank"]
+            importances_df = interpreter.results_[
+                [
+                    "feature",
+                    "mean_importance",
+                    "mean_rank",
+                    "median_importance",
+                    "stdev_importance",
+                    "median_rank",
+                    "stdev_rank",
+                ]
             ].set_index("feature")
 
             importances_df = importances_df.rename(
                 columns={
-                    "mean_shap": f"MeanSHAP{comparison[0]}-{comparison[1]}",
+                    "mean_importance": f"MeanImportance{comparison[0]}-{comparison[1]}",
                     "mean_rank": f"MeanRank{comparison[0]}-{comparison[1]}",
+                    "median_importance": f"MedianImportance{comparison[0]}-{comparison[1]}",
+                    "stdev_importance": f"StdevImportance{comparison[0]}-{comparison[1]}",
+                    "median_rank": f"MedianRank{comparison[0]}-{comparison[1]}",
+                    "stdev_rank": f"StdevRank{comparison[0]}-{comparison[1]}",
                 }
             )
 
             self.row_annotations = self.row_annotations.join(
-                importances_df, on="Protein"
+                importances_df, on=feature_column
             )
 
         self.explain_results = explain_results
+
+        return self
+
+    def evaluate(
+        self,
+        clf,
+        comparisons: list,
+        method: str = "all",
+        feature_column: str = "Protein",
+        verbose: str = False,
+        base_score_columns: Optional[list] = None,
+    ):
+        if base_score_columns is None:
+            score_columns = []
+        if not "Decoy" in self.row_annotations:
+            raise ValueError(
+                "No Decoy features found, must call append() on a QuantMatrix first."
+            )
+
+        evaluate_results = []
+
+        if isinstance(comparisons, tuple):
+            comparisons = [comparisons]
+
+        for comparison in comparisons:
+
+            if base_score_columns:
+
+                score_columns = [
+                    f"{score_column}{comparison[0]}-{comparison[1]}"
+                    for score_column in base_score_columns
+                ]
+
+            else:
+
+                if method == "all":
+
+                    score_columns = [
+                        f"DEScore{comparison[0]}-{comparison[1]}",
+                        f"Group{comparison[0]}Mean",
+                        f"Group{comparison[1]}Mean",
+                        f"Group{comparison[0]}Stdev",
+                        f"Group{comparison[1]}Stdev",
+                        f"Log2FoldChange{comparison[0]}-{comparison[1]}",
+                        f"CorrectedPValue{comparison[0]}-{comparison[1]}",
+                        f"MeanImportance{comparison[0]}-{comparison[1]}",
+                        f"MeanRank{comparison[0]}-{comparison[1]}",
+                    ]
+
+                elif method == "ml":
+                    score_columns = [
+                        f"MeanImportance{comparison[0]}-{comparison[1]}",
+                        f"MeanRank{comparison[0]}-{comparison[1]}",
+                        f"MedianImportance{comparison[0]}-{comparison[1]}",
+                        f"MedianRank{comparison[0]}-{comparison[1]}",
+                    ]
+
+                elif method == "deg":
+
+                    score_columns = [
+                        f"DEScore{comparison[0]}-{comparison[1]}",
+                        f"Group{comparison[0]}Mean",
+                        f"Group{comparison[1]}Mean",
+                        f"Group{comparison[0]}Stdev",
+                        f"Group{comparison[1]}Stdev",
+                        f"Log2FoldChange{comparison[0]}-{comparison[1]}",
+                        f"CorrectedPValue{comparison[0]}-{comparison[1]}",
+                    ]
+
+            X = self.row_annotations[score_columns].copy()
+
+            y = np.where(self.row_annotations["Decoy"] == 0, 1, 0)
+
+            scaler = StandardScaler()
+
+            X[X.columns] = scaler.fit_transform(X[X.columns])
+
+            feature_scores = cross_val_predict(
+                clf, X, y, cv=3, method="decision_function"
+            )
+
+            scores = cross_val_score(clf, X, y, cv=3)
+
+            feature_score_results = pd.DataFrame(
+                {
+                    "feature_name": self.row_annotations[feature_column],
+                    "label": y,
+                    f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}": feature_scores,
+                }
+            )
+
+            decoy_counter = DecoyCounter()
+
+            feature_score_results[
+                f"{method.capitalize()}FeatureQValue{comparison[0]}-{comparison[1]}"
+            ] = decoy_counter.q_values(
+                feature_score_results[
+                    f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}"
+                ],
+                feature_score_results["label"].values,
+            )
+
+            self.row_annotations = self.row_annotations.join(
+                feature_score_results[
+                    [
+                        f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}",
+                        f"{method.capitalize()}FeatureQValue{comparison[0]}-{comparison[1]}",
+                    ]
+                ]
+            )
+
+            evaluate_results.append((feature_score_results, scores))
+
+            if verbose:
+                print(f"Comparison {comparison[0]}-{comparison[1]}: {scores}")
+
+        self.evaluate_results = evaluate_results
+
+        return self
+
+    def cluster(self, feature_column: str = "Protein", q_value: float = 0.01):
+        X, y = self.to_ml(feature_column=feature_column)
+
+        if not "Decoy" in self.row_annotations:
+            background = self.append(method="shuffle")
+
+            x_background, _ = QuantMatrix(
+                quantification_file=background.to_df()[
+                    background.to_df()["Decoy"] == 1
+                ].copy(),
+                design_matrix_file=self.sample_annotations,
+            ).to_ml()
+
+        else:
+            x_background = self.quantitative_data[
+                (self.quantitative_data.obs["Decoy"] == 1)
+            ].X
+
+        clusterer = FeatureClustering(q_value=q_value)
+
+        cluster_ids = clusterer.fit_predict(X, x_background)
+
+        self.row_annotations["FeatureCluster"] = cluster_ids
+
+        self.clusterer = clusterer
 
         return self
 
@@ -682,9 +894,9 @@ class QuantMatrix:
         filter_pvalue: bool = False,
         pvalue_cutoff: float = 0.1,
         pvalue_column: str = "CorrectedPValue2-1",
-        filter_shap: bool = False,
-        shap_cutoff: float = 0.0,
-        shap_column: str = "MeanSHAP2-1",
+        filter_importance: bool = False,
+        importance_cutoff: float = 0.0,
+        importance_column: str = "MeanImportance2-1",
         subset_library: bool = False,
     ):
         """Perform gene set enrichment analysis.
@@ -697,9 +909,9 @@ class QuantMatrix:
            filter_pvalue (bool, optional): Whether to filter by p-value. Defaults to False.
            pvalue_cutoff (float, optional): P-value cutoff for filtering. Defaults to 0.1.
            pvalue_column (str, optional): Column name for p-values. Defaults to "CorrectedPValue2-1".
-           filter_shap (bool, optional): Whether to filter by SHAP value. Defaults to False.
-           shap_cutoff (float, optional): SHAP value cutoff for filtering. Defaults to 0.0.
-           shap_column (str, optional): Column name for SHAP values. Defaults to "MeanSHAP2-1".
+           filter_importance (bool, optional): Whether to filter by local perturbation importance value. Defaults to False.
+           importance_cutoff (float, optional): Local perturbation importance value cutoff for filtering. Defaults to 0.0.
+           importance_column (str, optional): Column name for local perturbation importance values. Defaults to "MeanImportance2-1".
            subset_library (bool, optional): Whether to subset the library. Defaults to False.
 
         Returns:
@@ -730,9 +942,9 @@ class QuantMatrix:
                 self.row_annotations[pvalue_column] < pvalue_cutoff
             ]
 
-        if filter_shap:
+        if filter_importance:
             gene_df = self.row_annotations[
-                self.row_annotations[shap_column] > shap_cutoff
+                self.row_annotations[importance_column] > importance_cutoff
             ]
 
         genes = gene_df["Gene"].to_list()
@@ -786,7 +998,6 @@ class QuantMatrix:
                 )
 
         else:
-
             raise ValueError(f"Unsupported pathway enrichment method: {method}")
 
         return enr
@@ -801,38 +1012,8 @@ class QuantMatrix:
             >>> quant_matrix.annotate()
 
         """
-        request = IdMappingClient.submit(
-            source="UniProtKB_AC-ID", dest="Gene_Name", ids=self.proteins
-        )
 
-        while True:
-            status = request.get_status()
-            if status in {"FINISHED", "ERROR"}:
-                break
-            else:
-                time.sleep(1)
-
-        translation_result = list(request.each_result())
-
-        id_mapping = dict()
-
-        for id_result in translation_result:
-            mapping = id_mapping.get(id_result["from"], [])
-
-            mapping.append(id_result["to"])
-
-            id_mapping[id_result["from"]] = mapping
-
-        final_mapping = dict()
-
-        for key, value in id_mapping.items():
-            value = value[0]
-
-            final_mapping[key] = value
-
-        mapping_df = pd.DataFrame(
-            {"Protein": final_mapping.keys(), "Gene": final_mapping.values()}
-        )
+        mapping_df = get_genes_from_proteins(self.proteins)
 
         self.row_annotations = self.row_annotations.join(
             mapping_df.set_index("Protein"), on="Protein", how="left"
@@ -885,21 +1066,19 @@ class QuantMatrix:
         self,
         classifier,
         scaler: Any = None,
-        shap_algorithm: str = "auto",
         scale: bool = True,
         downsample_background=False,
     ) -> QuantMatrix:
-        """Interpret the model's predictions using SHAP values.
+        """Interpret the model's predictions using local perturbation importance values.
 
         Args:
             classifier: The classifier model to interpret.
             scaler (optional): The scaler object to use for data scaling.
-            shap_algorithm (str): The SHAP algorithm to use. Defaults to "auto".
             scale (bool): Whether to scale the data before interpretation. Defaults to True.
             downsample_background (bool): Whether to downsample background data. Defaults to False.
 
         Returns:
-            QuantMatrix: The QuantMatrix object with SHAP values added to observations.
+            QuantMatrix: The QuantMatrix object with local perturbation importance values added to observations.
 
         Examples:
             >>> quant_matrix.interpret(classifier=clf, scaler=std_scaler)
@@ -915,7 +1094,7 @@ class QuantMatrix:
                 scaler = StandardScaler()
                 X = scaler.fit_transform(X)
 
-        classifier = Classifier(classifier=classifier, shap_algorithm=shap_algorithm)
+        classifier = Classifier(classifier=classifier)
 
         if downsample_background:
             rus = RandomUnderSampler(random_state=0)
@@ -928,11 +1107,11 @@ class QuantMatrix:
             self.transformed_data = X
 
         self.classifier = classifier
-        shap_values = classifier.feature_importances_.tolist()
+        feature_importances = classifier.feature_importances_.tolist()
 
-        self.quantitative_data.obs["SHAP"] = shap_values
+        self.quantitative_data.obs["Importance"] = feature_importances
 
-        self.shap = classifier.shap_values
+        self.local_feature_importances_ = classifier.explainer.local_explanations
 
         return self
 
@@ -1091,7 +1270,7 @@ class QuantMatrix:
 
         Args:
             plot_type (str): The type of plot to generate. Possible values are:
-                - "shap_summary": SHAP summary plot.
+                - "importance_summary": Local perturbation importance summary plot.
                 - "rfe_pca": Recursive Feature Elimination (RFE) with Principal Component Analysis (PCA) plot.
             save (bool): Whether to save the plot. Defaults to False.
             fig (matplotlib.figure.Figure): The matplotlib figure object. Defaults to None.
@@ -1105,14 +1284,14 @@ class QuantMatrix:
             ValueError: If an unsupported plot type is provided.
 
         Examples:
-            >>> fig, ax = quant_matrix.plot(plot_type='shap_summary', save=True, n_display=10)
+            >>> fig, ax = quant_matrix.plot(plot_type='importance_summary', save=True, n_display=10)
         """
 
-        if plot_type == "shap_summary":
+        if plot_type == "importance_summary":
             try:
-                getattr(self, "shap")
+                getattr(self, "feature_importances_")
             except AttributeError:
-                print("SHAP values have not been generated")
+                print("Local perturbation importance values have not been generated")
             cmap = kwargs.get(
                 "cmap",
                 [
@@ -1124,12 +1303,12 @@ class QuantMatrix:
                 ],
             )
 
-            order_by = kwargs.get("order_by", "shap")
+            order_by = kwargs.get("order_by", "importance")
 
-            fig, ax = SHAPPlot(
+            fig, ax = ImportancePlot(
                 fig=fig,
                 ax=ax,
-                shap_values=self.shap,
+                feature_importances=self.local_feature_importances_,
                 X=self.transformed_data,
                 qm=self,
                 cmap=cmap,
@@ -1218,7 +1397,7 @@ class QuantMatrix:
         qm_df = self.to_df()
 
         samples = self.sample_annotations[
-            self.sample_annotations["group"].isin(comparison)
+            self.sample_annotations[label_column].isin(comparison)
         ]["sample"].to_list()
 
         transposed_features = qm_df.set_index(feature_column)[samples].T

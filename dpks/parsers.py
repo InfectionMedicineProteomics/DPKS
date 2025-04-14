@@ -170,6 +170,8 @@ def parse_diann(
             inplace=True,
         )
 
-    wide_results.replace(0, np.nan, inplace=True)
+    wide_results[
+        [col for col in wide_results.columns if col not in scoring_columns]
+    ].replace(0, np.nan, inplace=True)
 
     return wide_results

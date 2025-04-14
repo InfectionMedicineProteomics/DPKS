@@ -34,9 +34,7 @@ class TicNormalization(NormalizationMethod):
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-
         with warnings.catch_warnings():
-
             warnings.simplefilter("ignore", category=RuntimeWarning)
 
             sample_sums = np.nansum(X, axis=0)
@@ -53,9 +51,7 @@ class MedianNormalization(NormalizationMethod):
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-
         with warnings.catch_warnings():
-
             warnings.simplefilter("ignore", category=RuntimeWarning)
 
             sample_medians = np.nanmedian(X, axis=0)
@@ -116,9 +112,7 @@ class MeanNormalization(NormalizationMethod):
         pass
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
-
         with warnings.catch_warnings():
-
             warnings.simplefilter("ignore", category=RuntimeWarning)
 
             sample_means = np.nanmean(X, axis=0)

@@ -215,12 +215,17 @@ class DifferentialTest:
             quant_matrix.row_annotations[f"Group{group_b}Mean"] = group_b_means
             quant_matrix.row_annotations[f"Group{group_a}Stdev"] = group_a_stdevs
             quant_matrix.row_annotations[f"Group{group_b}Stdev"] = group_b_stdevs
-            quant_matrix.row_annotations[f"Log2FoldChange{group_a}-{group_b}"] = log_fold_changes
+            quant_matrix.row_annotations[f"Log2FoldChange{group_a}-{group_b}"] = (
+                log_fold_changes
+            )
             quant_matrix.row_annotations[f"PValue{group_a}-{group_b}"] = p_values
-            quant_matrix.row_annotations[f"Group{group_a}RepCounts"] = group_a_rep_counts
-            quant_matrix.row_annotations[f"Group{group_b}RepCounts"] = group_b_rep_counts
+            quant_matrix.row_annotations[f"Group{group_a}RepCounts"] = (
+                group_a_rep_counts
+            )
+            quant_matrix.row_annotations[f"Group{group_b}RepCounts"] = (
+                group_b_rep_counts
+            )
 
-            # Correct for multiple testing
             quant_matrix.quantitative_data.obs.sort_values(
                 f"PValue{group_a}-{group_b}", inplace=True
             )
@@ -230,7 +235,11 @@ class DifferentialTest:
             ][f"PValue{group_a}-{group_b}"]
 
             correction_results = multipletests(
-                valid_pvals,
+                quant_matrix.quantitative_data.obs[
+                    ~np.isnan(
+                        quant_matrix.quantitative_data.obs[f"PValue{group_a}-{group_b}"]
+                    )
+                ][f"PValue{group_a}-{group_b}"],
                 method=self.multiple_testing_correction_method,
                 is_sorted=False,
             )

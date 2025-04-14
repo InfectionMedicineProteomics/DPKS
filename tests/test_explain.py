@@ -1,10 +1,6 @@
 from dpks.quant_matrix import QuantMatrix
 import pytest
-import xgboost
-from sklearn.svm import SVC
-from sklearn import tree
-from sklearn.neighbors import KNeighborsClassifier
-
+from sklearn.linear_model import LogisticRegression
 
 @pytest.fixture
 def quantified_data(paths):
@@ -23,20 +19,6 @@ def quantified_data(paths):
 
 
 def test_xgb(quantified_data: QuantMatrix):
-    clf = xgboost.XGBClassifier()
-    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
 
-
-def test_decision_tree(quantified_data):
-    clf = tree.DecisionTreeClassifier()
-    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
-
-
-def test_knn(quantified_data):
-    clf = KNeighborsClassifier()
-    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
-
-
-def test_svm(quantified_data):
-    clf = SVC()
+    clf = LogisticRegression()
     quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)

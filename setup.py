@@ -8,7 +8,7 @@ version = "0.1.5"
 
 install_requires = [
     "click",
-    "numpy",
+    "numpy<1.24",
     "numba",
     "scipy",
     "networkx",
@@ -20,8 +20,6 @@ install_requires = [
     "biopython",
     "pytest",
     "pytest-runner",
-    "xgboost",
-    "shap",
     "imbalanced-learn",
     "kneed",
     "gseapy",
