@@ -155,10 +155,11 @@ class DifferentialTest:
                 elif self.method == "linregress":
                     if not self.covariates:
                         group_indicator = (labels == group_a).astype(int)
-                        X = sm.add_constant(group_indicator)
+                        X = pd.DataFrame({"const": np.ones(len(group_indicator)), 
+                            "group_indicator": group_indicator})
                         model = sm.OLS(expression_data, X).fit() # switched to sm.OLS for consistency with covariates. Same as linregress
                         test_results = type("TestResults", (), {
-                            "pvalue": model.pvalues["group_indicator"]
+                            "pvalue": model.pvalues["group_indicator"],
                         })
                     else:
                         group_indicator = (labels == group_a).astype(int)
