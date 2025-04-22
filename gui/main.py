@@ -12,7 +12,7 @@ from run import run_analysis
 
 import re
 
-app.native.window_args['resizable'] = False
+app.native.window_args['resizable'] = True
 app.native.start_args['debug'] = True
 app.native.settings['ALLOW_DOWNLOADS'] = True
 
