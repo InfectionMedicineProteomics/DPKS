@@ -1,14 +1,17 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, List, Optional
 
 import numpy as np
-from scipy import stats  # type: ignore
+from scipy import stats
+import statsmodels.api as sm
+from statsmodels.stats.multitest import multipletests
+import statsmodels.formula.api as smf  
+import pandas as pd 
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
 else:
     QuantMatrix = Any
 
-from statsmodels.stats.multitest import multipletests  # type: ignore
 
 
 class DifferentialTest:
@@ -18,6 +21,7 @@ class DifferentialTest:
     group_a: int
     group_b: int
     multiple_testing_correction_method: str
+    covariates: Optional[List[str]]
 
     def __init__(
         self,
@@ -26,17 +30,18 @@ class DifferentialTest:
         min_samples_per_group: int = 2,
         level: str = "precursor",
         multiple_testing_correction_method: str = "fdr_tsbh",
+        covariates: Optional[List[str]] = None,
     ):
         self.method = method
         self.comparisons = comparisons
         self.min_samples_per_group = min_samples_per_group
         self.multiple_testing_correction_method = multiple_testing_correction_method
+        self.covariates = covariates if covariates else []
+
         if level == "precursor":
             self.level = "PrecursorId"
-
         elif level == "protein":
             self.level = "Protein"
-
         elif level == "peptide":
             self.level = "PeptideSequence"
         else:
@@ -45,10 +50,8 @@ class DifferentialTest:
     def test(self, quant_matrix: QuantMatrix) -> QuantMatrix:
         if self.level == "PrecursorId":
             identifiers = quant_matrix.precursors
-
         elif self.level == "Protein":
             identifiers = quant_matrix.proteins
-
         elif self.level == "PeptideSequence":
             identifiers = quant_matrix.peptides
         else:
@@ -56,6 +59,11 @@ class DifferentialTest:
 
         if isinstance(self.comparisons, tuple):
             self.comparisons = [self.comparisons]
+
+        # Replace zeroes with NaN to avoid messing up stats
+        quant_matrix.quantitative_data.X[
+            quant_matrix.quantitative_data.X == 0.0
+        ] = np.nan
 
         for comparison in self.comparisons:
             group_a, group_b = comparison
@@ -69,10 +77,6 @@ class DifferentialTest:
             group_b_rep_counts = []
             indices = []
 
-            quant_matrix.quantitative_data.X[
-                quant_matrix.quantitative_data.X == 0.0
-            ] = np.nan
-
             for identifier in identifiers:
                 quant_data = quant_matrix.quantitative_data[
                     quant_matrix.row_annotations[self.level] == identifier, :
@@ -80,6 +84,7 @@ class DifferentialTest:
 
                 indices.append(quant_data.obs.index.to_numpy()[0])
 
+                # Gather sample sets
                 group_a_samples = quant_matrix.get_samples(group=group_a)
                 if self.method == "ttest_paired":
                     group_b_samples = quant_matrix.get_pairs(samples=group_a_samples)
@@ -89,19 +94,20 @@ class DifferentialTest:
                 group_a_data = quant_data[:, group_a_samples].X.copy()
                 group_b_data = quant_data[:, group_b_samples].X.copy()
 
+                # Count non-NaN
                 group_a_nan = len(group_a_data[~np.isnan(group_a_data)])
                 group_b_nan = len(group_b_data[~np.isnan(group_b_data)])
 
                 group_a_rep_counts.append(group_a_nan)
                 group_b_rep_counts.append(group_b_nan)
 
+                # If either group doesn't meet min rep count, store NaN
                 if (group_a_nan < self.min_samples_per_group) or (
                     group_b_nan < self.min_samples_per_group
                 ):
                     if group_a_nan < self.min_samples_per_group:
                         group_a_means.append(np.nan)
                         group_a_stdevs.append(np.nan)
-
                     else:
                         group_a_means.append(np.mean(group_a_data))
                         group_a_stdevs.append(np.std(group_a_data))
@@ -109,60 +115,102 @@ class DifferentialTest:
                     if group_b_nan < self.min_samples_per_group:
                         group_b_means.append(np.nan)
                         group_b_stdevs.append(np.nan)
-
                     else:
                         group_b_means.append(np.mean(group_b_data))
                         group_b_stdevs.append(np.std(group_b_data))
 
                     log_fold_changes.append(np.nan)
                     p_values.append(np.nan)
+                    continue
 
-                else:
-                    group_a_data = group_a_data[~np.isnan(group_a_data)]
-                    group_b_data = group_b_data[~np.isnan(group_b_data)]
+                # Otherwise, we drop NaNs for the actual test
+                group_a_data = group_a_data[~np.isnan(group_a_data)]
+                group_b_data = group_b_data[~np.isnan(group_b_data)]
 
-                    group_a_mean = np.mean(group_a_data)
-                    group_b_mean = np.mean(group_b_data)
-                    group_a_stdev = np.std(group_a_data)
-                    group_b_stdev = np.std(group_b_data)
+                group_a_mean = np.mean(group_a_data)
+                group_b_mean = np.mean(group_b_data)
+                group_a_stdev = np.std(group_a_data)
+                group_b_stdev = np.std(group_b_data)
+                log_fold_change = group_a_mean - group_b_mean
 
-                    log_fold_change = group_a_mean - group_b_mean
+                group_a_means.append(group_a_mean)
+                group_b_means.append(group_b_mean)
+                group_a_stdevs.append(group_a_stdev)
+                group_b_stdevs.append(group_b_stdev)
+                log_fold_changes.append(log_fold_change)
 
-                    group_a_labels = np.array([1.0 for _ in range(len(group_a_data))])
-                    group_b_labels = np.array([2.0 for _ in range(len(group_b_data))])
+                expression_data = np.concatenate((group_a_data, group_b_data), axis=0)
+                labels = np.array([group_a for _ in range(len(group_a_data))] +
+                                  [group_b for _ in range(len(group_b_data))])
 
-                    labels = np.concatenate([group_a_labels, group_b_labels])
+                if self.method == "ttest":
+                    test_results = stats.ttest_ind(group_a_data, group_b_data)
 
-                    expression_data = np.concatenate(
-                        [group_a_data, group_b_data], axis=0
-                    )
+                elif self.method == "ttest_paired":
+                    test_results = stats.ttest_rel(group_a_data, group_b_data)
 
-                    if self.method == "ttest":
-                        test_results = stats.ttest_ind(group_a_data, group_b_data)
+                elif self.method == "anova":
+                    test_results = stats.f_oneway(group_a_data, group_b_data)
 
-                    elif self.method == "linregress":
-                        test_results = stats.linregress(x=expression_data, y=labels)
+                elif self.method == "linregress":
+                    if not self.covariates:
+                        group_indicator = (labels == group_a).astype(int)
+                        X = pd.DataFrame({"const": np.ones(len(group_indicator)), 
+                            "group_indicator": group_indicator})
+                        model = sm.OLS(expression_data, X).fit() # switched to sm.OLS for consistency with covariates. Same as linregress
+                        test_results = type("TestResults", (), {
+                            "pvalue": model.pvalues["group_indicator"],
+                        })
+                    else:
+                        group_indicator = (labels == group_a).astype(int)
+                        all_samples = group_a_samples + group_b_samples
 
-                    elif self.method == "anova":
-                        test_results = stats.f_oneway(group_a_data, group_b_data)
+                        df = pd.DataFrame({
+                            "expr": expression_data,
+                            "group": group_indicator
+                        })
+                        
+                        # Add covariates
+                        cat_covariates = []
+                        num_covariates = []
+                        for covariate in self.covariates:
+                            values = []
+                            for sample in all_samples:
+                                val = quant_matrix.sample_annotations.loc[sample, covariate]
+                                values.append(val)
+                            df[covariate] = values
 
-                    elif self.method == "ttest_paired":
-                        test_results = stats.ttest_rel(group_a_data, group_b_data)
+                            if isinstance(values[0], str): # guess from first row
+                                cat_covariates.append(covariate)
+                            else:
+                                num_covariates.append(covariate)
 
-                    group_a_means.append(group_a_mean)
-                    group_b_means.append(group_b_mean)
-                    group_a_stdevs.append(group_a_stdev)
-                    group_b_stdevs.append(group_b_stdev)
-                    log_fold_changes.append(log_fold_change)
-                    p_values.append(test_results.pvalue)
+                        # Build the formula
+                        # statsmodels uses R-like formulas
+                        formula_terms = ["group"]
+                        formula_terms += [f"C({covar})" for covar in cat_covariates]
+                        formula_terms += num_covariates
+                        formula = "expr ~ " + " + ".join(formula_terms)
 
-            log_p_values = [-np.log(p) for p in p_values]
+                        model = smf.ols(formula, data=df).fit()
+                        group_pval = model.pvalues["group"]
+
+                        test_results = type("TestResults", (), {"pvalue": group_pval})
+
+                p_values.append(test_results.pvalue)
+
+            # Some columns for “-logp” or combined score
+            log_p_values = [-np.log(p) if p is not None and p > 0 else np.nan
+                            for p in p_values]
             max_log_p_value = np.nanmax(log_p_values)
             max_log_fold_change = np.nanmax([abs(fc) for fc in log_fold_changes])
             de_scores = [
                 np.sqrt((p / max_log_p_value) ** 2 + (fc / max_log_fold_change) ** 2)
+                if not np.isnan(p) and max_log_p_value != 0 else np.nan
                 for p, fc in zip(log_p_values, log_fold_changes)
             ]
+
+            # Write results to row_annotations
             quant_matrix.row_annotations[f"DEScore{group_a}-{group_b}"] = de_scores
             quant_matrix.row_annotations[f"Group{group_a}Mean"] = group_a_means
             quant_matrix.row_annotations[f"Group{group_b}Mean"] = group_b_means
@@ -183,6 +231,10 @@ class DifferentialTest:
                 f"PValue{group_a}-{group_b}", inplace=True
             )
 
+            valid_pvals = quant_matrix.quantitative_data.obs[
+                ~np.isnan(quant_matrix.quantitative_data.obs[f"PValue{group_a}-{group_b}"])
+            ][f"PValue{group_a}-{group_b}"]
+
             correction_results = multipletests(
                 quant_matrix.quantitative_data.obs[
                     ~np.isnan(
@@ -193,21 +245,15 @@ class DifferentialTest:
                 is_sorted=False,
             )
 
-            corrected_results = np.empty(
-                (len(quant_matrix.quantitative_data.obs),), dtype=np.float64
+            corrected = np.full(len(quant_matrix.quantitative_data.obs), np.nan)
+            corrected[: len(correction_results[1])] = correction_results[1]
+
+            quant_matrix.quantitative_data.obs[f"CorrectedPValue{group_a}-{group_b}"] = corrected
+            quant_matrix.quantitative_data.obs[f"-Log10CorrectedPValue{group_a}-{group_b}"] = -np.log10(
+                corrected
             )
-            corrected_results[:] = np.nan
 
-            corrected_results[: len(correction_results[1])] = correction_results[1]
-
-            quant_matrix.quantitative_data.obs[
-                f"CorrectedPValue{group_a}-{group_b}"
-            ] = corrected_results
-
-            quant_matrix.quantitative_data.obs[
-                f"-Log10CorrectedPValue{group_a}-{group_b}"
-            ] = -np.log10(corrected_results)
-
+            # Restore original sort order
             quant_matrix.quantitative_data.obs.index = (
                 quant_matrix.quantitative_data.obs.index.map(int)
             )

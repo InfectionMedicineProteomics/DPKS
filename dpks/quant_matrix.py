@@ -593,6 +593,7 @@ class QuantMatrix:
         min_samples_per_group: int = 2,
         level: str = "protein",
         multiple_testing_correction_method: str = "fdr_tsbh",
+        covariates: Optional[List[str]] = None,
     ) -> QuantMatrix:
         """Compare groups by differential testing.
 
@@ -602,6 +603,7 @@ class QuantMatrix:
             min_samples_per_group (int, optional): Minimum number of samples per group. Defaults to 2.
             level (str, optional): Level of comparison. Defaults to 'protein'.
             multiple_testing_correction_method (str, optional): Method for multiple testing correction. Defaults to 'fdr_tsbh'.
+            covariates (Optional[List[str]], optional): List of column names in the design matrix to use as covariates. Defaults to None.
 
         Returns:
             QuantMatrix: Matrix containing the results of the differential testing.
@@ -613,14 +615,19 @@ class QuantMatrix:
             >>> quantified_data = quantified_data.compare(
             >>>     method="linregress",
             >>>     min_samples_per_group=2,
-            >>>     comparisons=[(2, 1), (3, 1)]
+            >>>     comparisons=[(2, 1), (3, 1)],
+            >>>     covariates=["gender", "age"]
             >>> )
-
-
         """
 
         if not method in {"ttest", "linregress", "anova", "ttest_paired"}:
             raise ValueError(f"Unsupported statistical comparison method: {method}")
+
+        # Check that all covariates are in the sample annotations
+        if covariates:
+            for covariate in covariates:
+                if covariate not in self.sample_annotations.columns:
+                    raise ValueError(f"Covariate '{covariate}' not found in sample annotations")
 
         differential_test = DifferentialTest(
             method,
@@ -628,6 +635,7 @@ class QuantMatrix:
             min_samples_per_group,
             level,
             multiple_testing_correction_method,
+            covariates,
         )
 
         compared_data = differential_test.test(self)
