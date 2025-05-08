@@ -633,10 +633,11 @@ class QuantMatrix:
         differential_test = DifferentialTest(
             method,
             comparisons,
-            min_samples_per_group,
-            level,
-            multiple_testing_correction_method,
-            covariates,
+            min_samples_per_group=min_samples_per_group,
+            level=level,
+            multiple_testing_correction_method=multiple_testing_correction_method,
+            covariates=covariates,
+            log2_transformed=log2_transformed,
         )
 
         compared_data = differential_test.test(self)
