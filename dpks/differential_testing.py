@@ -4,8 +4,8 @@ import numpy as np
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.stats.multitest import multipletests
-import statsmodels.formula.api as smf  
-import pandas as pd 
+import statsmodels.formula.api as smf
+import pandas as pd
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
@@ -22,6 +22,7 @@ class DifferentialTest:
     group_b: int
     multiple_testing_correction_method: str
     covariates: Optional[List[str]]
+    log2_transformed: bool
 
     def __init__(
         self,
@@ -31,12 +32,14 @@ class DifferentialTest:
         level: str = "precursor",
         multiple_testing_correction_method: str = "fdr_tsbh",
         covariates: Optional[List[str]] = None,
+        log2_transformed: bool = True,
     ):
         self.method = method
         self.comparisons = comparisons
         self.min_samples_per_group = min_samples_per_group
         self.multiple_testing_correction_method = multiple_testing_correction_method
         self.covariates = covariates if covariates else []
+        self.log2_transformed = log2_transformed
 
         if level == "precursor":
             self.level = "PrecursorId"
@@ -131,7 +134,14 @@ class DifferentialTest:
                 group_b_mean = np.mean(group_b_data)
                 group_a_stdev = np.std(group_a_data)
                 group_b_stdev = np.std(group_b_data)
-                log_fold_change = group_a_mean - group_b_mean
+
+                if self.log2_transformed:
+
+                    log_fold_change = group_a_mean - group_b_mean
+
+                else:
+
+                    log_fold_change = group_a_mean / group_b_mean
 
                 group_a_means.append(group_a_mean)
                 group_b_means.append(group_b_mean)
@@ -155,7 +165,7 @@ class DifferentialTest:
                 elif self.method == "linregress":
                     if not self.covariates:
                         group_indicator = (labels == group_a).astype(int)
-                        X = pd.DataFrame({"const": np.ones(len(group_indicator)), 
+                        X = pd.DataFrame({"const": np.ones(len(group_indicator)),
                             "group_indicator": group_indicator})
                         model = sm.OLS(expression_data, X).fit() # switched to sm.OLS for consistency with covariates. Same as linregress
                         test_results = type("TestResults", (), {
@@ -169,7 +179,7 @@ class DifferentialTest:
                             "expr": expression_data,
                             "group": group_indicator
                         })
-                        
+
                         # Add covariates
                         cat_covariates = []
                         num_covariates = []

@@ -594,6 +594,7 @@ class QuantMatrix:
         level: str = "protein",
         multiple_testing_correction_method: str = "fdr_tsbh",
         covariates: Optional[List[str]] = None,
+        log2_transformed: bool = True,
     ) -> QuantMatrix:
         """Compare groups by differential testing.
 
