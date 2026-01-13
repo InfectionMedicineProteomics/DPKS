@@ -533,6 +533,7 @@ class QuantMatrix:
         self, method: str = "mean", feature_column: str = "Protein"
     ) -> QuantMatrix:
 
+
         self.decoy_features = DecoyFeatures()
 
         if method == "mean":
