@@ -91,6 +91,7 @@ class QuantMatrix:
             >>> quant_matrix = QuantMatrix("quantification.tsv", "design_matrix.csv", annotation_fasta_file="annotation.fasta")
         """
 
+        self.added_decoys = False
         self.annotated = False
         self.explain_results = None
         if isinstance(design_matrix_file, str):
@@ -533,8 +534,7 @@ class QuantMatrix:
         self, method: str = "mean", feature_column: str = "Protein"
     ) -> QuantMatrix:
 
-
-        self.decoy_features = DecoyFeatures()
+        decoy_model = DecoyFeatures()
 
         if method == "mean":
             X, y = self.to_ml(feature_column=feature_column)
@@ -542,11 +542,11 @@ class QuantMatrix:
             n_samples = X.shape[0]
             n_features = X.shape[1]
 
-            self.decoy_features = MeanDecoyFeatures(
+            decoy_model = MeanDecoyFeatures(
                 n_samples=n_samples, n_features=n_features, feature_names=X.columns
             )
 
-            self.decoy_features.fit(X)
+            decoy_model.fit(X)
 
         elif method == "shuffle":
             X, y = self.to_ml(feature_column=feature_column)
@@ -554,13 +554,13 @@ class QuantMatrix:
             n_samples = X.shape[0]
             n_features = X.shape[1]
 
-            self.decoy_features = ShuffleDecoyFeatures(
+            decoy_model = ShuffleDecoyFeatures(
                 n_samples=n_samples, n_features=n_features, feature_names=X.columns
             )
 
-            self.decoy_features.fit(X)
+            decoy_model.fit(X)
 
-        decoy_df = self.decoy_features.features.T
+        decoy_df = decoy_model.features.T
 
         id_columns = ["Protein", "ProteinLabel", "Gene"]
 
@@ -575,18 +575,15 @@ class QuantMatrix:
         for col in used_id_columns:
             decoy_df[col] = "decoy_" + decoy_df[col]
 
-        target_df = self.to_df()
-
-        combined_features = pd.concat([target_df, decoy_df], axis=0)
-
-        combined_features["Decoy"] = np.where(
-            combined_features[feature_column].str.contains("decoy"), 1, 0
-        )
-
-        return QuantMatrix(
-            quantification_file=combined_features.copy(),
+        self.decoy_features = QuantMatrix(
+            quantification_file=decoy_df.copy(),
             design_matrix_file=self.quantitative_data.var.copy(),
         )
+
+        self.decoy_model = decoy_model
+        self.added_decoys = True
+
+        return self
 
     def compare(
         self,
@@ -755,7 +752,7 @@ class QuantMatrix:
     ):
         if base_score_columns is None:
             score_columns = []
-        if not "Decoy" in self.row_annotations:
+        if not self.added_decoys:
             raise ValueError(
                 "No Decoy features found, must call append() on a QuantMatrix first."
             )
@@ -862,22 +859,16 @@ class QuantMatrix:
         return self
 
     def cluster(self, feature_column: str = "Protein", q_value: float = 0.01):
+
+        if not self.added_decoys:
+
+            raise ValueError(
+                "No Decoy features found, must call append() on a QuantMatrix first."
+            )
+
         X, y = self.to_ml(feature_column=feature_column)
 
-        if not "Decoy" in self.row_annotations:
-            background = self.append(method="shuffle")
-
-            x_background, _ = QuantMatrix(
-                quantification_file=background.to_df()[
-                    background.to_df()["Decoy"] == 1
-                ].copy(),
-                design_matrix_file=self.sample_annotations,
-            ).to_ml()
-
-        else:
-            x_background = self.quantitative_data[
-                (self.quantitative_data.obs["Decoy"] == 1)
-            ].X
+        x_background, _ = self.decoy_features.to_ml(feature_column=feature_column)
 
         clusterer = FeatureClustering(q_value=q_value)
 
