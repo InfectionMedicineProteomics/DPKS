@@ -201,7 +201,7 @@ class QuantMatrix:
             .loc[samples]
         )
 
-        return list(sorted_samples["pair"])
+        return list(sorted_samples["paired"])
 
     def get_batches(self) -> np.ndarray:
         return self.sample_annotations["batch"].values
