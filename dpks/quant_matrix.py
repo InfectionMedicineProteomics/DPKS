@@ -16,6 +16,7 @@ import gseapy as gp
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
+from sklearn.pipeline import Pipeline
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler, LabelEncoder
@@ -531,7 +532,7 @@ class QuantMatrix:
         return self
 
     def append(
-        self, method: str = "mean", feature_column: str = "Protein"
+        self, method: str = "mean", feature_column: str = "Protein", in_background: bool = False
     ) -> QuantMatrix:
 
         decoy_model = DecoyFeatures()
@@ -575,15 +576,37 @@ class QuantMatrix:
         for col in used_id_columns:
             decoy_df[col] = "decoy_" + decoy_df[col]
 
-        self.decoy_features = QuantMatrix(
-            quantification_file=decoy_df.copy(),
-            design_matrix_file=self.quantitative_data.var.copy(),
-        )
+        if in_background:
 
-        self.decoy_model = decoy_model
-        self.added_decoys = True
+            self.decoy_features = QuantMatrix(
+                quantification_file=decoy_df.copy(),
+                design_matrix_file=self.quantitative_data.var.copy(),
+            )
 
-        return self
+            self.decoy_model = decoy_model
+            self.added_decoys = True
+
+            return self
+
+        else:
+
+            target_df = self.to_df()
+
+            combined_features = pd.concat([target_df, decoy_df], axis=0)
+
+            combined_features["Decoy"] = np.where(
+                combined_features[feature_column].str.contains("decoy"), 1, 0
+            )
+
+            qm = QuantMatrix(
+                quantification_file=combined_features.copy(),
+                design_matrix_file=self.quantitative_data.var.copy(),
+            )
+
+            qm.decoy_model = decoy_model
+            qm.added_decoys = True
+
+            return qm
 
     def compare(
         self,
@@ -693,6 +716,7 @@ class QuantMatrix:
         for comparison in comparisons:
             X, y = self.to_ml(feature_column=feature_column, comparison=comparison)
 
+            #TODO: add CV loop for feature explanations with accuracy scores to provide model estimate
             scaler = StandardScaler()
 
             if fillna:
@@ -766,10 +790,7 @@ class QuantMatrix:
 
             if base_score_columns:
 
-                score_columns = [
-                    f"{score_column}{comparison[0]}-{comparison[1]}"
-                    for score_column in base_score_columns
-                ]
+                score_columns = [score_col for score_col in base_score_columns]
 
             else:
 
@@ -793,6 +814,8 @@ class QuantMatrix:
                         f"MeanRank{comparison[0]}-{comparison[1]}",
                         f"MedianImportance{comparison[0]}-{comparison[1]}",
                         f"MedianRank{comparison[0]}-{comparison[1]}",
+                        f"StdevImportance{comparison[0]}-{comparison[1]}",
+                        f"StdevRank{comparison[0]}-{comparison[1]}",
                     ]
 
                 elif method == "deg":
@@ -811,15 +834,18 @@ class QuantMatrix:
 
             y = np.where(self.row_annotations["Decoy"] == 0, 1, 0)
 
-            scaler = StandardScaler()
-
-            X[X.columns] = scaler.fit_transform(X[X.columns])
-
-            feature_scores = cross_val_predict(
-                clf, X, y, cv=3, method="decision_function"
+            pipe = Pipeline(
+                [
+                    ("scaler", StandardScaler()),
+                    ("clf", clf)
+                ]
             )
 
-            scores = cross_val_score(clf, X, y, cv=3)
+            feature_scores = cross_val_predict(
+                pipe, X, y, cv=3, method="decision_function"
+            )
+
+            scores = cross_val_score(pipe, X, y, cv=3)
 
             feature_score_results = pd.DataFrame(
                 {
@@ -836,8 +862,8 @@ class QuantMatrix:
             ] = decoy_counter.q_values(
                 feature_score_results[
                     f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}"
-                ],
-                feature_score_results["label"].values,
+                ].to_numpy(),
+                feature_score_results["label"].to_numpy(),
             )
 
             self.row_annotations = self.row_annotations.join(
