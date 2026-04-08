@@ -62,3 +62,4 @@ def test_differential_testing_paired(paths):
     )
 
     assert isinstance(compared_data, QuantMatrix)
+
