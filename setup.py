@@ -25,6 +25,7 @@ install_requires = [
     "gseapy",
     "unipressed",
     "jupyterlab",
+    "streamlit"
 ]
 
 

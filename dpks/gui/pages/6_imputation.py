@@ -1,0 +1,142 @@
+"""
+Page 5 — Imputation
+Impute missing values before protein quantification.
+"""
+
+#TODO: Add NearestNeighbor imputation
+
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+import copy
+import streamlit as st
+from utils.state import render_sidebar, require_step, get_qm, set_qm
+from utils.plots import missingness_heatmap
+
+st.set_page_config(page_title="6. Imputation — DPKS GUI", layout="wide")
+render_sidebar()
+
+st.title("6. Imputation")
+st.markdown(
+    "Impute missing (NaN / zero) intensity values. "
+    "This step is optional — some quantification methods handle missing values internally."
+)
+
+if not require_step("qm_quantified", "Quantification", "4. Quantification"):
+    st.stop()
+
+qm_input = get_qm("qm_quantified")
+
+print("hello")
+print(qm_input.row_annotations)
+
+# ── Missingness summary ────────────────────────────────────────────────────
+import numpy as np
+
+X = qm_input.quantitative_data.X
+n_total = X.size
+n_missing = int(np.sum(np.isnan(X)) + np.sum(X == 0))
+pct_missing = n_missing / n_total * 100
+
+st.divider()
+st.subheader("🔍 Missingness Summary")
+
+m1, m2, m3 = st.columns(3)
+m1.metric("Total values", f"{n_total:,}")
+m2.metric("Missing / zero values", f"{n_missing:,}")
+m3.metric("% Missing", f"{pct_missing:.1f}%")
+
+with st.expander("Show missingness heatmap"):
+    st.plotly_chart(
+        missingness_heatmap(qm_input, feature_index="Protein", title="Missingness Before Imputation"),
+        use_container_width=True,
+    )
+
+st.divider()
+
+# ── Imputation parameters ──────────────────────────────────────────────────
+st.subheader("⚙️ Imputation Parameters")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    impute_method = st.selectbox(
+        "Imputation method",
+        options=["uniform_percentile", "uniform_range"],
+        help=(
+            "**uniform_percentile** — replace missing values with a random draw from "
+            "[0, percentile] of the observed distribution. "
+            "**uniform_range** — replace with a uniform random draw from [minvalue, maxvalue]."
+        ),
+    )
+
+with col2:
+    if impute_method == "uniform_percentile":
+        percentile = st.slider(
+            "Percentile",
+            min_value=0.01, max_value=0.5, value=0.1, step=0.01,
+            help="Values are drawn from [0, this percentile of observed intensities].",
+        )
+    else:
+        col_min, col_max = st.columns(2)
+        minvalue = col_min.number_input("Min value", value=0, step=1)
+        maxvalue = col_max.number_input("Max value", value=1, step=1)
+
+
+st.divider()
+
+# ── Skip / Apply ───────────────────────────────────────────────────────────
+col_run, col_skip = st.columns([2, 1])
+
+with col_run:
+    run_impute = st.button("▶️ Apply Imputation", type="primary")
+
+with col_skip:
+    skip_impute = st.button("⏭️ Skip this step")
+
+if skip_impute:
+    set_qm("qm_imputed", copy.deepcopy(qm_input))
+    st.success("✅ Skipped — data passed through unchanged.")
+
+if run_impute:
+    try:
+        with st.spinner("Imputing missing values…"):
+            qm_imputed = copy.deepcopy(qm_input)
+
+            impute_kwargs = dict(method=impute_method)
+            if impute_method == "uniform_percentile":
+                impute_kwargs["percentile"] = float(percentile)
+            else:
+                impute_kwargs["minvalue"] = int(minvalue)
+                impute_kwargs["maxvalue"] = int(maxvalue)
+
+            qm_imputed = qm_imputed.impute(**impute_kwargs)
+
+        set_qm("qm_imputed", qm_imputed)
+        st.success("✅ Imputation complete.")
+
+    except Exception as e:
+        st.error(f"❌ Imputation failed: {e}")
+        st.exception(e)
+
+# ── Results preview ────────────────────────────────────────────────────────
+qm_imputed = st.session_state.get("qm_imputed")
+
+if qm_imputed is not None:
+    st.divider()
+    st.subheader("📊 Results")
+
+    X_after = qm_imputed.quantitative_data.X
+    n_missing_after = int(np.sum(np.isnan(X_after)) + np.sum(X_after == 0))
+
+    ma1, ma2 = st.columns(2)
+    ma1.metric("Missing / zero before", f"{n_missing:,}")
+    ma2.metric("Missing / zero after", f"{n_missing_after:,}", delta=-(n_missing - n_missing_after))
+
+    with st.expander("Show missingness heatmap after imputation"):
+        st.plotly_chart(
+            missingness_heatmap(qm_imputed, feature_index="Protein", title="Missingness After Imputation"),
+            use_container_width=True,
+        )
+
+    st.info("👉 Proceed to **6. Quantification** in the sidebar.")
