@@ -4,8 +4,8 @@ import numpy as np
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.stats.multitest import multipletests
-import statsmodels.formula.api as smf  
-import pandas as pd 
+import statsmodels.formula.api as smf
+import pandas as pd
 
 if TYPE_CHECKING:
     from .quant_matrix import QuantMatrix
@@ -147,7 +147,9 @@ class DifferentialTest:
                     test_results = stats.ttest_ind(group_a_data, group_b_data)
 
                 elif self.method == "ttest_paired":
-                    test_results = stats.ttest_rel(group_a_data, group_b_data)
+                    # If data arrays are inbalanced, remove corresponding samples that doesn't have a pair
+                    pair_end = int(min([len(group_a_data),len(group_b_data)]))
+                    test_results = stats.ttest_rel(group_a_data[:pair_end], group_b_data[:pair_end])
 
                 elif self.method == "anova":
                     test_results = stats.f_oneway(group_a_data, group_b_data)
@@ -155,7 +157,7 @@ class DifferentialTest:
                 elif self.method == "linregress":
                     if not self.covariates:
                         group_indicator = (labels == group_a).astype(int)
-                        X = pd.DataFrame({"const": np.ones(len(group_indicator)), 
+                        X = pd.DataFrame({"const": np.ones(len(group_indicator)),
                             "group_indicator": group_indicator})
                         model = sm.OLS(expression_data, X).fit() # switched to sm.OLS for consistency with covariates. Same as linregress
                         test_results = type("TestResults", (), {
@@ -169,7 +171,7 @@ class DifferentialTest:
                             "expr": expression_data,
                             "group": group_indicator
                         })
-                        
+
                         # Add covariates
                         cat_covariates = []
                         num_covariates = []
