@@ -28,4 +28,7 @@ Homepage = "https://github.com/InfectionMedicineProteomics/DPKS"
 Documentation = "https://infectionmedicineproteomics.github.io/DPKS/"
 Issues = "https://github.com/InfectionMedicineProteomics/DPKS/issues"
 
+[project.scripts]
+dpks = "dpks.cli.main:app"
+
 

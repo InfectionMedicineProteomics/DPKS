@@ -108,7 +108,7 @@ if filter_mode == "Importance value" and explain_comparisons:
             step=0.001,
             format="%.4f",
         )
-        filter_kwargs = dict(filter_Importance=True, Importance_column=importance_col, Importance_cutoff=importance_cutoff)
+        filter_kwargs = dict(filter_importance=True, importance_column=importance_col, importance_cutoff=importance_cutoff)
     else:
         st.warning(f"Column `{importance_col}` not found. Check the Explainable ML step.")
 

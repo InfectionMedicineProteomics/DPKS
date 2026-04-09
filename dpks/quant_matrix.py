@@ -76,7 +76,7 @@ class QuantMatrix:
         quantification_file: Union[str, pd.DataFrame],
         design_matrix_file: Union[str, pd.DataFrame],
         annotation_fasta_file: str = None,
-        quant_type: str = "gps",
+        quant_type: str = "standard",
         diann_qvalue: float = 0.01,
     ) -> None:
         """Initialize the QuantMatrix instance.
@@ -85,7 +85,7 @@ class QuantMatrix:
             quantification_file (Union[str, pd.DataFrame]): Path to the quantification file or DataFrame.
             design_matrix_file (Union[str, pd.DataFrame]): Path to the design matrix file or DataFrame.
             annotation_fasta_file (str, optional): Path to the annotation FASTA file. Defaults to None.
-            quant_type (str, optional): Type of quantification. Defaults to "gps".
+            quant_type (str, optional): Type of quantification. Defaults to "standard".
             diann_qvalue (float, optional): DIANN q-value. Defaults to 0.01.
 
         Examples:
@@ -101,7 +101,7 @@ class QuantMatrix:
             design_matrix_file.columns = map(str.lower, design_matrix_file.columns)
 
         if isinstance(quantification_file, str):
-            if quant_type == "gps":
+            if quant_type == "standard":
                 quantification_file = pd.read_csv(quantification_file, sep="\t")
 
             elif quant_type == "diann":
