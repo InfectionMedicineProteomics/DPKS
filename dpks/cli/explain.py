@@ -21,11 +21,12 @@ _CLASSIFIERS = {
     "logistic_regression":("sklearn.linear_model","LogisticRegression"),
 }
 
-# left it open to possibly add more models, but this needs to be optimized somehow and should
+# TODO: left it open to possibly add more models, but this needs to be optimized somehow and should
 # probably be done in a notebook outside of the command line. As it stands, only basic logistic regression is
 # implemented here
 # For example, how would we optimize hyperparameters for more complex models? We could implement an optimize step
 # that builds an optimized model from a dataset, and then pass those parameters and the model to this step.
+# TODO: Similar to this, should we add a CLI command for enrich()
 def _build_classifier(name: str):
     entry = _CLASSIFIERS.get(name)
     if entry is None:

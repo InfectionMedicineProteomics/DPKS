@@ -1,6 +1,8 @@
-<p>
-    <img src="/docs/img/logo.png", width="100" />
-</p>
+[//]: # (<p>)
+
+[//]: # (    <img src="/docs/img/logo.png", width="100"  alt="DPKS Logo"/>)
+
+[//]: # (</p>)
 
 
 # DPKS (Data Processing Kitchen Sink)
@@ -119,6 +121,19 @@ DPKS makes complicated analysis easy, and allows you to explore multiple analyti
 ## Getting started
 
 -   Take a look at the [documentation](https://infectionmedicineproteomics.github.io/DPKS/) for instructions on how to get started.
+
+## Command Line Interface (CLI)
+
+```bash
+dpks filter
+dpks normalize
+dpks correct
+dpks quantify
+dpks impute
+dpks compare
+dpks explain
+dpks gui
+```
 
 # Contributors
 

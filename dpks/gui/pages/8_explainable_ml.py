@@ -103,7 +103,7 @@ with st.expander("⚙️ Classifier Hyperparameters", expanded=True):
 
     elif clf_name == "Logistic Regression":
         params["C"] = col1.number_input(
-            help="Lower values for stronger regularization", label="Regularization C", min_value=0.001, max_value=100.0, value=1.0)
+            help="Lower values for stronger regularization", label="Regularization C", min_value=0.000001, max_value=100.0, value=1.0)
         params["max_iter"] = col2.number_input("max_iter", 100, 5000, 1000, step=100)
         params['penalty'] = col1.selectbox("Penalty", ["l1", "l2", "elasticnet"])
         params['solver'] = "liblinear"

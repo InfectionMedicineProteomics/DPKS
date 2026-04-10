@@ -5,8 +5,11 @@ Import this at the top of every page:
     from utils.state import render_sidebar, require_step, get_qm, set_qm
 """
 
+from pathlib import Path
+from PIL import Image
 import streamlit as st
 
+ASSETS = Path(__file__).parent.parent / "assets"
 
 # ── Pipeline step keys ────────────────────────────────────────────────────────
 STEP_KEYS = {
@@ -25,7 +28,16 @@ STEP_KEYS = {
 
 def render_sidebar():
     """Render the pipeline progress in the sidebar."""
-    st.sidebar.title("DPKS Pipeline")
+
+    logo_path = ASSETS / "logo.png"
+    if logo_path.exists():
+        st.logo(
+            str(logo_path),
+            size="large",
+            link="https://github.com/InfectionMedicineProteomics/DPKS",
+        )
+
+    st.sidebar.title("DPKS Pipeline Steps")
     st.sidebar.markdown("---")
     for key, label in STEP_KEYS.items():
         done = st.session_state.get(key) is not None

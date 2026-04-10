@@ -115,4 +115,3 @@ def filter(
      )
 
     save_quant_matrix(qm, output)
-
