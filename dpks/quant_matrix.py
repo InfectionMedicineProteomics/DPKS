@@ -9,6 +9,7 @@ instanciate a quant matrix:
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Union, List, Any, Optional
 
 import anndata as ad
@@ -16,10 +17,12 @@ import gseapy as gp
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
+from joblib import dump, load
 from sklearn.pipeline import Pipeline
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+from statsmodels.genmod.qif import QIFAutoregressive
 
 from dpks.annotation import get_protein_labels, get_genes_from_proteins
 from dpks.clustering import FeatureClustering
@@ -605,6 +608,10 @@ class QuantMatrix:
 
             qm.decoy_model = decoy_model
             qm.added_decoys = True
+            qm.decoy_features = QuantMatrix(
+                quantification_file=decoy_df.copy(),
+                design_matrix_file=self.quantitative_data.var.copy(),
+            )
 
             return qm
 
@@ -676,6 +683,7 @@ class QuantMatrix:
         downsample_background: bool = True,
         feature_column: str = "Protein",
         fillna: bool = True,
+        shuffle_iterations: int = 10,
         use_sample_weight: bool = True,
     ) -> QuantMatrix:
         """Explain group differences using explainable machine learning and feature importance.
@@ -728,6 +736,7 @@ class QuantMatrix:
                 feature_names=X.columns,
                 n_iterations=n_iterations,
                 downsample_background=downsample_background,
+                shuffle_iterations=shuffle_iterations,
             )
 
             interpreter.fit(X.values, y.values.ravel(), clf)
@@ -786,6 +795,9 @@ class QuantMatrix:
         if isinstance(comparisons, tuple):
             comparisons = [comparisons]
 
+
+        self.evaluate_models_ = []
+
         for comparison in comparisons:
 
             if base_score_columns:
@@ -831,7 +843,6 @@ class QuantMatrix:
                     ]
 
             X = self.row_annotations[score_columns].copy()
-
             y = np.where(self.row_annotations["Decoy"] == 0, 1, 0)
 
             pipe = Pipeline(
@@ -846,6 +857,10 @@ class QuantMatrix:
             )
 
             scores = cross_val_score(pipe, X, y, cv=3)
+
+            self.evaluate_models_.append(
+                (comparison, pipe.fit(X, y))
+            )
 
             feature_score_results = pd.DataFrame(
                 {
@@ -884,7 +899,7 @@ class QuantMatrix:
 
         return self
 
-    def cluster(self, feature_column: str = "Protein", q_value: float = 0.01):
+    def cluster(self, feature_column: str = "Protein", q_value: float = 0.01, method: str = "min"):
 
         if not self.added_decoys:
 
@@ -896,7 +911,7 @@ class QuantMatrix:
 
         x_background, _ = self.decoy_features.to_ml(feature_column=feature_column)
 
-        clusterer = FeatureClustering(q_value=q_value)
+        clusterer = FeatureClustering(q_value=q_value, method=method)
 
         cluster_ids = clusterer.fit_predict(X, x_background)
 
@@ -1441,3 +1456,20 @@ class QuantMatrix:
         )
 
         return combined.loc[:, combined.columns != "label"], combined[["label"]]
+
+    def copy(self) -> QuantMatrix:
+        return deepcopy(self)
+
+    def save(self, file_path: str) -> None:
+
+        with open(file_path, "wb") as f:
+            dump(self, f)
+
+    def load(file_path: str) -> QuantMatrix:
+
+        qm = None
+        with open(file_path, "rb") as f:
+
+            qm = load(f)
+
+        return qm

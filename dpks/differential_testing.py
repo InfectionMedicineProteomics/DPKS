@@ -64,9 +64,10 @@ class DifferentialTest:
             self.comparisons = [self.comparisons]
 
         # Replace zeroes with NaN to avoid messing up stats
-        quant_matrix.quantitative_data.X[
-            quant_matrix.quantitative_data.X == 0.0
-        ] = np.nan
+        # Need to replace this, this breaks in 3.13 and newer versions of AnnData
+        # quant_matrix.quantitative_data.X[
+        #     quant_matrix.quantitative_data.X == 0.0
+        # ] = np.nan
 
         for comparison in self.comparisons:
             group_a, group_b = comparison
