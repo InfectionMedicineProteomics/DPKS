@@ -22,7 +22,6 @@ from sklearn.pipeline import Pipeline
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from statsmodels.genmod.qif import QIFAutoregressive
 
 from dpks.annotation import get_protein_labels, get_genes_from_proteins
 from dpks.clustering import FeatureClustering
