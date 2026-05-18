@@ -16,6 +16,18 @@ DPKS provides easily accesible data processing and explainable machine learning 
 
 ## Installation
 
+Install the latest version via pip from github using the following command:
+
+```shell
+pip install git+https://github.com/InfectionMedicineProteomics/DPKS.git
+```
+
+Or with `uv` to add the package to a managed list:
+
+```shell
+uv pip install git+https://github.com/InfectionMedicineProteomics/DPKS.git
+```
+
 `DPKS` can be install via `pip`:
 
 ```shell
@@ -30,7 +42,7 @@ workflows and allow for exploration. Additionally, it exposes advances explainab
 with a simple API allowing them to be used by non-machine learning practicioners in the field.
 
 <figure>
-    <img src="/docs/img/dpks_overview_figure.png">
+    <img src="/docs/img/overview_figure.png">
     <figcaption>An overview of DPKS and some of its main functionality.</figcaption>
 </figure>
 
