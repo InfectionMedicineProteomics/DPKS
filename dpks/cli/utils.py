@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-import pandas as pd
 
 from dpks import QuantMatrix
 
@@ -12,8 +11,6 @@ class ComparisonError(Exception):
 
 class IOError(Exception):
     pass
-
-# ── Console helpers ───────────────────────────────────────────────────────────
 
 def success(msg: str) -> None:
     typer.echo(typer.style(f"SUCCESS: {msg}", fg=typer.colors.GREEN))
@@ -27,23 +24,9 @@ def warn(msg: str) -> None:
     typer.echo(typer.style(f"WARNING: {msg}", fg=typer.colors.YELLOW), err=True)
 
 
-# def error(msg: str) -> None:
-#     typer.echo(typer.style(f"✗  {msg}", fg=typer.colors.RED, bold=True), err=True)
-
-#
-# def abort(msg: str, exit_code: int = 1) -> None:
-#     """Print an error message and exit."""
-#     #error(msg)
-#     raise typer.Exit(exit_code)
-
-# ── I/O helpers ───────────────────────────────────────────────────────────────
 
 def load_quant_matrix(quant_file: Path, design_matrix: Path, quant_type: str = "standard", diann_qvalue: float = 0.01,
                       annotation_fasta: Optional[Path] = None):
-    """
-    Instantiate and return a QuantMatrix from file paths.
-    Exits with a helpful message on failure.
-    """
 
     _require_file(quant_file, "Quantification file")
     _require_file(design_matrix, "Design Matrix file")
@@ -83,13 +66,6 @@ def save_quant_matrix(qm, output: Path) -> None:
     except Exception as exc:
         raise IOError(f"Failed to write output: {exc}")
 
-#
-# def load_tsv(path: Path, label: str = "file") -> pd.DataFrame:
-#     _require_file(path, label)
-#     try:
-#         return pd.read_csv(path, sep="\t")
-#     except Exception as exc:
-#         abort(f"Could not read {label} '{path}': {exc}")
 
 
 def parse_comparisons(raw: list[str]) -> list[tuple[str, str]]:
@@ -117,8 +93,6 @@ def parse_comparisons(raw: list[str]) -> list[tuple[str, str]]:
             )
     return comparisons
 
-
-# ── Internal helpers ──────────────────────────────────────────────────────────
 
 def _require_file(path: Path, label: str) -> None:
     if not path.exists():

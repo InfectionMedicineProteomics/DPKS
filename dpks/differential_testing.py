@@ -63,11 +63,6 @@ class DifferentialTest:
         if isinstance(self.comparisons, tuple):
             self.comparisons = [self.comparisons]
 
-        # Replace zeroes with NaN to avoid messing up stats
-        # Need to replace this, this breaks in 3.13 and newer versions of AnnData
-        # quant_matrix.quantitative_data.X[
-        #     quant_matrix.quantitative_data.X == 0.0
-        # ] = np.nan
 
         for comparison in self.comparisons:
             group_a, group_b = comparison
@@ -97,6 +92,10 @@ class DifferentialTest:
 
                 group_a_data = quant_data[:, group_a_samples].X.copy()
                 group_b_data = quant_data[:, group_b_samples].X.copy()
+
+                # Sets 0 to np.nan so that things can be calculated nicely
+                group_a_data = np.where(group_a_data == 0, np.nan, group_a_data)
+                group_b_data = np.where(group_b_data == 0, np.nan, group_b_data)
 
                 # Count non-NaN
                 group_a_nan = len(group_a_data[~np.isnan(group_a_data)])
@@ -131,6 +130,7 @@ class DifferentialTest:
                 group_a_data = group_a_data[~np.isnan(group_a_data)]
                 group_b_data = group_b_data[~np.isnan(group_b_data)]
 
+
                 group_a_mean = np.mean(group_a_data)
                 group_b_mean = np.mean(group_b_data)
                 group_a_stdev = np.std(group_a_data)
@@ -142,7 +142,14 @@ class DifferentialTest:
 
                 else:
 
-                    log_fold_change = group_a_mean / group_b_mean
+                    if group_b_mean == 0:
+
+                        log_fold_change = (group_a_mean + 1) / (group_b_mean + 1)
+
+                    else:
+
+                        log_fold_change = group_a_mean / group_b_mean
+
 
                 group_a_means.append(group_a_mean)
                 group_b_means.append(group_b_mean)

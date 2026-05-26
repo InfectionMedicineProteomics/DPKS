@@ -594,12 +594,10 @@ class QuantMatrix:
 
             target_df = self.to_df()
 
+            target_df['Decoy'] = 0
+            decoy_df['Decoy'] = 1
+
             combined_features = pd.concat([target_df, decoy_df], axis=0)
-
-            combined_features["Decoy"] = np.where(
-                combined_features[feature_column].str.contains("decoy"), 1, 0
-            )
-
             qm = QuantMatrix(
                 quantification_file=combined_features.copy(),
                 design_matrix_file=self.quantitative_data.var.copy(),
@@ -716,6 +714,7 @@ class QuantMatrix:
 
         """
         explain_results = []
+        explain_eval_results = []
 
         if isinstance(comparisons, tuple):
             comparisons = [comparisons]
@@ -724,6 +723,17 @@ class QuantMatrix:
             X, y = self.to_ml(feature_column=feature_column, comparison=comparison)
 
             #TODO: add CV loop for feature explanations with accuracy scores to provide model estimate
+            pipe = Pipeline(
+                [
+                    ("scaler", StandardScaler()),
+                    ("clf", clf)
+                ]
+            )
+
+            scores = cross_val_score(pipe, X, y, cv=3)
+
+            explain_eval_results.append((comparison, scores))
+
             scaler = StandardScaler()
 
             if fillna:
@@ -769,6 +779,7 @@ class QuantMatrix:
                 importances_df, on=feature_column
             )
 
+        self.explain_eval_results = explain_eval_results
         self.explain_results = explain_results
 
         return self
