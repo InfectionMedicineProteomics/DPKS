@@ -142,13 +142,7 @@ class DifferentialTest:
 
                 else:
 
-                    if group_b_mean == 0:
-
-                        log_fold_change = (group_a_mean + 1) / (group_b_mean + 1)
-
-                    else:
-
-                        log_fold_change = group_a_mean / group_b_mean
+                    log_fold_change = group_a_mean / group_b_mean
 
 
                 group_a_means.append(group_a_mean)
