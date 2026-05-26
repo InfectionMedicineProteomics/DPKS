@@ -11,34 +11,42 @@ from dpks.fdr import DecoyCounter
 class FeatureClustering:
     q_value: float
     distance_cutoff: float
-    decoy_min_distances: np.ndarray
-    target_min_distances: np.ndarray
+    decoy_distances: np.ndarray
+    target_distances: np.ndarray
     decoy_distance_matrix: np.ndarray
     target_distance_matrix: np.ndarray
     distance_df: pd.DataFrame
 
-    def __init__(self, q_value: float = 0.01):
+    def __init__(self, q_value: float = 0.01, method: str = "min"):
         self.q_value = q_value
-        self.decoy_min_distances = None
-        self.target_min_distances = None
+        self.decoy_distances = None
+        self.target_distances = None
         self.decoy_distance_matrix = None
         self.target_distance_matrix = None
         self.distance_cutoff = 0.0
         self.distance_df = None
+        self.method = method
 
     def fit_predict(self, X, background) -> ndarray:
         self.target_distance_matrix = _get_distance_matrix(X)
         self.decoy_distance_matrix = _get_distance_matrix(background)
 
-        self.target_min_distances = _get_min_distances(self.target_distance_matrix)
-        self.decoy_min_distances = _get_min_distances(self.decoy_distance_matrix)
+        if self.method == "min":
+
+            self.target_distances = _get_min_distances(self.target_distance_matrix)
+            self.decoy_distances = _get_min_distances(self.decoy_distance_matrix)
+
+        elif self.method == "mean":
+
+            self.target_distances = _get_mean_distances(self.target_distance_matrix)
+            self.decoy_distances = _get_mean_distances(self.decoy_distance_matrix)
 
         self.distance_df = pd.DataFrame(
             {
-                "label": ["Decoy" for _ in range(len(self.decoy_min_distances))]
-                + ["Target" for _ in range(len(self.target_min_distances))],
+                "label": ["Decoy" for _ in range(len(self.decoy_distances))]
+                + ["Target" for _ in range(len(self.target_distances))],
                 "distance": np.concatenate(
-                    (self.decoy_min_distances, self.target_min_distances)
+                    (self.decoy_distances, self.target_distances)
                 ),
             }
         )
@@ -86,6 +94,19 @@ def _get_min_distances(X) -> np.ndarray:
         combined = np.concatenate((first, second))
 
         distances.append(np.min(combined))
+
+    return np.array(distances)
+
+def _get_mean_distances(X) -> np.ndarray:
+    distances = []
+
+    for i in range(X.shape[0]):
+        first = X[i, :i]
+        second = X[i, i + 1 :]
+
+        combined = np.concatenate((first, second))
+
+        distances.append(np.mean(combined))
 
     return np.array(distances)
 

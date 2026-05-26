@@ -1,6 +1,8 @@
-<p>
-    <img src="/docs/img/logo.png", width="100" />
-</p>
+[//]: # (<p>)
+
+[//]: # (    <img src="/docs/img/logo.png", width="100"  alt="DPKS Logo"/>)
+
+[//]: # (</p>)
 
 
 # DPKS (Data Processing Kitchen Sink)
@@ -13,6 +15,18 @@ DPKS provides easily accesible data processing and explainable machine learning 
 -   Documentation: [here](https://infectionmedicineproteomics.github.io/DPKS/).
 
 ## Installation
+
+Install the latest version via pip from github using the following command:
+
+```shell
+pip install git+https://github.com/InfectionMedicineProteomics/DPKS.git
+```
+
+Or with `uv` to add the package to a managed list:
+
+```shell
+uv pip install git+https://github.com/InfectionMedicineProteomics/DPKS.git
+```
 
 `DPKS` can be install via `pip`:
 
@@ -28,7 +42,7 @@ workflows and allow for exploration. Additionally, it exposes advances explainab
 with a simple API allowing them to be used by non-machine learning practicioners in the field.
 
 <figure>
-    <img src="/docs/img/dpks_overview_figure.png">
+    <img src="/docs/img/overview_figure.png">
     <figcaption>An overview of DPKS and some of its main functionality.</figcaption>
 </figure>
 
@@ -119,6 +133,19 @@ DPKS makes complicated analysis easy, and allows you to explore multiple analyti
 ## Getting started
 
 -   Take a look at the [documentation](https://infectionmedicineproteomics.github.io/DPKS/) for instructions on how to get started.
+
+## Command Line Interface (CLI)
+
+```bash
+dpks filter
+dpks normalize
+dpks correct
+dpks quantify
+dpks impute
+dpks compare
+dpks explain
+dpks gui
+```
 
 # Contributors
 

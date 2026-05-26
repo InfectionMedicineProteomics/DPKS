@@ -9,6 +9,7 @@ instanciate a quant matrix:
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Union, List, Any, Optional
 
 import anndata as ad
@@ -16,6 +17,8 @@ import gseapy as gp
 import matplotlib
 import numpy as np
 import pandas as pd  # type: ignore
+from joblib import dump, load
+from sklearn.pipeline import Pipeline
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict
 from sklearn.preprocessing import StandardScaler, LabelEncoder
@@ -75,7 +78,7 @@ class QuantMatrix:
         quantification_file: Union[str, pd.DataFrame],
         design_matrix_file: Union[str, pd.DataFrame],
         annotation_fasta_file: str = None,
-        quant_type: str = "gps",
+        quant_type: str = "standard",
         diann_qvalue: float = 0.01,
     ) -> None:
         """Initialize the QuantMatrix instance.
@@ -84,13 +87,14 @@ class QuantMatrix:
             quantification_file (Union[str, pd.DataFrame]): Path to the quantification file or DataFrame.
             design_matrix_file (Union[str, pd.DataFrame]): Path to the design matrix file or DataFrame.
             annotation_fasta_file (str, optional): Path to the annotation FASTA file. Defaults to None.
-            quant_type (str, optional): Type of quantification. Defaults to "gps".
+            quant_type (str, optional): Type of quantification. Defaults to "standard".
             diann_qvalue (float, optional): DIANN q-value. Defaults to 0.01.
 
         Examples:
             >>> quant_matrix = QuantMatrix("quantification.tsv", "design_matrix.csv", annotation_fasta_file="annotation.fasta")
         """
 
+        self.added_decoys = False
         self.annotated = False
         self.explain_results = None
         if isinstance(design_matrix_file, str):
@@ -99,7 +103,7 @@ class QuantMatrix:
             design_matrix_file.columns = map(str.lower, design_matrix_file.columns)
 
         if isinstance(quantification_file, str):
-            if quant_type == "gps":
+            if quant_type == "standard":
                 quantification_file = pd.read_csv(quantification_file, sep="\t")
 
             elif quant_type == "diann":
@@ -530,9 +534,10 @@ class QuantMatrix:
         return self
 
     def append(
-        self, method: str = "mean", feature_column: str = "Protein"
+        self, method: str = "mean", feature_column: str = "Protein", in_background: bool = False
     ) -> QuantMatrix:
-        self.decoy_features = DecoyFeatures()
+
+        decoy_model = DecoyFeatures()
 
         if method == "mean":
             X, y = self.to_ml(feature_column=feature_column)
@@ -540,11 +545,11 @@ class QuantMatrix:
             n_samples = X.shape[0]
             n_features = X.shape[1]
 
-            self.decoy_features = MeanDecoyFeatures(
+            decoy_model = MeanDecoyFeatures(
                 n_samples=n_samples, n_features=n_features, feature_names=X.columns
             )
 
-            self.decoy_features.fit(X)
+            decoy_model.fit(X)
 
         elif method == "shuffle":
             X, y = self.to_ml(feature_column=feature_column)
@@ -552,13 +557,13 @@ class QuantMatrix:
             n_samples = X.shape[0]
             n_features = X.shape[1]
 
-            self.decoy_features = ShuffleDecoyFeatures(
+            decoy_model = ShuffleDecoyFeatures(
                 n_samples=n_samples, n_features=n_features, feature_names=X.columns
             )
 
-            self.decoy_features.fit(X)
+            decoy_model.fit(X)
 
-        decoy_df = self.decoy_features.features.T
+        decoy_df = decoy_model.features.T
 
         id_columns = ["Protein", "ProteinLabel", "Gene"]
 
@@ -573,18 +578,39 @@ class QuantMatrix:
         for col in used_id_columns:
             decoy_df[col] = "decoy_" + decoy_df[col]
 
-        target_df = self.to_df()
+        if in_background:
 
-        combined_features = pd.concat([target_df, decoy_df], axis=0)
+            self.decoy_features = QuantMatrix(
+                quantification_file=decoy_df.copy(),
+                design_matrix_file=self.quantitative_data.var.copy(),
+            )
 
-        combined_features["Decoy"] = np.where(
-            combined_features[feature_column].str.contains("decoy"), 1, 0
-        )
+            self.decoy_model = decoy_model
+            self.added_decoys = True
 
-        return QuantMatrix(
-            quantification_file=combined_features.copy(),
-            design_matrix_file=self.quantitative_data.var.copy(),
-        )
+            return self
+
+        else:
+
+            target_df = self.to_df()
+
+            target_df['Decoy'] = 0
+            decoy_df['Decoy'] = 1
+
+            combined_features = pd.concat([target_df, decoy_df], axis=0)
+            qm = QuantMatrix(
+                quantification_file=combined_features.copy(),
+                design_matrix_file=self.quantitative_data.var.copy(),
+            )
+
+            qm.decoy_model = decoy_model
+            qm.added_decoys = True
+            qm.decoy_features = QuantMatrix(
+                quantification_file=decoy_df.copy(),
+                design_matrix_file=self.quantitative_data.var.copy(),
+            )
+
+            return qm
 
     def compare(
         self,
@@ -594,6 +620,7 @@ class QuantMatrix:
         level: str = "protein",
         multiple_testing_correction_method: str = "fdr_tsbh",
         covariates: Optional[List[str]] = None,
+        log2_transformed: bool = True,
     ) -> QuantMatrix:
         """Compare groups by differential testing.
 
@@ -632,10 +659,11 @@ class QuantMatrix:
         differential_test = DifferentialTest(
             method,
             comparisons,
-            min_samples_per_group,
-            level,
-            multiple_testing_correction_method,
-            covariates,
+            min_samples_per_group=min_samples_per_group,
+            level=level,
+            multiple_testing_correction_method=multiple_testing_correction_method,
+            covariates=covariates,
+            log2_transformed=log2_transformed,
         )
 
         compared_data = differential_test.test(self)
@@ -652,6 +680,7 @@ class QuantMatrix:
         downsample_background: bool = True,
         feature_column: str = "Protein",
         fillna: bool = True,
+        shuffle_iterations: int = 10,
         use_sample_weight: bool = True,
     ) -> QuantMatrix:
         """Explain group differences using explainable machine learning and feature importance.
@@ -685,12 +714,25 @@ class QuantMatrix:
 
         """
         explain_results = []
+        explain_eval_results = []
 
         if isinstance(comparisons, tuple):
             comparisons = [comparisons]
 
         for comparison in comparisons:
             X, y = self.to_ml(feature_column=feature_column, comparison=comparison)
+
+            #TODO: add CV loop for feature explanations with accuracy scores to provide model estimate
+            pipe = Pipeline(
+                [
+                    ("scaler", StandardScaler()),
+                    ("clf", clf)
+                ]
+            )
+
+            scores = cross_val_score(pipe, X, y, cv=3)
+
+            explain_eval_results.append((comparison, scores))
 
             scaler = StandardScaler()
 
@@ -703,6 +745,7 @@ class QuantMatrix:
                 feature_names=X.columns,
                 n_iterations=n_iterations,
                 downsample_background=downsample_background,
+                shuffle_iterations=shuffle_iterations,
             )
 
             interpreter.fit(X.values, y.values.ravel(), clf)
@@ -736,6 +779,7 @@ class QuantMatrix:
                 importances_df, on=feature_column
             )
 
+        self.explain_eval_results = explain_eval_results
         self.explain_results = explain_results
 
         return self
@@ -751,7 +795,7 @@ class QuantMatrix:
     ):
         if base_score_columns is None:
             score_columns = []
-        if not "Decoy" in self.row_annotations:
+        if not self.added_decoys:
             raise ValueError(
                 "No Decoy features found, must call append() on a QuantMatrix first."
             )
@@ -761,14 +805,14 @@ class QuantMatrix:
         if isinstance(comparisons, tuple):
             comparisons = [comparisons]
 
+
+        self.evaluate_models_ = []
+
         for comparison in comparisons:
 
             if base_score_columns:
 
-                score_columns = [
-                    f"{score_column}{comparison[0]}-{comparison[1]}"
-                    for score_column in base_score_columns
-                ]
+                score_columns = [score_col for score_col in base_score_columns]
 
             else:
 
@@ -792,6 +836,8 @@ class QuantMatrix:
                         f"MeanRank{comparison[0]}-{comparison[1]}",
                         f"MedianImportance{comparison[0]}-{comparison[1]}",
                         f"MedianRank{comparison[0]}-{comparison[1]}",
+                        f"StdevImportance{comparison[0]}-{comparison[1]}",
+                        f"StdevRank{comparison[0]}-{comparison[1]}",
                     ]
 
                 elif method == "deg":
@@ -807,18 +853,24 @@ class QuantMatrix:
                     ]
 
             X = self.row_annotations[score_columns].copy()
-
             y = np.where(self.row_annotations["Decoy"] == 0, 1, 0)
 
-            scaler = StandardScaler()
-
-            X[X.columns] = scaler.fit_transform(X[X.columns])
-
-            feature_scores = cross_val_predict(
-                clf, X, y, cv=3, method="decision_function"
+            pipe = Pipeline(
+                [
+                    ("scaler", StandardScaler()),
+                    ("clf", clf)
+                ]
             )
 
-            scores = cross_val_score(clf, X, y, cv=3)
+            feature_scores = cross_val_predict(
+                pipe, X, y, cv=3, method="decision_function"
+            )
+
+            scores = cross_val_score(pipe, X, y, cv=3)
+
+            self.evaluate_models_.append(
+                (comparison, pipe.fit(X, y))
+            )
 
             feature_score_results = pd.DataFrame(
                 {
@@ -835,8 +887,8 @@ class QuantMatrix:
             ] = decoy_counter.q_values(
                 feature_score_results[
                     f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}"
-                ],
-                feature_score_results["label"].values,
+                ].to_numpy(),
+                feature_score_results["label"].to_numpy(),
             )
 
             self.row_annotations = self.row_annotations.join(
@@ -857,25 +909,19 @@ class QuantMatrix:
 
         return self
 
-    def cluster(self, feature_column: str = "Protein", q_value: float = 0.01):
+    def cluster(self, feature_column: str = "Protein", q_value: float = 0.01, method: str = "min"):
+
+        if not self.added_decoys:
+
+            raise ValueError(
+                "No Decoy features found, must call append() on a QuantMatrix first."
+            )
+
         X, y = self.to_ml(feature_column=feature_column)
 
-        if not "Decoy" in self.row_annotations:
-            background = self.append(method="shuffle")
+        x_background, _ = self.decoy_features.to_ml(feature_column=feature_column)
 
-            x_background, _ = QuantMatrix(
-                quantification_file=background.to_df()[
-                    background.to_df()["Decoy"] == 1
-                ].copy(),
-                design_matrix_file=self.sample_annotations,
-            ).to_ml()
-
-        else:
-            x_background = self.quantitative_data[
-                (self.quantitative_data.obs["Decoy"] == 1)
-            ].X
-
-        clusterer = FeatureClustering(q_value=q_value)
+        clusterer = FeatureClustering(q_value=q_value, method=method)
 
         cluster_ids = clusterer.fit_predict(X, x_background)
 
@@ -1420,3 +1466,20 @@ class QuantMatrix:
         )
 
         return combined.loc[:, combined.columns != "label"], combined[["label"]]
+
+    def copy(self) -> QuantMatrix:
+        return deepcopy(self)
+
+    def save(self, file_path: str) -> None:
+
+        with open(file_path, "wb") as f:
+            dump(self, f)
+
+    def load(file_path: str) -> QuantMatrix:
+
+        qm = None
+        with open(file_path, "rb") as f:
+
+            qm = load(f)
+
+        return qm
