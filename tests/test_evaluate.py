@@ -17,8 +17,8 @@ def quantified_data(paths):
         .quantify(method="top_n", summarization_method="mean")
         .impute(method="constant", constant=0)
         .append(method="shuffle", feature_column="Protein")
-        .compare(method="linregress", min_samples_per_group=10, comparisons=[(2, 1)])
-        .explain(clf, comparisons=[(2, 1)], n_iterations=10, downsample_background=True, fillna=True)
+        .compare(method="linregress", min_samples_per_group=10, comparison=(2, 1))
+        .explain(clf, comparison=(2, 1), n_iterations=10, downsample_background=True, fillna=True)
     )
     return quantified_data
 
@@ -27,4 +27,4 @@ def test_evaluate(quantified_data: QuantMatrix):
 
     clf = HistGradientBoostingClassifier(max_depth=2)
 
-    quantified_data.evaluate(clf, method="all", comparisons=[(2, 1)])
+    quantified_data.evaluate(clf, method="all", comparison=(2, 1))
