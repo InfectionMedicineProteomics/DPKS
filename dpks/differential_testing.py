@@ -75,20 +75,23 @@ class FastOLS:
             Z_subset = Z[X_mask]
             X_subset = X_subset[X_mask]
 
+            n_subset = X_subset.shape[0]
+            q_subset = Z_subset.shape[1]
+
             Q, R = np.linalg.qr(Z_subset)
             QtX = Q.T @ X_subset
             B_hat = np.linalg.solve(R, QtX)
             X_fitted = Z_subset @ B_hat
 
             _residuals = X_subset - X_fitted
-            sigma2 = np.sum(_residuals ** 2, axis=0) / (n - q)
+            sigma2 = np.sum(_residuals ** 2, axis=0) / (n_subset - q_subset)
 
             r_inv = np.linalg.inv(R)
             diag_inv = np.sum(r_inv ** 2, axis=1)
             standard_error = np.sqrt(np.outer(diag_inv, sigma2))
             t_statistics = B_hat / standard_error
 
-            degrees_of_freedom = X_subset.shape[0] - Z_subset.shape[1]
+            degrees_of_freedom = n_subset - q_subset
             _pvalues = 2 * stats.t.sf(np.abs(t_statistics), df=degrees_of_freedom)
 
             params[:, cols_] = B_hat
