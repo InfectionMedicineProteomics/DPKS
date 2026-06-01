@@ -6,15 +6,17 @@ Roll up precursor/peptide intensities to protein-level quantities.
 #TODO: Add an Annotate()
 
 import sys, os
+
+from dpks.gui.utils.io import df_to_tsv_bytes
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import copy
 import streamlit as st
-from utils.state import render_sidebar, require_step, get_qm, set_qm
-from utils.plots import intensity_boxplot
+from dpks.gui.utils.state import require_step, get_qm, set_qm
+from dpks.gui.utils.plots import intensity_boxplot
 
 st.set_page_config(page_title="5. Quantification — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("5. Quantification")
 st.markdown(
@@ -116,6 +118,20 @@ qm_quantified = st.session_state.get("qm_quantified")
 if qm_quantified is not None:
     st.divider()
     st.subheader("📊 Results")
+
+    tsv_bytes = df_to_tsv_bytes(qm_quantified.to_df())
+
+    filename = st.text_input(
+        label="File name",
+        value="dpks_quantified.tsv"
+    )
+
+    st.download_button(
+        label=f"⬇️ Download",
+        data=tsv_bytes,
+        file_name=filename,
+        mime="text/tab-separated-values",
+    )
 
     m1, m2 = st.columns(2)
     m1.metric("Proteins", qm_quantified.num_rows)

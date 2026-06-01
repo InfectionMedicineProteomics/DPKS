@@ -8,11 +8,11 @@ import sys, os
 
 import copy
 import streamlit as st
-from utils.state import render_sidebar, require_step, get_qm, set_qm
-from utils.plots import intensity_boxplot
+from dpks.gui.utils.state import require_step, get_qm, set_qm
+from dpks.gui.utils.plots import intensity_boxplot
+from dpks.gui.utils.io import df_to_tsv_bytes
 
 st.set_page_config(page_title="2. Filtering — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("2. Filtering")
 st.markdown(
@@ -110,6 +110,20 @@ qm_filtered = st.session_state.get("qm_filtered")
 if qm_filtered is not None:
     st.divider()
     st.subheader("📊 Results")
+
+    tsv_bytes = df_to_tsv_bytes(qm_filtered.to_df())
+
+    filename = st.text_input(
+        label="File name",
+        value="dpks_filtered.tsv"
+    )
+
+    st.download_button(
+        label=f"⬇️ Download",
+        data=tsv_bytes,
+        file_name=filename,
+        mime="text/tab-separated-values",
+    )
 
     m1, m2, m3 = st.columns(3)
     m1.metric("Rows before", qm_input.num_rows)

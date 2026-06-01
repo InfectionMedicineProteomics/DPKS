@@ -9,10 +9,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import io
 import streamlit as st
 import pandas as pd
-from utils.state import render_sidebar, get_qm
+from dpks.gui.utils.io import df_to_tsv_bytes
 
 st.set_page_config(page_title="10. Export — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("10. Export")
 st.markdown(
@@ -21,13 +20,6 @@ st.markdown(
 )
 
 st.divider()
-
-# ── Helper to convert a DataFrame to a TSV bytes buffer ───────────────────
-def df_to_tsv_bytes(df: pd.DataFrame) -> bytes:
-    buf = io.StringIO()
-    df.to_csv(buf, sep="\t", index=False)
-    return buf.getvalue().encode("utf-8")
-
 
 # ── Data downloads ─────────────────────────────────────────────────────────
 st.subheader("📥 Download Results")
@@ -85,151 +77,8 @@ else:
 
 st.divider()
 
-# ── Pipeline code generator ────────────────────────────────────────────────
-st.subheader("🐍 Auto-generated Pipeline Script")
-st.markdown(
-    "The script below reproduces your pipeline. "
-    "Copy it into a `.py` file and run it independently — no GUI needed."
-)
-
-
-def build_pipeline_code() -> str:
-    """Reconstruct a DPKS Python script from session state choices."""
-    lines = [
-        '"""',
-        "Auto-generated DPKS pipeline script.",
-        "Edit the file paths below before running.",
-        '"""',
-        "",
-        "import xgboost",
-        "from dpks.quant_matrix import QuantMatrix",
-        "",
-        '# ── File paths ──────────────────────────────────────────────────────────',
-        'quant_file   = "quant_data.tsv"   # <- update this path',
-        'design_file  = "design_matrix.tsv"  # <- update this path',
-        "",
-        "qm = QuantMatrix(",
-        "    quantification_file=quant_file,",
-        "    design_matrix_file=design_file,",
-        ")",
-    ]
-
-    # Filter
-    if st.session_state.get("qm_filtered") is not None:
-        lines += [
-            "",
-            "# ── Filtering ───────────────────────────────────────────────────────────",
-            "qm = qm.filter(",
-            "    peptide_q_value=0.01,",
-            "    protein_q_value=0.01,",
-            "    remove_decoys=True,",
-            "    remove_contaminants=True,",
-            "    remove_non_proteotypic=True,",
-            ")",
-        ]
-
-    # Normalize
-    if st.session_state.get("qm_normalized") is not None:
-        lines += [
-            "",
-            "# ── Normalization ───────────────────────────────────────────────────────",
-            'qm = qm.normalize(method="mean", log_transform=True)',
-        ]
-
-    # Batch correction
-    if st.session_state.get("qm_corrected") is not None:
-        lines += [
-            "",
-            "# ── Batch Correction ────────────────────────────────────────────────────",
-            'qm = qm.correct(method="combat")',
-        ]
-
-    # Imputation
-    if st.session_state.get("qm_imputed") is not None:
-        lines += [
-            "",
-            "# ── Imputation ──────────────────────────────────────────────────────────",
-            'qm = qm.impute(method="uniform_percentile", percentile=0.1)',
-        ]
-
-    # Quantification
-    if st.session_state.get("qm_quantified") is not None:
-        lines += [
-            "",
-            "# ── Quantification ──────────────────────────────────────────────────────",
-            'qm = qm.quantify(method="maxlfq", threads=4)',
-        ]
-
-    # Statistical comparison
-    stat_comparisons = st.session_state.get("stat_comparisons", [])
-    if st.session_state.get("qm_compared") is not None and stat_comparisons:
-        cmp_str = repr(stat_comparisons)
-        lines += [
-            "",
-            "# ── Statistical Comparison ──────────────────────────────────────────────",
-            "qm = qm.compare(",
-            '    method="linregress",',
-            f"    comparisons={cmp_str},",
-            "    min_samples_per_group=2,",
-            '    multiple_testing_correction_method="fdr_tsbh",',
-            ")",
-        ]
-
-    # Explainable ML
-    explain_comparisons = st.session_state.get("explain_comparisons", [])
-    if st.session_state.get("qm_explained") is not None and explain_comparisons:
-        cmp_str = repr(explain_comparisons)
-        lines += [
-            "",
-            "# ── Explainable ML ──────────────────────────────────────────────────────",
-            "clf = xgboost.XGBClassifier(",
-            "    max_depth=2,",
-            "    reg_lambda=2,",
-            '    objective="binary:logistic",',
-            "    seed=42,",
-            ")",
-            "qm = qm.explain(",
-            "    clf,",
-            f"    comparisons={cmp_str},",
-            "    n_iterations=100,",
-            "    downsample_background=True,",
-            ")",
-        ]
-
-    # Enrichment
-    if st.session_state.get("enrich_result") is not None:
-        lines += [
-            "",
-            "# ── Pathway Enrichment ──────────────────────────────────────────────────",
-            "qm = qm.annotate()",
-            "enr = qm.enrich(",
-            '    method="overreptest",',
-            '    libraries=["GO_Biological_Process_2023", "KEGG_2021_Human", "Reactome_2022"],',
-            "    filter_shap=True,",
-            ")",
-        ]
-
-    # Export
-    lines += [
-        "",
-        "# ── Export ──────────────────────────────────────────────────────────────",
-        'qm.write("dpks_results.tsv")',
-        "",
-        "print('Pipeline complete!')",
-    ]
-
-    return "\n".join(lines)
-
-
-pipeline_code = build_pipeline_code()
-st.code(pipeline_code, language="python")
-
-st.download_button(
-    label="⬇️ Download pipeline script (.py)",
-    data=pipeline_code.encode("utf-8"),
-    file_name="dpks_pipeline.py",
-    mime="text/x-python",
-)
+st.subheader("📋 Automated Methods")
+st.text("This section will automatically generate a methods section of the results.")
 
 st.divider()
 

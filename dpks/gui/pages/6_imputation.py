@@ -6,15 +6,17 @@ Impute missing values before protein quantification.
 #TODO: Add NearestNeighbor imputation
 
 import sys, os
+
+from dpks.gui.utils.io import df_to_tsv_bytes
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import copy
 import streamlit as st
-from utils.state import render_sidebar, require_step, get_qm, set_qm
-from utils.plots import missingness_heatmap
+from dpks.gui.utils.state import require_step, get_qm, set_qm
+from dpks.gui.utils.plots import missingness_heatmap
 
 st.set_page_config(page_title="6. Imputation — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("6. Imputation")
 st.markdown(
@@ -26,9 +28,6 @@ if not require_step("qm_quantified", "Quantification", "4. Quantification"):
     st.stop()
 
 qm_input = get_qm("qm_quantified")
-
-print("hello")
-print(qm_input.row_annotations)
 
 # ── Missingness summary ────────────────────────────────────────────────────
 import numpy as np
@@ -125,6 +124,20 @@ qm_imputed = st.session_state.get("qm_imputed")
 if qm_imputed is not None:
     st.divider()
     st.subheader("📊 Results")
+
+    tsv_bytes = df_to_tsv_bytes(qm_imputed.to_df())
+
+    filename = st.text_input(
+        label="File name",
+        value="dpks_imputed.tsv"
+    )
+
+    st.download_button(
+        label=f"⬇️ Download",
+        data=tsv_bytes,
+        file_name=filename,
+        mime="text/tab-separated-values",
+    )
 
     X_after = qm_imputed.quantitative_data.X
     n_missing_after = int(np.sum(np.isnan(X_after)) + np.sum(X_after == 0))

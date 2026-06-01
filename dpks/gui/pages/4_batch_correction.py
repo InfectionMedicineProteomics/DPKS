@@ -4,15 +4,17 @@ Correct for systematic batch effects using ComBat or mean correction.
 """
 
 import sys, os
+
+from utils.io import df_to_tsv_bytes
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import copy
 import streamlit as st
-from utils.state import render_sidebar, require_step, get_qm, set_qm
-from utils.plots import intensity_boxplot
+from dpks.gui.utils.state import render_sidebar, require_step, get_qm, set_qm
+from dpks.gui.utils.plots import intensity_boxplot
 
 st.set_page_config(page_title="4. Batch Correction — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("4. Batch Correction")
 st.markdown(
@@ -116,6 +118,20 @@ qm_corrected = st.session_state.get("qm_corrected")
 if qm_corrected is not None:
     st.divider()
     st.subheader("📊 Results")
+
+    tsv_bytes = df_to_tsv_bytes(qm_corrected.to_df())
+
+    filename = st.text_input(
+        label="File name",
+        value="dpks_corrected.tsv"
+    )
+
+    st.download_button(
+        label=f"⬇️ Download",
+        data=tsv_bytes,
+        file_name=filename,
+        mime="text/tab-separated-values",
+    )
 
     tab1, tab2 = st.tabs(["Before Correction", "After Correction"])
     with tab1:

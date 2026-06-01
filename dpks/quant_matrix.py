@@ -933,7 +933,7 @@ class QuantMatrix:
         importance_cutoff: float = 0.0,
         importance_column: str = "MeanImportance2-1",
         subset_library: bool = False,
-    ):
+    ) -> pd.DataFrame:
         """Perform gene set enrichment analysis.
 
         Args:

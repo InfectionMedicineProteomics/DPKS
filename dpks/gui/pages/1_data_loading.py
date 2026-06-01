@@ -1,13 +1,14 @@
 import sys
 import os
+from pathlib import Path
+
 #sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import streamlit as st
 import pandas as pd
-from dpks.gui.utils.state import render_sidebar, set_qm
+from dpks.gui.utils.state import set_qm
 
 st.set_page_config(page_title="1. Data Loading — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("1. Data Loading")
 st.markdown(
@@ -32,7 +33,7 @@ with col1:
     st.subheader("Quantification File")
     quant_file = st.file_uploader(
         "Upload quantification TSV",
-        type=["tsv", "txt", "csv"],
+        type=["tsv", "txt", "csv", "parquet"],
         help="Tab-separated file from GPS, DIA-NN, or similar tools.",
     )
 
@@ -88,8 +89,27 @@ if st.button("🚀 Load Data", type="primary", disabled=(quant_file is None or d
 
         sep = "\t"
 
-        quant_df = pd.read_csv(quant_file, sep=sep)
+        if quant_type == "DIA-NN":
+            quant_type = "diann"
+
+        if quant_file:
+            suffix = Path(quant_file.name).suffix
+
+        if suffix == ".parquet":
+            quant_df = pd.read_parquet(quant_file)
+        else:
+            quant_df = pd.read_csv(quant_file, sep=sep)
+
+        print(quant_df)
+
         design_df = pd.read_csv(design_file, sep=sep)
+
+        print(quant_type)
+
+        if "sample" not in design_df:
+            st.error(
+                "❌ 'sample' column not found in design matrix. Please ensure the design matrix contains a 'sample' column."
+            )
 
         init_kwargs = dict(
             quantification_file=quant_df,

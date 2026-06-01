@@ -4,15 +4,17 @@ Normalise sample intensities and optionally scale at the feature level.
 """
 
 import sys, os
+
+from utils.io import df_to_tsv_bytes
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import copy
 import streamlit as st
-from utils.state import render_sidebar, require_step, get_qm, set_qm
-from utils.plots import intensity_boxplot
+from dpks.gui.utils.state import require_step, get_qm, set_qm
+from dpks.gui.utils.plots import intensity_boxplot
 
 st.set_page_config(page_title="3. Normalization & Scaling — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("3. Normalization & Scaling")
 st.markdown(
@@ -136,6 +138,20 @@ qm_norm = st.session_state.get("qm_normalized")
 if qm_norm is not None:
     st.divider()
     st.subheader("📊 Results")
+
+    tsv_bytes = df_to_tsv_bytes(qm_norm.to_df())
+
+    filename = st.text_input(
+        label="File name",
+        value="dpks_normalized.tsv"
+    )
+
+    st.download_button(
+        label=f"⬇️ Download",
+        data=tsv_bytes,
+        file_name=filename,
+        mime="text/tab-separated-values",
+    )
 
     tab1, tab2 = st.tabs(["Before", "After"])
     with tab1:
