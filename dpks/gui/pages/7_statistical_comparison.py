@@ -47,12 +47,13 @@ col1, col2 = st.columns(2)
 with col1:
     stat_method = st.selectbox(
         "Statistical test",
-        options=["linregress", "ttest", "ttest_paired", "anova"],
+        options=["linregress", "ttest", "ttest_paired", "anova", "fast_ols"],
         help=(
             "**linregress** — linear regression (recommended for most DIA data). "
             "**ttest** — Student's t-test. "
             "**ttest_paired** — paired t-test. "
             "**anova** — one-way ANOVA."
+            "**fast_ols** — fast ordinary least squares regression."
         ),
     )
 
