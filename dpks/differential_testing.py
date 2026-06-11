@@ -162,22 +162,31 @@ class DifferentialTest:
         indices = []
 
         if self.method == "fast_ols":
-
             ols = FastOLS(
                 fit_intercept=True,
             )
 
-            X = quant_matrix.quantitative_data.X.T
-            design_matrix = quant_matrix.quantitative_data.var[['group'] + self.covariates]
+            #This block is to ensure that only the correct samples are taken
+            group_a_samples = quant_matrix.get_samples(group=group_a)
+            group_b_samples = quant_matrix.get_samples(group=group_b)
+            samples = group_a_samples + group_b_samples
+            quant_data = quant_matrix.quantitative_data[
+                :, quant_matrix.quantitative_data.var['sample'].isin(samples)
+            ].copy()
+
+            X = quant_data.X.T
+            design_matrix = quant_data.var[['group'] + self.covariates].copy()
+
+            original_groups = design_matrix['group'].to_numpy()
+            design_matrix['group'] = (design_matrix['group'] == group_a).astype(int)
 
             ols.fit(X, design_matrix)
 
-            group_a_idx = np.argwhere(design_matrix['group'] == group_a)
-            group_b_idx = np.argwhere(design_matrix['group'] == group_b)
+            group_a_idx = np.argwhere(original_groups == group_a)
+            group_b_idx = np.argwhere(original_groups == group_b)
 
             group_a_means = np.nanmean(X[group_a_idx], axis=0).ravel()
             group_b_means = np.nanmean(X[group_b_idx], axis=0).ravel()
-
 
             group_a_stdevs = np.nanstd(X[group_a_idx], axis=0).ravel()
             group_b_stdevs = np.nanstd(X[group_b_idx], axis=0).ravel()
@@ -277,6 +286,7 @@ class DifferentialTest:
                     test_results = stats.f_oneway(group_a_data, group_b_data)
 
                 elif self.method == "linregress":
+
                     if not self.covariates:
                         group_indicator = (labels == group_a).astype(int)
                         X = pd.DataFrame({"const": np.ones(len(group_indicator)),
@@ -362,11 +372,7 @@ class DifferentialTest:
         ][f"PValue{group_a}-{group_b}"]
 
         correction_results = multipletests(
-            quant_matrix.quantitative_data.obs[
-                ~np.isnan(
-                    quant_matrix.quantitative_data.obs[f"PValue{group_a}-{group_b}"]
-                )
-            ][f"PValue{group_a}-{group_b}"],
+            valid_pvals,
             method=self.multiple_testing_correction_method,
             is_sorted=False,
         )
