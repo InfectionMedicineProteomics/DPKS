@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -98,6 +99,13 @@ if st.button("🚀 Load Data", type="primary", disabled=(quant_file is None or d
             quant_df = pd.read_parquet(quant_file)
         else:
             quant_df = pd.read_csv(quant_file, sep=sep)
+
+        # Ensure that missing values are correctly encoded, sometimes DIA-NN encodes them as None
+        # They also sometimes include precursor quantities that are 0, which breaks downstream analysis
+        if quant_type == "diann":
+            quant_df = quant_df.replace({None: np.nan})
+            quant_df['Precursor.Quantity'] = quant_df['Precursor.Quantity'].astype(float)
+            quant_df = quant_df[quant_df['Precursor.Quantity'] > 0]
 
         design_df = pd.read_csv(design_file, sep=sep)
 
