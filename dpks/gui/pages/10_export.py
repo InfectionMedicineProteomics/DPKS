@@ -110,6 +110,6 @@ for key, label in {
         "Details": detail,
     })
 
-st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
+st.dataframe(pd.DataFrame(summary_rows), width="stretch")
 
 st.session_state["qm_exported"] = True

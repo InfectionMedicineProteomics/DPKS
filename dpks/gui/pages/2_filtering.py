@@ -132,7 +132,7 @@ if qm_filtered is not None:
     st.info("👉 Proceed to **3. Normalization & Scaling** in the sidebar.")
 
     with st.expander("View filtered data (first 100 rows)"):
-        st.dataframe(qm_filtered.to_df().head(100), use_container_width=True)
+        st.dataframe(qm_filtered.to_df().head(100), width="stretch")
 
     if st.button("▶️ Generate Figures", type="primary"):
         try:

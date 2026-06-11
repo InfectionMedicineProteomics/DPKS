@@ -138,12 +138,12 @@ if qm_corrected is not None:
             with tab1:
                 st.plotly_chart(
                     intensity_boxplot(qm_input, "Before Batch Correction"),
-                    use_container_width=True,
+                    width="stretch",
                 )
             with tab2:
                 st.plotly_chart(
                     intensity_boxplot(qm_corrected, "After Batch Correction"),
-                    use_container_width=True,
+                    width="stretch",
                 )
         except Exception as e:
             st.error(f"❌ Failed generate plots: {e}")

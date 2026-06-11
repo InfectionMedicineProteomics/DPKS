@@ -31,7 +31,7 @@ st.divider()
 st.subheader("🔬 Group Overview")
 st.dataframe(
     qm_input.sample_annotations[["sample", "group"]].reset_index(drop=True),
-    use_container_width=False,
+    width="stretch",
 )
 
 st.divider()
@@ -174,10 +174,10 @@ if qm_compared is not None:
             fc_threshold=fc_thresh,
             pval_threshold=p_thresh,
         ),
-        use_container_width=True,
+        width="stretch",
     )
 
     with st.expander("View results table (first 200 rows)"):
-        st.dataframe(qm_compared.row_annotations.head(200), use_container_width=True)
+        st.dataframe(qm_compared.row_annotations.head(200), width="stretch")
 
     st.info("👉 Proceed to **8. Explainable ML** in the sidebar.")

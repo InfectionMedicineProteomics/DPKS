@@ -222,10 +222,10 @@ if qm_explained is not None:
     )
     st.plotly_chart(
         importance_bar_chart(qm_explained, stored_comparison, top_n=top_n_display),
-        use_container_width=True,
+        width="stretch",
     )
 
     with st.expander("View full annotations table (first 200 rows)"):
-        st.dataframe(qm_explained.row_annotations.head(200), use_container_width=True)
+        st.dataframe(qm_explained.row_annotations.head(200), width="stretch")
 
     st.info("👉 Proceed to **9. Pathway Enrichment** in the sidebar.")

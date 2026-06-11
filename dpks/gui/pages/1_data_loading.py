@@ -158,9 +158,9 @@ if qm is not None:
     tab1, tab2 = st.tabs(["Quantification (first 100 rows)", "Design Matrix"])
 
     with tab1:
-        st.dataframe(qm.to_df().head(100), use_container_width=True)
+        st.dataframe(qm.to_df().head(100), width="stretch")
 
     with tab2:
-        st.dataframe(qm.sample_annotations.reset_index(drop=True), use_container_width=True)
+        st.dataframe(qm.sample_annotations.reset_index(drop=True), width="stretch")
 
     st.info("👉 Proceed to **2. Filtering** in the sidebar.")

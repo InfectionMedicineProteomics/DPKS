@@ -219,9 +219,9 @@ if enr is not None:
                     title="Top 20 Enriched Terms (-log₁₀ adj. p-value)",
                 )
                 fig.update_layout(coloraxis_showscale=False, height=600)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
-            st.dataframe(results_df, use_container_width=True)
+            st.dataframe(results_df, width="stretch")
 
     except Exception as e:
         st.error(f"Could not parse enrichment results: {e}")

@@ -135,13 +135,13 @@ if qm_quantified is not None:
     st.info("👉 Proceed to **7. Imputation** in the sidebar.")
 
     with st.expander("View protein matrix (first 100 rows)"):
-        st.dataframe(qm_quantified.to_df().head(100), use_container_width=True)
+        st.dataframe(qm_quantified.to_df().head(100), width="stretch")
 
     if st.button("Show intensity boxplot", type="primary"):
         try:
             st.plotly_chart(
                 intensity_boxplot(qm_quantified, "Protein-level Intensity Distribution"),
-                use_container_width=True,
+                width="stretch",
             )
         except Exception as e:
             st.error(f"❌ Failed to generate plots: {e}")

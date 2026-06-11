@@ -132,12 +132,12 @@ if qm_norm is not None:
             with tab1:
                 st.plotly_chart(
                     intensity_boxplot(qm_input, "Before Normalization"),
-                    use_container_width=True,
+                    width="stretch",
                 )
             with tab2:
                 st.plotly_chart(
                     intensity_boxplot(qm_norm, "After Normalization"),
-                    use_container_width=True,
+                    width="stretch",
                 )
         except Exception as e:
             st.error(f"❌ Failed generate plots: {e}")
