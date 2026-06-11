@@ -3,18 +3,12 @@ Page 5 — Imputation
 Impute missing values before protein quantification.
 """
 
-#TODO: Add NearestNeighbor imputation
+import copy
 
-import sys, os
+import streamlit as st
 
 from dpks.gui.utils.io import df_to_tsv_bytes
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-import copy
-import streamlit as st
 from dpks.gui.utils.state import require_step, get_qm, set_qm
-from dpks.gui.utils.plots import missingness_heatmap
 
 st.set_page_config(page_title="6. Imputation — DPKS GUI", layout="wide")
 
@@ -35,21 +29,17 @@ import numpy as np
 X = qm_input.quantitative_data.X
 n_total = X.size
 n_missing = int(np.sum(np.isnan(X)) + np.sum(X == 0))
+n_zero = int(np.sum(X == 0))
 pct_missing = n_missing / n_total * 100
 
 st.divider()
 st.subheader("🔍 Missingness Summary")
 
-m1, m2, m3 = st.columns(3)
+m1, m2, m3, m4 = st.columns(4)
 m1.metric("Total values", f"{n_total:,}")
 m2.metric("Missing / zero values", f"{n_missing:,}")
 m3.metric("% Missing", f"{pct_missing:.1f}%")
-
-with st.expander("Show missingness heatmap"):
-    st.plotly_chart(
-        missingness_heatmap(qm_input, feature_index="Protein", title="Missingness Before Imputation"),
-        use_container_width=True,
-    )
+m4.metric("Zero values", f"{n_zero:,}")
 
 st.divider()
 
@@ -61,11 +51,12 @@ col1, col2 = st.columns(2)
 with col1:
     impute_method = st.selectbox(
         "Imputation method",
-        options=["uniform_percentile", "uniform_range"],
+        options=["uniform_percentile", "uniform_range", "neighborhood"],
         help=(
             "**uniform_percentile** — replace missing values with a random draw from "
             "[0, percentile] of the observed distribution. "
             "**uniform_range** — replace with a uniform random draw from [minvalue, maxvalue]."
+            "**neighborhood** — replace with a random draw from the observed intensities of the nearest neighbors."
         ),
     )
 
@@ -76,11 +67,12 @@ with col2:
             min_value=0.01, max_value=0.5, value=0.1, step=0.01,
             help="Values are drawn from [0, this percentile of observed intensities].",
         )
-    else:
+    elif impute_method == "uniform_range":
         col_min, col_max = st.columns(2)
         minvalue = col_min.number_input("Min value", value=0, step=1)
         maxvalue = col_max.number_input("Max value", value=1, step=1)
-
+    elif impute_method == "neighborhood":
+        n_neighbors = st.number_input("Number of nearest neighbors", value=5, step=1)
 
 st.divider()
 
@@ -105,9 +97,11 @@ if run_impute:
             impute_kwargs = dict(method=impute_method)
             if impute_method == "uniform_percentile":
                 impute_kwargs["percentile"] = float(percentile)
-            else:
+            elif impute_method == "uniform_range":
                 impute_kwargs["minvalue"] = int(minvalue)
                 impute_kwargs["maxvalue"] = int(maxvalue)
+            elif impute_method == "neighborhood":
+                impute_kwargs["n_neighbors"] = n_neighbors
 
             qm_imputed = qm_imputed.impute(**impute_kwargs)
 
@@ -145,11 +139,5 @@ if qm_imputed is not None:
     ma1, ma2 = st.columns(2)
     ma1.metric("Missing / zero before", f"{n_missing:,}")
     ma2.metric("Missing / zero after", f"{n_missing_after:,}", delta=-(n_missing - n_missing_after))
-
-    with st.expander("Show missingness heatmap after imputation"):
-        st.plotly_chart(
-            missingness_heatmap(qm_imputed, feature_index="Protein", title="Missingness After Imputation"),
-            use_container_width=True,
-        )
 
     st.info("👉 Proceed to **6. Quantification** in the sidebar.")

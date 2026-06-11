@@ -3,14 +3,13 @@ Page 2 — Filtering
 Remove decoys, contaminants, non-proteotypic entries, and zero/sparse rows.
 """
 
-import sys, os
-#sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 import copy
+
 import streamlit as st
-from dpks.gui.utils.state import require_step, get_qm, set_qm
-from dpks.gui.utils.plots import intensity_boxplot
+
 from dpks.gui.utils.io import df_to_tsv_bytes
+from dpks.gui.utils.plots import intensity_boxplot
+from dpks.gui.utils.state import require_step, get_qm, set_qm
 
 st.set_page_config(page_title="2. Filtering — DPKS GUI", layout="wide")
 
@@ -130,12 +129,17 @@ if qm_filtered is not None:
     m2.metric("Rows after", qm_filtered.num_rows, delta=-(qm_input.num_rows - qm_filtered.num_rows))
     m3.metric("Proteins retained", len(qm_filtered.proteins))
 
-    st.plotly_chart(
-        intensity_boxplot(qm_filtered, title="Post-filter Intensity Distribution"),
-        use_container_width=True,
-    )
+    st.info("👉 Proceed to **3. Normalization & Scaling** in the sidebar.")
 
     with st.expander("View filtered data (first 100 rows)"):
         st.dataframe(qm_filtered.to_df().head(100), use_container_width=True)
 
-    st.info("👉 Proceed to **3. Normalization & Scaling** in the sidebar.")
+    if st.button("▶️ Generate Figures", type="primary"):
+        try:
+            st.plotly_chart(
+                intensity_boxplot(qm_filtered, title="Post-filter Intensity Distribution"),
+                width="stretch",
+            )
+        except Exception as e:
+            st.error(f"❌ Figure generation failed: {e}")
+            st.exception(e)

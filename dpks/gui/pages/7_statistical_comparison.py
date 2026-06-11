@@ -3,16 +3,13 @@ Page 7 — Statistical Comparison
 Differential abundance analysis between sample groups.
 """
 
-import sys, os
+import copy
+
+import streamlit as st
 
 from dpks.gui.utils.io import df_to_tsv_bytes
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-import copy
-import streamlit as st
-from dpks.gui.utils.state import require_step, get_qm, set_qm
 from dpks.gui.utils.plots import volcano_plot
+from dpks.gui.utils.state import require_step, get_qm, set_qm
 
 st.set_page_config(page_title="7. Statistical Comparison — DPKS GUI", layout="wide")
 

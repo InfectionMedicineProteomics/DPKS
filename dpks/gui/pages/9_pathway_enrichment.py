@@ -3,16 +3,14 @@ Page 9 — Pathway Enrichment
 Gene-set enrichment analysis (over-representation test) on significant proteins.
 """
 
-import sys, os
-#sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 import copy
-import streamlit as st
-import pandas as pd
-import gseapy as gp
 
-from dpks.gui.utils.state import require_step, get_qm, set_qm
+import gseapy as gp
+import pandas as pd
+import streamlit as st
+
 from dpks.gui.utils.io import df_to_tsv_bytes
+from dpks.gui.utils.state import require_step, get_qm, set_qm
 
 st.set_page_config(page_title="9. Pathway Enrichment — DPKS GUI", layout="wide")
 
@@ -76,7 +74,6 @@ with col2:
     )
     st.session_state['enrich_result'] = None
 
-
 st.divider()
 
 # ── Protein filter ─────────────────────────────────────────────────────────
@@ -101,16 +98,19 @@ if filter_mode == "Importance value" and explain_comparison:
     g1, g2 = explain_comparison
     importance_col = f"MeanImportance{g1}-{g2}"
     if importance_col in row_annotations.columns:
-        default_cutoff = float(row_annotations[importance_col].quantile(0.75)) if importance_col in row_annotations.columns else 0.0
+        default_cutoff = float(
+            row_annotations[importance_col].quantile(0.75)) if importance_col in row_annotations.columns else 0.0
         importance_cutoff = st.number_input(
             f"Min. mean |Importance| cutoff",
             min_value=0.0,
-            max_value=float(row_annotations[importance_col].max()) if importance_col in row_annotations.columns else 1.0,
+            max_value=float(
+                row_annotations[importance_col].max()) if importance_col in row_annotations.columns else 1.0,
             value=max(0.0, default_cutoff),
             step=0.001,
             format="%.4f",
         )
-        filter_kwargs = dict(filter_importance=True, importance_column=importance_col, importance_cutoff=importance_cutoff)
+        filter_kwargs = dict(filter_importance=True, importance_column=importance_col,
+                             importance_cutoff=importance_cutoff)
     else:
         st.warning(f"Column `{importance_col}` not found. Check the Explainable ML step.")
 
@@ -207,6 +207,7 @@ if enr is not None:
             plot_df = results_df.head(20).copy()
             if "Term" in plot_df.columns and sig_col in plot_df.columns:
                 import numpy as np
+
                 plot_df["-log10(adj.p)"] = -np.log10(plot_df[sig_col].clip(lower=1e-300))
                 fig = px.bar(
                     plot_df.sort_values("-log10(adj.p)"),

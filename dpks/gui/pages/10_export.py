@@ -2,13 +2,9 @@
 Page 10 — Export
 Download results and auto-generated pipeline code.
 """
-
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-import io
-import streamlit as st
 import pandas as pd
+import streamlit as st
+
 from dpks.gui.utils.io import df_to_tsv_bytes
 
 st.set_page_config(page_title="10. Export — DPKS GUI", layout="wide")
@@ -25,13 +21,13 @@ st.divider()
 st.subheader("📥 Download Results")
 
 steps = {
-    "Filtered data":              ("qm_filtered",   "dpks_filtered.tsv"),
-    "Normalised data":            ("qm_normalized",  "dpks_normalized.tsv"),
-    "Batch-corrected data":       ("qm_corrected",   "dpks_corrected.tsv"),
-    "Imputed data":               ("qm_imputed",     "dpks_imputed.tsv"),
-    "Protein quantification":     ("qm_quantified",  "dpks_proteins.tsv"),
-    "Statistical results":        ("qm_compared",    "dpks_statistics.tsv"),
-    "SHAP / ML results":          ("qm_explained",   "dpks_shap.tsv"),
+    "Filtered data": ("qm_filtered", "dpks_filtered.tsv"),
+    "Normalised data": ("qm_normalized", "dpks_normalized.tsv"),
+    "Batch-corrected data": ("qm_corrected", "dpks_corrected.tsv"),
+    "Imputed data": ("qm_imputed", "dpks_imputed.tsv"),
+    "Protein quantification": ("qm_quantified", "dpks_proteins.tsv"),
+    "Statistical results": ("qm_compared", "dpks_statistics.tsv"),
+    "SHAP / ML results": ("qm_explained", "dpks_shap.tsv"),
 }
 
 for label, (state_key, filename) in steps.items():
@@ -87,14 +83,14 @@ st.subheader("📋 Session Summary")
 
 summary_rows = []
 for key, label in {
-    "qm_loaded":     "1. Data Loading",
-    "qm_filtered":   "2. Filtering",
+    "qm_loaded": "1. Data Loading",
+    "qm_filtered": "2. Filtering",
     "qm_normalized": "3. Normalization & Scaling",
-    "qm_corrected":  "4. Batch Correction",
+    "qm_corrected": "4. Batch Correction",
     "qm_quantified": "5. Quantification",
-    "qm_imputed":    "6. Imputation",
-    "qm_compared":   "7. Statistical Comparison",
-    "qm_explained":  "8. Explainable ML",
+    "qm_imputed": "6. Imputation",
+    "qm_compared": "7. Statistical Comparison",
+    "qm_explained": "8. Explainable ML",
     "enrich_result": "9. Pathway Enrichment",
 }.items():
     done = st.session_state.get(key) is not None

@@ -1,11 +1,8 @@
-import sys
-import os
 from pathlib import Path
 
-#sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-import streamlit as st
 import pandas as pd
+import streamlit as st
+
 from dpks.gui.utils.state import set_qm
 
 st.set_page_config(page_title="1. Data Loading — DPKS GUI", layout="wide")
@@ -55,10 +52,10 @@ with st.expander("⚙️ Advanced Options", expanded=False):
         quant_type = st.selectbox(
             "Quantification type",
             options=[
-                "Generic",
+                "Standard",
                 "DIA-NN"
             ],
-            help="'Generic' for generic tab-separated output; 'DIA-NN' for DIA-NN .tsv or .parquet long report files.",
+            help="'Standard' for generic tab-separated output decribed in the DPKS documentation; 'DIA-NN' for DIA-NN .tsv or .parquet long report files.",
         )
 
     with col_b:
@@ -91,6 +88,8 @@ if st.button("🚀 Load Data", type="primary", disabled=(quant_file is None or d
 
         if quant_type == "DIA-NN":
             quant_type = "diann"
+        elif quant_type == "Standard":
+            quant_type = "standard"
 
         if quant_file:
             suffix = Path(quant_file.name).suffix
@@ -99,8 +98,6 @@ if st.button("🚀 Load Data", type="primary", disabled=(quant_file is None or d
             quant_df = pd.read_parquet(quant_file)
         else:
             quant_df = pd.read_csv(quant_file, sep=sep)
-
-        print(quant_df)
 
         design_df = pd.read_csv(design_file, sep=sep)
 
@@ -123,6 +120,7 @@ if st.button("🚀 Load Data", type="primary", disabled=(quant_file is None or d
         # Save FASTA to a temp file if provided
         if fasta_file is not None:
             import tempfile
+
             with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as tmp:
                 tmp.write(fasta_file.read())
                 init_kwargs["annotation_fasta_file"] = tmp.name

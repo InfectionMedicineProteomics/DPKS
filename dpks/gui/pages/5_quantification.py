@@ -3,18 +3,13 @@ Page 6 — Quantification
 Roll up precursor/peptide intensities to protein-level quantities.
 """
 
-#TODO: Add an Annotate()
+import copy
 
-import sys, os
+import streamlit as st
 
 from dpks.gui.utils.io import df_to_tsv_bytes
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-import copy
-import streamlit as st
-from dpks.gui.utils.state import require_step, get_qm, set_qm
 from dpks.gui.utils.plots import intensity_boxplot
+from dpks.gui.utils.state import require_step, get_qm, set_qm
 
 st.set_page_config(page_title="5. Quantification — DPKS GUI", layout="wide")
 
@@ -137,12 +132,17 @@ if qm_quantified is not None:
     m1.metric("Proteins", qm_quantified.num_rows)
     m2.metric("Samples", qm_quantified.num_samples)
 
-    st.plotly_chart(
-        intensity_boxplot(qm_quantified, "Protein-level Intensity Distribution"),
-        use_container_width=True,
-    )
+    st.info("👉 Proceed to **7. Imputation** in the sidebar.")
 
     with st.expander("View protein matrix (first 100 rows)"):
         st.dataframe(qm_quantified.to_df().head(100), use_container_width=True)
 
-    st.info("👉 Proceed to **7. Imputation** in the sidebar.")
+    if st.button("Show intensity boxplot", type="primary"):
+        try:
+            st.plotly_chart(
+                intensity_boxplot(qm_quantified, "Protein-level Intensity Distribution"),
+                use_container_width=True,
+            )
+        except Exception as e:
+            st.error(f"❌ Failed to generate plots: {e}")
+            st.exception(e)

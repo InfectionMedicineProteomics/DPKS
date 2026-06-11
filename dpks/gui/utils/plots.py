@@ -3,7 +3,6 @@ utils/plots.py — reusable plotting helpers for DPKS GUI pages.
 """
 
 import numpy as np
-import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -39,28 +38,6 @@ def intensity_boxplot(qm, title: str = "Sample Intensity Distribution") -> go.Fi
         labels={"intensity": "log₂ Intensity", "sample": "Sample"},
     )
     fig.update_layout(xaxis_tickangle=-45)
-    return fig
-
-
-def missingness_heatmap(qm, feature_index: str = "Protein", title: str = "Missing Values Heatmap") -> go.Figure:
-    """
-    Heatmap showing where values are missing (NaN) across samples.
-    """
-    samples = list(qm.sample_annotations["sample"])
-
-    print(samples)
-    print(qm.to_df())
-
-    df = qm.to_df().set_index(feature_index)[samples]
-    missing = df.isnull().astype(int)
-
-    fig = px.imshow(
-        missing.T,
-        title=title,
-        labels=dict(x="Feature Index", y="Sample", color="Missing"),
-        color_continuous_scale=["#2ecc71", "#e74c3c"],
-        aspect="auto",
-    )
     return fig
 
 

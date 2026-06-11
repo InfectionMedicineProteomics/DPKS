@@ -3,16 +3,13 @@ Page 8 — Explainable Machine Learning
 Train a classifier and compute Importance-based protein feature importances.
 """
 
-import sys, os
+import copy
+
+import streamlit as st
 
 from dpks.gui.utils.io import df_to_tsv_bytes
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-import copy
-import streamlit as st
-from dpks.gui.utils.state import require_step, get_qm, set_qm
 from dpks.gui.utils.plots import importance_bar_chart
+from dpks.gui.utils.state import require_step, get_qm, set_qm
 
 st.set_page_config(page_title="8. Explainable ML — DPKS GUI", layout="wide")
 
@@ -39,6 +36,7 @@ clf_name = st.selectbox(
     options=["Logistic Regression", "XGBoost", "Random Forest", "Gradient Boosting", "SVM"],
     help="The classifier used to discriminate between groups. In most cases, Logistic Regression is sufficient.",
 )
+
 
 def build_classifier(name: str, params: dict):
     """Instantiate a sklearn-compatible classifier from name and params."""
@@ -85,6 +83,7 @@ def build_classifier(name: str, params: dict):
             random_state=params.get("random_state", 42),
         )
 
+
 # ── Classifier hyperparameters ─────────────────────────────────────────────
 with st.expander("⚙️ Classifier Hyperparameters", expanded=True):
     params = {}
@@ -105,7 +104,8 @@ with st.expander("⚙️ Classifier Hyperparameters", expanded=True):
 
     elif clf_name == "Logistic Regression":
         params["C"] = col1.number_input(
-            help="Lower values for stronger regularization", label="Regularization C", min_value=0.000001, max_value=100.0, value=1.0)
+            help="Lower values for stronger regularization", label="Regularization C", min_value=0.000001,
+            max_value=100.0, value=1.0)
         params["max_iter"] = col2.number_input("max_iter", 100, 5000, 1000, step=100)
         params['penalty'] = col1.selectbox("Penalty", ["l1", "l2", "elasticnet"])
         params['solver'] = "liblinear"
@@ -153,7 +153,6 @@ if not stored_comparison:
 else:
     st.markdown("**Current comparison:**")
     st.markdown(f"- Group **{stored_comparison[0]}** vs Group **{stored_comparison[1]}**")
-
 
 st.divider()
 
