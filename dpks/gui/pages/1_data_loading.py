@@ -101,8 +101,6 @@ if st.button("🚀 Load Data", type="primary", disabled=(quant_file is None or d
 
         design_df = pd.read_csv(design_file, sep=sep)
 
-        print(quant_type)
-
         if "sample" not in design_df:
             st.error(
                 "❌ 'sample' column not found in design matrix. Please ensure the design matrix contains a 'sample' column."

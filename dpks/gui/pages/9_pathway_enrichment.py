@@ -26,9 +26,6 @@ if not require_step("qm_explained", "Explainable ML", "8. Explainable ML"):
 
 qm_input = get_qm("qm_explained")
 
-print(qm_input.row_annotations)
-
-print(qm_input.annotated)
 # Ensure proteins are annotated with gene names (needed for enrichment)
 if not qm_input.annotated:
     with st.spinner("Annotating proteins with gene names via UniProt…"):
