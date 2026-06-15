@@ -21,4 +21,4 @@ def quantified_data(paths):
 def test_xgb(quantified_data: QuantMatrix):
 
     clf = LogisticRegression()
-    quantified_data.explain(clf, comparisons=(1, 2), n_iterations=10)
+    quantified_data.explain(clf, comparison=(1, 2), n_iterations=10)

@@ -615,7 +615,7 @@ class QuantMatrix:
     def compare(
         self,
         method: str,
-        comparisons: list,
+        comparison: tuple[Any, Any],
         min_samples_per_group: int = 2,
         level: str = "protein",
         multiple_testing_correction_method: str = "fdr_tsbh",
@@ -626,7 +626,7 @@ class QuantMatrix:
 
         Args:
             method (str): Statistical comparison method. Options are 'ttest', 'linregress', 'anova', 'ttest_paired'.
-            comparisons (list): List of tuples specifying the group comparisons.
+            comparison (tuple): tuple specifying the group comparison.
             min_samples_per_group (int, optional): Minimum number of samples per group. Defaults to 2.
             level (str, optional): Level of comparison. Defaults to 'protein'.
             multiple_testing_correction_method (str, optional): Method for multiple testing correction. Defaults to 'fdr_tsbh'.
@@ -642,12 +642,12 @@ class QuantMatrix:
             >>> quantified_data = quantified_data.compare(
             >>>     method="linregress",
             >>>     min_samples_per_group=2,
-            >>>     comparisons=[(2, 1), (3, 1)],
+            >>>     comparison=(2, 1),
             >>>     covariates=["gender", "age"]
             >>> )
         """
 
-        if not method in {"ttest", "linregress", "anova", "ttest_paired"}:
+        if not method in {"ttest", "linregress", "anova", "ttest_paired", "fast_ols"}:
             raise ValueError(f"Unsupported statistical comparison method: {method}")
 
         # Check that all covariates are in the sample annotations
@@ -658,7 +658,7 @@ class QuantMatrix:
 
         differential_test = DifferentialTest(
             method,
-            comparisons,
+            comparison,
             min_samples_per_group=min_samples_per_group,
             level=level,
             multiple_testing_correction_method=multiple_testing_correction_method,
@@ -675,7 +675,7 @@ class QuantMatrix:
     def explain(
         self,
         clf,
-        comparisons: list,
+        comparison: tuple,
         n_iterations: int = 100,
         downsample_background: bool = True,
         feature_column: str = "Protein",
@@ -687,7 +687,7 @@ class QuantMatrix:
 
         Args:
             clf: Classifier object used for prediction.
-            comparisons (list): List of tuples specifying the group comparisons.
+            comparison (tuple): Tuples specifying the group comparison.
             n_iterations (int, optional): Number of iterations for bootstrapping. Defaults to 100.
             downsample_background (bool, optional): Whether to downsample the background. Defaults to True.
             feature_column (str, optional): Name of the feature column. Defaults to 'Protein'.
@@ -707,7 +707,7 @@ class QuantMatrix:
             >>>
             >>> quantified_data = quantified_data.explain(
             >>>     clf,
-            >>>     comparisons=[(2, 1), (3, 1)],
+            >>>     comparison=(2, 1),
             >>>     n_iterations=10,
             >>>     downsample_background=True
             >>> )
@@ -716,68 +716,63 @@ class QuantMatrix:
         explain_results = []
         explain_eval_results = []
 
-        if isinstance(comparisons, tuple):
-            comparisons = [comparisons]
+        X, y = self.to_ml(feature_column=feature_column, comparison=comparison)
 
-        for comparison in comparisons:
-            X, y = self.to_ml(feature_column=feature_column, comparison=comparison)
+        pipe = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("clf", clf)
+            ]
+        )
 
-            #TODO: add CV loop for feature explanations with accuracy scores to provide model estimate
-            pipe = Pipeline(
-                [
-                    ("scaler", StandardScaler()),
-                    ("clf", clf)
-                ]
-            )
+        scores = cross_val_score(pipe, X, y, cv=3)
 
-            scores = cross_val_score(pipe, X, y, cv=3)
+        explain_eval_results.append((comparison, scores))
 
-            explain_eval_results.append((comparison, scores))
+        scaler = StandardScaler()
 
-            scaler = StandardScaler()
+        if fillna:
+            X[:] = X[:].fillna(0.0)
 
-            if fillna:
-                X[:] = X[:].fillna(0.0)
+        X[:] = scaler.fit_transform(X[:])
 
-            X[:] = scaler.fit_transform(X[:])
+        interpreter = BootstrapInterpreter(
+            feature_names=X.columns,
+            n_iterations=n_iterations,
+            downsample_background=downsample_background,
+            shuffle_iterations=shuffle_iterations,
+        )
 
-            interpreter = BootstrapInterpreter(
-                feature_names=X.columns,
-                n_iterations=n_iterations,
-                downsample_background=downsample_background,
-                shuffle_iterations=shuffle_iterations,
-            )
+        interpreter.fit(X.values, y.values.ravel(), clf)
 
-            interpreter.fit(X.values, y.values.ravel(), clf)
+        explain_results.append((comparison, interpreter))
 
-            explain_results.append((comparison, interpreter))
+        importances_df = interpreter.results_[
+            [
+                "feature",
+                "mean_importance",
+                "mean_rank",
+                "median_importance",
+                "stdev_importance",
+                "median_rank",
+                "stdev_rank",
+            ]
+        ].set_index("feature")
 
-            importances_df = interpreter.results_[
-                [
-                    "feature",
-                    "mean_importance",
-                    "mean_rank",
-                    "median_importance",
-                    "stdev_importance",
-                    "median_rank",
-                    "stdev_rank",
-                ]
-            ].set_index("feature")
+        importances_df = importances_df.rename(
+            columns={
+                "mean_importance": f"MeanImportance{comparison[0]}-{comparison[1]}",
+                "mean_rank": f"MeanRank{comparison[0]}-{comparison[1]}",
+                "median_importance": f"MedianImportance{comparison[0]}-{comparison[1]}",
+                "stdev_importance": f"StdevImportance{comparison[0]}-{comparison[1]}",
+                "median_rank": f"MedianRank{comparison[0]}-{comparison[1]}",
+                "stdev_rank": f"StdevRank{comparison[0]}-{comparison[1]}",
+            }
+        )
 
-            importances_df = importances_df.rename(
-                columns={
-                    "mean_importance": f"MeanImportance{comparison[0]}-{comparison[1]}",
-                    "mean_rank": f"MeanRank{comparison[0]}-{comparison[1]}",
-                    "median_importance": f"MedianImportance{comparison[0]}-{comparison[1]}",
-                    "stdev_importance": f"StdevImportance{comparison[0]}-{comparison[1]}",
-                    "median_rank": f"MedianRank{comparison[0]}-{comparison[1]}",
-                    "stdev_rank": f"StdevRank{comparison[0]}-{comparison[1]}",
-                }
-            )
-
-            self.row_annotations = self.row_annotations.join(
-                importances_df, on=feature_column
-            )
+        self.row_annotations = self.row_annotations.join(
+            importances_df, on=feature_column
+        )
 
         self.explain_eval_results = explain_eval_results
         self.explain_results = explain_results
@@ -787,7 +782,7 @@ class QuantMatrix:
     def evaluate(
         self,
         clf,
-        comparisons: list,
+        comparison: tuple,
         method: str = "all",
         feature_column: str = "Protein",
         verbose: str = False,
@@ -802,108 +797,102 @@ class QuantMatrix:
 
         evaluate_results = []
 
-        if isinstance(comparisons, tuple):
-            comparisons = [comparisons]
-
-
         self.evaluate_models_ = []
 
-        for comparison in comparisons:
+        if base_score_columns:
 
-            if base_score_columns:
+            score_columns = [score_col for score_col in base_score_columns]
 
-                score_columns = [score_col for score_col in base_score_columns]
+        else:
 
-            else:
+            if method == "all":
 
-                if method == "all":
-
-                    score_columns = [
-                        f"DEScore{comparison[0]}-{comparison[1]}",
-                        f"Group{comparison[0]}Mean",
-                        f"Group{comparison[1]}Mean",
-                        f"Group{comparison[0]}Stdev",
-                        f"Group{comparison[1]}Stdev",
-                        f"Log2FoldChange{comparison[0]}-{comparison[1]}",
-                        f"CorrectedPValue{comparison[0]}-{comparison[1]}",
-                        f"MeanImportance{comparison[0]}-{comparison[1]}",
-                        f"MeanRank{comparison[0]}-{comparison[1]}",
-                    ]
-
-                elif method == "ml":
-                    score_columns = [
-                        f"MeanImportance{comparison[0]}-{comparison[1]}",
-                        f"MeanRank{comparison[0]}-{comparison[1]}",
-                        f"MedianImportance{comparison[0]}-{comparison[1]}",
-                        f"MedianRank{comparison[0]}-{comparison[1]}",
-                        f"StdevImportance{comparison[0]}-{comparison[1]}",
-                        f"StdevRank{comparison[0]}-{comparison[1]}",
-                    ]
-
-                elif method == "deg":
-
-                    score_columns = [
-                        f"DEScore{comparison[0]}-{comparison[1]}",
-                        f"Group{comparison[0]}Mean",
-                        f"Group{comparison[1]}Mean",
-                        f"Group{comparison[0]}Stdev",
-                        f"Group{comparison[1]}Stdev",
-                        f"Log2FoldChange{comparison[0]}-{comparison[1]}",
-                        f"CorrectedPValue{comparison[0]}-{comparison[1]}",
-                    ]
-
-            X = self.row_annotations[score_columns].copy()
-            y = np.where(self.row_annotations["Decoy"] == 0, 1, 0)
-
-            pipe = Pipeline(
-                [
-                    ("scaler", StandardScaler()),
-                    ("clf", clf)
+                score_columns = [
+                    f"DEScore{comparison[0]}-{comparison[1]}",
+                    f"Group{comparison[0]}Mean",
+                    f"Group{comparison[1]}Mean",
+                    f"Group{comparison[0]}Stdev",
+                    f"Group{comparison[1]}Stdev",
+                    f"Log2FoldChange{comparison[0]}-{comparison[1]}",
+                    f"CorrectedPValue{comparison[0]}-{comparison[1]}",
+                    f"MeanImportance{comparison[0]}-{comparison[1]}",
+                    f"MeanRank{comparison[0]}-{comparison[1]}",
                 ]
-            )
 
-            feature_scores = cross_val_predict(
-                pipe, X, y, cv=3, method="decision_function"
-            )
+            elif method == "ml":
+                score_columns = [
+                    f"MeanImportance{comparison[0]}-{comparison[1]}",
+                    f"MeanRank{comparison[0]}-{comparison[1]}",
+                    f"MedianImportance{comparison[0]}-{comparison[1]}",
+                    f"MedianRank{comparison[0]}-{comparison[1]}",
+                    f"StdevImportance{comparison[0]}-{comparison[1]}",
+                    f"StdevRank{comparison[0]}-{comparison[1]}",
+                ]
 
-            scores = cross_val_score(pipe, X, y, cv=3)
+            elif method == "deg":
 
-            self.evaluate_models_.append(
-                (comparison, pipe.fit(X, y))
-            )
+                score_columns = [
+                    f"DEScore{comparison[0]}-{comparison[1]}",
+                    f"Group{comparison[0]}Mean",
+                    f"Group{comparison[1]}Mean",
+                    f"Group{comparison[0]}Stdev",
+                    f"Group{comparison[1]}Stdev",
+                    f"Log2FoldChange{comparison[0]}-{comparison[1]}",
+                    f"CorrectedPValue{comparison[0]}-{comparison[1]}",
+                ]
 
-            feature_score_results = pd.DataFrame(
-                {
-                    "feature_name": self.row_annotations[feature_column],
-                    "label": y,
-                    f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}": feature_scores,
-                }
-            )
+        X = self.row_annotations[score_columns].copy()
+        y = np.where(self.row_annotations["Decoy"] == 0, 1, 0)
 
-            decoy_counter = DecoyCounter()
+        pipe = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("clf", clf)
+            ]
+        )
 
+        feature_scores = cross_val_predict(
+            pipe, X, y, cv=3, method="decision_function"
+        )
+
+        scores = cross_val_score(pipe, X, y, cv=3)
+
+        self.evaluate_models_.append(
+            (comparison, pipe.fit(X, y))
+        )
+
+        feature_score_results = pd.DataFrame(
+            {
+                "feature_name": self.row_annotations[feature_column],
+                "label": y,
+                f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}": feature_scores,
+            }
+        )
+
+        decoy_counter = DecoyCounter()
+
+        feature_score_results[
+            f"{method.capitalize()}FeatureQValue{comparison[0]}-{comparison[1]}"
+        ] = decoy_counter.q_values(
             feature_score_results[
-                f"{method.capitalize()}FeatureQValue{comparison[0]}-{comparison[1]}"
-            ] = decoy_counter.q_values(
-                feature_score_results[
-                    f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}"
-                ].to_numpy(),
-                feature_score_results["label"].to_numpy(),
-            )
+                f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}"
+            ].to_numpy(),
+            feature_score_results["label"].to_numpy(),
+        )
 
-            self.row_annotations = self.row_annotations.join(
-                feature_score_results[
-                    [
-                        f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}",
-                        f"{method.capitalize()}FeatureQValue{comparison[0]}-{comparison[1]}",
-                    ]
+        self.row_annotations = self.row_annotations.join(
+            feature_score_results[
+                [
+                    f"{method.capitalize()}FeatureScore{comparison[0]}-{comparison[1]}",
+                    f"{method.capitalize()}FeatureQValue{comparison[0]}-{comparison[1]}",
                 ]
-            )
+            ]
+        )
 
-            evaluate_results.append((feature_score_results, scores))
+        evaluate_results.append((feature_score_results, scores))
 
-            if verbose:
-                print(f"Comparison {comparison[0]}-{comparison[1]}: {scores}")
+        if verbose:
+            print(f"Comparison {comparison[0]}-{comparison[1]}: {scores}")
 
         self.evaluate_results = evaluate_results
 
@@ -944,7 +933,7 @@ class QuantMatrix:
         importance_cutoff: float = 0.0,
         importance_column: str = "MeanImportance2-1",
         subset_library: bool = False,
-    ):
+    ) -> pd.DataFrame:
         """Perform gene set enrichment analysis.
 
         Args:
@@ -1426,7 +1415,7 @@ class QuantMatrix:
         feature_column: str = "Protein",
         label_column: str = "group",
         comparison: tuple = (1, 2),
-    ) -> tuple[Any, Any]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Converts the QuantMatrix object to features and labels for machine learning.
 
         Args:

@@ -3,16 +3,15 @@ Page 3 — Normalization & Scaling
 Normalise sample intensities and optionally scale at the feature level.
 """
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 import copy
+
 import streamlit as st
-from utils.state import render_sidebar, require_step, get_qm, set_qm
-from utils.plots import intensity_boxplot
+
+from dpks.gui.utils.io import df_to_tsv_bytes
+from dpks.gui.utils.plots import intensity_boxplot
+from dpks.gui.utils.state import require_step, get_qm, set_qm
 
 st.set_page_config(page_title="3. Normalization & Scaling — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("3. Normalization & Scaling")
 st.markdown(
@@ -75,29 +74,6 @@ if use_rt_window:
 
 st.divider()
 
-# ── Scaling ────────────────────────────────────────────────────────────────
-st.subheader("📏 Feature-level Scaling (optional)")
-
-apply_scaling = st.checkbox(
-    "Apply feature scaling after normalization",
-    value=False,
-    help="Scales each feature (row) independently. Useful before ML steps.",
-)
-
-scale_method = None
-if apply_scaling:
-    scale_method = st.selectbox(
-        "Scaling method",
-        options=["zscore", "minmax", "absmax"],
-        help=(
-            "**zscore** — standardise to zero mean and unit variance. "
-            "**minmax** — scale to [0, 1] range. "
-            "**absmax** — scale by the absolute maximum."
-        ),
-    )
-
-st.divider()
-
 # ── Apply button ───────────────────────────────────────────────────────────
 if st.button("▶️ Apply Normalization & Scaling", type="primary"):
     try:
@@ -120,9 +96,6 @@ if st.button("▶️ Apply Normalization & Scaling", type="primary"):
 
             qm_norm = qm_norm.normalize(**norm_kwargs)
 
-            if apply_scaling and scale_method:
-                qm_norm = qm_norm.scale(method=scale_method)
-
         set_qm("qm_normalized", qm_norm)
         st.success("✅ Normalization complete.")
 
@@ -137,16 +110,35 @@ if qm_norm is not None:
     st.divider()
     st.subheader("📊 Results")
 
-    tab1, tab2 = st.tabs(["Before", "After"])
-    with tab1:
-        st.plotly_chart(
-            intensity_boxplot(qm_input, "Before Normalization"),
-            use_container_width=True,
-        )
-    with tab2:
-        st.plotly_chart(
-            intensity_boxplot(qm_norm, "After Normalization"),
-            use_container_width=True,
-        )
+    tsv_bytes = df_to_tsv_bytes(qm_norm.to_df())
+
+    filename = st.text_input(
+        label="File name",
+        value="dpks_normalized.tsv"
+    )
+
+    st.download_button(
+        label=f"⬇️ Download",
+        data=tsv_bytes,
+        file_name=filename,
+        mime="text/tab-separated-values",
+    )
 
     st.info("👉 Proceed to **4. Batch Correction** in the sidebar.")
+
+    if st.button("Show intensity distributions", type="primary"):
+        try:
+            tab1, tab2 = st.tabs(["Before", "After"])
+            with tab1:
+                st.plotly_chart(
+                    intensity_boxplot(qm_input, "Before Normalization"),
+                    width="stretch",
+                )
+            with tab2:
+                st.plotly_chart(
+                    intensity_boxplot(qm_norm, "After Normalization"),
+                    width="stretch",
+                )
+        except Exception as e:
+            st.error(f"❌ Failed generate plots: {e}")
+            st.exception(e)

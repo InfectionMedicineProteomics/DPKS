@@ -1,13 +1,12 @@
-import sys
-import os
-#sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from pathlib import Path
 
-import streamlit as st
+import numpy as np
 import pandas as pd
-from dpks.gui.utils.state import render_sidebar, set_qm
+import streamlit as st
+
+from dpks.gui.utils.state import set_qm
 
 st.set_page_config(page_title="1. Data Loading — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("1. Data Loading")
 st.markdown(
@@ -32,7 +31,7 @@ with col1:
     st.subheader("Quantification File")
     quant_file = st.file_uploader(
         "Upload quantification TSV",
-        type=["tsv", "txt", "csv"],
+        type=["tsv", "txt", "csv", "parquet"],
         help="Tab-separated file from GPS, DIA-NN, or similar tools.",
     )
 
@@ -54,10 +53,10 @@ with st.expander("⚙️ Advanced Options", expanded=False):
         quant_type = st.selectbox(
             "Quantification type",
             options=[
-                "Generic",
+                "Standard",
                 "DIA-NN"
             ],
-            help="'Generic' for generic tab-separated output; 'DIA-NN' for DIA-NN .tsv or .parquet long report files.",
+            help="'Standard' for generic tab-separated output decribed in the DPKS documentation; 'DIA-NN' for DIA-NN .tsv or .parquet long report files.",
         )
 
     with col_b:
@@ -88,8 +87,32 @@ if st.button("🚀 Load Data", type="primary", disabled=(quant_file is None or d
 
         sep = "\t"
 
-        quant_df = pd.read_csv(quant_file, sep=sep)
+        if quant_type == "DIA-NN":
+            quant_type = "diann"
+        elif quant_type == "Standard":
+            quant_type = "standard"
+
+        if quant_file:
+            suffix = Path(quant_file.name).suffix
+
+        if suffix == ".parquet":
+            quant_df = pd.read_parquet(quant_file)
+        else:
+            quant_df = pd.read_csv(quant_file, sep=sep)
+
+        # Ensure that missing values are correctly encoded, sometimes DIA-NN encodes them as None
+        # They also sometimes include precursor quantities that are 0, which breaks downstream analysis
+        if quant_type == "diann":
+            quant_df = quant_df.replace({None: np.nan})
+            quant_df['Precursor.Quantity'] = quant_df['Precursor.Quantity'].astype(float)
+            quant_df = quant_df[quant_df['Precursor.Quantity'] > 0]
+
         design_df = pd.read_csv(design_file, sep=sep)
+
+        if "sample" not in design_df:
+            st.error(
+                "❌ 'sample' column not found in design matrix. Please ensure the design matrix contains a 'sample' column."
+            )
 
         init_kwargs = dict(
             quantification_file=quant_df,
@@ -103,6 +126,7 @@ if st.button("🚀 Load Data", type="primary", disabled=(quant_file is None or d
         # Save FASTA to a temp file if provided
         if fasta_file is not None:
             import tempfile
+
             with tempfile.NamedTemporaryFile(delete=False, suffix=".fasta") as tmp:
                 tmp.write(fasta_file.read())
                 init_kwargs["annotation_fasta_file"] = tmp.name
@@ -140,9 +164,9 @@ if qm is not None:
     tab1, tab2 = st.tabs(["Quantification (first 100 rows)", "Design Matrix"])
 
     with tab1:
-        st.dataframe(qm.to_df().head(100), use_container_width=True)
+        st.dataframe(qm.to_df().head(100), width="stretch")
 
     with tab2:
-        st.dataframe(qm.sample_annotations.reset_index(drop=True), use_container_width=True)
+        st.dataframe(qm.sample_annotations.reset_index(drop=True), width="stretch")
 
     st.info("👉 Proceed to **2. Filtering** in the sidebar.")

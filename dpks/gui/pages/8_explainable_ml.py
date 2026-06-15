@@ -3,16 +3,15 @@ Page 8 — Explainable Machine Learning
 Train a classifier and compute Importance-based protein feature importances.
 """
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 import copy
+
 import streamlit as st
-from utils.state import render_sidebar, require_step, get_qm, set_qm
-from utils.plots import importance_bar_chart
+
+from dpks.gui.utils.io import df_to_tsv_bytes
+from dpks.gui.utils.plots import importance_bar_chart
+from dpks.gui.utils.state import require_step, get_qm, set_qm
 
 st.set_page_config(page_title="8. Explainable ML — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("8. Explainable Machine Learning")
 st.markdown(
@@ -25,7 +24,7 @@ if not require_step("qm_compared", "Statistical Comparison", "7. Statistical Com
     st.stop()
 
 qm_input = get_qm("qm_compared")
-stored_comparisons = st.session_state.get("stat_comparisons", [])
+stored_comparison = st.session_state.get("stat_comparison", ())
 
 st.divider()
 
@@ -37,6 +36,7 @@ clf_name = st.selectbox(
     options=["Logistic Regression", "XGBoost", "Random Forest", "Gradient Boosting", "SVM"],
     help="The classifier used to discriminate between groups. In most cases, Logistic Regression is sufficient.",
 )
+
 
 def build_classifier(name: str, params: dict):
     """Instantiate a sklearn-compatible classifier from name and params."""
@@ -83,6 +83,7 @@ def build_classifier(name: str, params: dict):
             random_state=params.get("random_state", 42),
         )
 
+
 # ── Classifier hyperparameters ─────────────────────────────────────────────
 with st.expander("⚙️ Classifier Hyperparameters", expanded=True):
     params = {}
@@ -103,7 +104,8 @@ with st.expander("⚙️ Classifier Hyperparameters", expanded=True):
 
     elif clf_name == "Logistic Regression":
         params["C"] = col1.number_input(
-            help="Lower values for stronger regularization", label="Regularization C", min_value=0.000001, max_value=100.0, value=1.0)
+            help="Lower values for stronger regularization", label="Regularization C", min_value=0.000001,
+            max_value=100.0, value=1.0)
         params["max_iter"] = col2.number_input("max_iter", 100, 5000, 1000, step=100)
         params['penalty'] = col1.selectbox("Penalty", ["l1", "l2", "elasticnet"])
         params['solver'] = "liblinear"
@@ -124,7 +126,7 @@ col3, col4 = st.columns(2)
 with col3:
     n_iterations = st.slider(
         "Bootstrap iterations",
-        min_value=10, max_value=500, value=50, step=10,
+        min_value=10, max_value=10000, value=50, step=10,
         help="More iterations → more stable Importance estimates. Increases runtime.",
     )
 
@@ -145,23 +147,19 @@ feature_column = st.selectbox(
 st.divider()
 st.subheader("🎯 Select Comparisons for Explanation")
 
-if not stored_comparisons:
-    st.warning("No comparisons found. Complete Step 7 first.")
+if not stored_comparison:
+    st.warning("No comparison found. Complete Step 7 first.")
     st.stop()
-
-selected_comparisons = st.multiselect(
-    "Comparisons to explain",
-    options=stored_comparisons,
-    default=stored_comparisons,
-    format_func=lambda c: f"Group {c[0]} vs Group {c[1]}",
-)
+else:
+    st.markdown("**Current comparison:**")
+    st.markdown(f"- Group **{stored_comparison[0]}** vs Group **{stored_comparison[1]}**")
 
 st.divider()
 
 if st.button(
     "▶️ Run Explainable ML",
     type="primary",
-    disabled=len(selected_comparisons) == 0,
+    disabled=stored_comparison is None,
 ):
     try:
         clf = build_classifier(clf_name, params)
@@ -173,14 +171,14 @@ if st.button(
             qm_explained = copy.deepcopy(qm_input)
             qm_explained = qm_explained.explain(
                 clf=clf,
-                comparisons=selected_comparisons,
+                comparison=stored_comparison,
                 n_iterations=int(n_iterations),
                 downsample_background=downsample_background,
                 feature_column=feature_column,
             )
 
         set_qm("qm_explained", qm_explained)
-        st.session_state["explain_comparisons"] = selected_comparisons
+        st.session_state["explain_comparison"] = stored_comparison
         st.success("✅ Explainable ML complete. Importance values added to QuantMatrix.")
 
     except ImportError as e:
@@ -199,24 +197,35 @@ if qm_explained is not None:
     st.divider()
     st.subheader("📊 Feature Importance Results")
 
-    explain_comparisons = st.session_state.get(
-        "explain_comparisons", selected_comparisons
+    tsv_bytes = df_to_tsv_bytes(qm_explained.to_df())
+
+    filename = st.text_input(
+        label="File name",
+        value=f"dpks_explained_{stored_comparison[0]}_{stored_comparison[1]}.tsv"
     )
 
-    tabs = st.tabs([f"Group {g1} vs {g2}" for g1, g2 in explain_comparisons])
-    for tab, cmp in zip(tabs, explain_comparisons):
-        with tab:
-            top_n_display = st.slider(
-                "Top N proteins to display",
-                min_value=5, max_value=50, value=20,
-                key=f"top_n_{cmp}",
-            )
-            st.plotly_chart(
-                importance_bar_chart(qm_explained, cmp, top_n=top_n_display),
-                use_container_width=True,
-            )
+    st.download_button(
+        label=f"⬇️ Download",
+        data=tsv_bytes,
+        file_name=filename,
+        mime="text/tab-separated-values",
+    )
+
+    explain_comparisons = st.session_state.get(
+        "explain_comparisons", stored_comparison
+    )
+
+    top_n_display = st.slider(
+        "Top N proteins to display",
+        min_value=5, max_value=50, value=20,
+        key=f"top_n_{stored_comparison[0]}_{stored_comparison[1]}",
+    )
+    st.plotly_chart(
+        importance_bar_chart(qm_explained, stored_comparison, top_n=top_n_display),
+        width="stretch",
+    )
 
     with st.expander("View full annotations table (first 200 rows)"):
-        st.dataframe(qm_explained.row_annotations.head(200), use_container_width=True)
+        st.dataframe(qm_explained.row_annotations.head(200), width="stretch")
 
     st.info("👉 Proceed to **9. Pathway Enrichment** in the sidebar.")

@@ -14,7 +14,7 @@ def quantified_data(paths):
         .quantify(method="top_n", top_n=5, summarization_method="mean").impute(method="neighborhood")
         .annotate()
         .append(method="mean", in_background=True)
-        .compare(method="linregress", min_samples_per_group=10, comparisons=[(2, 1)])
+        .compare(method="linregress", min_samples_per_group=10, comparison=(2, 1))
     )
     return quantified_data
 

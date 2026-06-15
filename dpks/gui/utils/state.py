@@ -6,23 +6,23 @@ Import this at the top of every page:
 """
 
 from pathlib import Path
-from PIL import Image
+
 import streamlit as st
 
 ASSETS = Path(__file__).parent.parent / "assets"
 
 # ── Pipeline step keys ────────────────────────────────────────────────────────
 STEP_KEYS = {
-    "qm_loaded":     "1. Data Loading",
-    "qm_filtered":   "2. Filtering",
+    "qm_loaded": "1. Data Loading",
+    "qm_filtered": "2. Filtering",
     "qm_normalized": "3. Normalization & Scaling",
-    "qm_corrected":  "4. Batch Correction",
+    "qm_corrected": "4. Batch Correction",
     "qm_quantified": "5. Quantification",
-    "qm_imputed":    "6. Imputation",
-    "qm_compared":   "7. Statistical Comparison",
-    "qm_explained":  "8. Explainable ML",
+    "qm_imputed": "6. Imputation",
+    "qm_compared": "7. Statistical Comparison",
+    "qm_explained": "8. Explainable ML",
     "enrich_result": "9. Pathway Enrichment",
-    "qm_exported":   "10. Export",
+    "qm_exported": "10. Export",
 }
 
 

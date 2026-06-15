@@ -3,16 +3,15 @@ Page 4 — Batch Correction
 Correct for systematic batch effects using ComBat or mean correction.
 """
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 import copy
+
 import streamlit as st
-from utils.state import render_sidebar, require_step, get_qm, set_qm
-from utils.plots import intensity_boxplot
+
+from dpks.gui.utils.io import df_to_tsv_bytes
+from dpks.gui.utils.plots import intensity_boxplot
+from dpks.gui.utils.state import require_step, get_qm, set_qm
 
 st.set_page_config(page_title="4. Batch Correction — DPKS GUI", layout="wide")
-render_sidebar()
 
 st.title("4. Batch Correction")
 st.markdown(
@@ -64,8 +63,8 @@ with col1:
         "Batch correction method",
         options=["mean", "combat"],
         help=(
-            "**mean** — subtract per-batch mean relative to a reference batch. "
-            "**combat** — empirical Bayes batch correction (recommended for most cases)."
+            "**mean** — subtract per-batch mean relative to a reference batch (reccomended). "
+            "**combat** — empirical Bayes batch correction."
         ),
     )
 
@@ -117,16 +116,35 @@ if qm_corrected is not None:
     st.divider()
     st.subheader("📊 Results")
 
-    tab1, tab2 = st.tabs(["Before Correction", "After Correction"])
-    with tab1:
-        st.plotly_chart(
-            intensity_boxplot(qm_input, "Before Batch Correction"),
-            use_container_width=True,
-        )
-    with tab2:
-        st.plotly_chart(
-            intensity_boxplot(qm_corrected, "After Batch Correction"),
-            use_container_width=True,
-        )
+    tsv_bytes = df_to_tsv_bytes(qm_corrected.to_df())
+
+    filename = st.text_input(
+        label="File name",
+        value="dpks_corrected.tsv"
+    )
+
+    st.download_button(
+        label=f"⬇️ Download",
+        data=tsv_bytes,
+        file_name=filename,
+        mime="text/tab-separated-values",
+    )
 
     st.info("👉 Proceed to **5. Quantification** in the sidebar.")
+
+    if st.button("Show intensity distributions", type="primary"):
+        try:
+            tab1, tab2 = st.tabs(["Before Correction", "After Correction"])
+            with tab1:
+                st.plotly_chart(
+                    intensity_boxplot(qm_input, "Before Batch Correction"),
+                    width="stretch",
+                )
+            with tab2:
+                st.plotly_chart(
+                    intensity_boxplot(qm_corrected, "After Batch Correction"),
+                    width="stretch",
+                )
+        except Exception as e:
+            st.error(f"❌ Failed generate plots: {e}")
+            st.exception(e)
