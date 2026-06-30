@@ -341,6 +341,8 @@ class BootstrapInterpreter:
 
         results["feature"] = self.feature_names
 
+        iteration_results = []
+
         for i in range(self.n_iterations):
             X_train, y_train = resample(
                 X, y, replace=True, n_samples=X.shape[0] * 1, stratify=y, random_state=i
@@ -363,6 +365,8 @@ class BootstrapInterpreter:
                 clf.fit(X_train, y_train)
                 explainer.fit(clf, X_train)
 
+            iteration_results.append(explainer)
+
             results[f"iteration_{i}_importance"] = pd.Series(
                 explainer.global_explanations / explainer.global_explanations.max()
             )
@@ -370,6 +374,7 @@ class BootstrapInterpreter:
                 ascending=False
             )
 
+        self.iteration_results = iteration_results
         self.importances = pd.DataFrame(results)
 
         self.importances["mean_importance"] = self.importances[

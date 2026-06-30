@@ -13,7 +13,8 @@ def quantified_data(paths):
         .normalize(method="mean", use_rt_sliding_window_filter=True, rt_unit="second", stride=5, minimum_data_points=200)
         .quantify(method="top_n", top_n=5, summarization_method="mean").impute(method="neighborhood")
         .annotate()
-        .compare(method="linregress", min_samples_per_group=10, comparisons=[(2, 1)])
+        .append(method="mean", in_background=True)
+        .compare(method="linregress", min_samples_per_group=10, comparison=(2, 1))
     )
     return quantified_data
 
