@@ -54,7 +54,7 @@ def test_differential_testing_paired(paths):
         .quantify(method="top_n", top_n=1)
         .compare(
             method="ttest_paired",
-            comparisons=(4,6),
+            comparison=(4,6),
             min_samples_per_group=4,
             level="protein",
             multiple_testing_correction_method="fdr_tsbh",
